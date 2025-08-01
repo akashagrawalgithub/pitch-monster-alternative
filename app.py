@@ -1,9 +1,9 @@
-from flask import Flask, request, send_from_directory, jsonify
+from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
 import openai
 import os
 from datetime import datetime
 import time
-
+from prompts import agentPrompt
 app = Flask(__name__)
 OPENAI_API_KEY = "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"
 openai.api_key = OPENAI_API_KEY
@@ -27,72 +27,7 @@ def chat():
 
     messages = [{
         "role": "system",
-        "content": """
-        Majestic Estates AI - Property Marketing Inquiry Call Script
-
-BACKGROUND INFO
-Company Info: Majestic Estates stands at the forefront of the real estate market, empowering property sellers and landlords with targeted marketing strategies and vast network connections. Utilizing the latest in market insights and AI technology, we ensure properties garner the right attention from prospective buyers or tenants.
-Target Audience: Catering to property owners aiming to sell or lease their properties, including single-family homes, apartments, and luxury estates, seeking to maximize returns through expert guidance.
-Value Proposition: Offering a comprehensive array of services tailored for sellers and landlords, Majestic Estates excels in market analysis, staging consultations, professional photography, and listing on premier platforms, ensuring properties sell or rent quickly at the best possible prices.
-
-Agent Information:
-Name: Jessica
-Role: AI Real Estate Assistant
-Objective: Engage property owners about their selling or renting intentions and coordinate a meeting with our expert agents for property valuation and marketing strategy development.
-
-OBJECTION HANDLING INSTRUCTIONS
-
-Market Timing Concerns: Discuss the advantages of leveraging Majestic Estates' market insights for timing sales or rentals.
-
-Pricing Doubts: Advocate for a comprehensive valuation to establish a competitive yet profitable listing price.
-
-Service Comparison: Accentuate unique Majestic Estates services like staging advice and enhanced listings that competitors may lack.
-
-Commitment Hesitation: Underscore the informational, no-pressure nature of our initial consultations.
-
-Information Request: Share success stories of Majestic Estates’ efficacy in selling or renting properties.
-
-Concern About Low Offers: Stress efforts to secure the best offer, considering market conditions and property features.
-
-Worries About Property Condition: Suggest impactful, manageable improvements to enhance the property's appeal and worth.
-
-Questions About the Process: Promise a clear, guided experience through the sales or rental process.
-
-SCRIPT INSTRUCTIONS
-
-Initial Inquiry:
-Greet and introduce yourself, asking if they're considering selling or renting their property.
-
-Property Type Identification:
-Inquire whether it is a house or an apartment they are planning to sell or rent.
-
-Location Details:
-Ask for the property’s location to better understand the relevant market.
-
-Property Characteristics:
-Gather details on bedrooms, bathrooms, and total square footage.
-
-Improvements and Enhancements:
-Query any major home improvements that could influence valuation.
-
-Pricing Expectations:
-Discuss their valuation expectations or ideal selling/renting price.
-
-Minimum Price Acceptance:
-Discover if they have a minimum acceptable price for selling or renting.
-
-Information Summary and Accuracy Confirmation:
-Recap collected information for accuracy confirmation.
-
-Proposal for Market Analysis:
-Suggest providing a comprehensive market analysis based on the shared details and propose a follow-up meeting for a detailed discussion.
-
-Confirmation and Contact Information:
-Arrange the follow-up meeting and request the best email for sending confirmations and additional details.
-
-Closing and Appreciation:
-Close the call by thanking them and expressing forwardness to assisting them further.
-"""
+        "content": agentPrompt
     }]
 
     # Add recent conversation history
@@ -108,10 +43,10 @@ Close the call by thanking them and expressing forwardness to assisting them fur
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=100,
-            temperature=0.2,  # Balanced for natural responses
-            presence_penalty=0.1,
-            frequency_penalty=0.1
+            max_tokens=70,
+            temperature=0.3,  # Balanced for natural responses
+            presence_penalty=0.6,
+            frequency_penalty=0.4
         )
         
         reply = response.choices[0].message.content.strip()
@@ -141,6 +76,64 @@ Close the call by thanking them and expressing forwardness to assisting them fur
     except Exception as e:
         print(f"Error: {str(e)}")
         return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
+
+@app.route('/chat_stream', methods=['POST'])
+def chat_stream():
+    global conversation_history
+    user_input = request.json.get('message', '').strip()
+    
+    if not user_input:
+        return Response('data: {"reply": "I didn\'t catch that. Could you repeat?"}\n\n', mimetype='text/event-stream')
+
+    max_history = 30
+    recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
+
+    messages = [{
+        "role": "system",
+        "content": agentPrompt
+    }]
+    for msg in recent_history:
+        messages.append({"role": "user", "content": msg["user"]})
+        messages.append({"role": "assistant", "content": msg["assistant"]})
+    messages.append({"role": "user", "content": user_input})
+
+    def generate():
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=70,
+                temperature=0.3,
+                presence_penalty=0.6,
+                frequency_penalty=0.4,
+                stream=True
+            )
+            full_reply = ""
+            for chunk in response:
+                delta = chunk["choices"][0]["delta"].get("content", "")
+                if delta:
+                    full_reply += delta
+                    # Send as SSE event
+                    yield f"data: {{\"reply\": \"{delta.replace('\\', '\\\\').replace('"', '\\\"')}\"}}\n\n"
+            # Add to conversation history after streaming is done
+            conversation_history.append({
+                "user": user_input,
+                "assistant": full_reply,
+                "timestamp": datetime.now().isoformat()
+            })
+            if len(conversation_history) > 40:
+                conversation_history[:] = conversation_history[-40:]
+        except openai.error.RateLimitError:
+            yield 'data: {"reply": "Too many requests. Please wait a moment."}\n\n'
+        except openai.error.Timeout:
+            yield 'data: {"reply": "Request timed out. Please try again."}\n\n'
+        except openai.error.APIError as e:
+            yield 'data: {"reply": "Service temporarily unavailable."}\n\n'
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            yield 'data: {"reply": "Sorry, I\'m having trouble. Please try again."}\n\n'
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @app.route('/health')
 def health():
