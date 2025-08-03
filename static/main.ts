@@ -321,6 +321,8 @@ let isPlayingAudio = false;
 let audioContext: AudioContext | null = null;
 let audioBufferQueue: AudioBuffer[] = [];
 let isAudioPlaying = false;
+let audioPlaybackQueue: ArrayBuffer[] = [];
+let isPlayingQueue = false;
 let currentSource: AudioBufferSourceNode | null = null;
 let textChunks: string[] = [];
 let isBuffering = false;
@@ -331,6 +333,9 @@ const timerEl = document.getElementById('timer') as HTMLSpanElement;
 const voiceWaveContainer = document.getElementById('voiceWaveContainer') as HTMLDivElement;
 const hiddenTranscript = document.getElementById('hiddenTranscript') as HTMLDivElement;
 let currentSpeechAudio: HTMLAudioElement | null = null;
+let accumulatedSpeech = '';
+let lastSpeechTime = 0;
+
 function formatTime(secs: number): string {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
     const s = (secs % 60).toString().padStart(2, '0');
@@ -385,14 +390,26 @@ function startListening() {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.continuous = true;
+    
+    // Configure for better speech capture
+    if ('webkitSpeechRecognition' in window) {
+        (recognition as any).continuous = true;
+        (recognition as any).interimResults = true;
+        (recognition as any).maxAlternatives = 1;
+    }
+    
     isListening = true;
     isProcessing = false;
     let finalTranscript = '';
+    accumulatedSpeech = '';
+    lastSpeechTime = 0;
     let interimBubble: { update: (text: string) => void, remove: () => void, getText: () => string } | null = null;
+    let isUserSpeaking = false;
+    let speechPauseTimeout: number | null = null;
 
     recognition.onresult = (event: any) => {
-        // Clear all outstanding audio when user starts speaking
-        clearAllOutstandingAudio();
+        // Clear audio playback immediately when user starts speaking
+        clearAudioPlaybackOnly();
 
         let interim = '';
         let hasFinal = false;
@@ -401,7 +418,9 @@ function startListening() {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
                 finalTranscript += transcript;
+                accumulatedSpeech += transcript;
                 hasFinal = true;
+                lastSpeechTime = Date.now();
             } else {
                 interim += transcript;
             }
@@ -412,33 +431,50 @@ function startListening() {
             if (!interimBubble) {
                 interimBubble = addStreamingTranscript('You');
             }
-            interimBubble.update(interim);
-            setVoiceWaveActive(true); // Activate voice wave when speaking
+            // Combine accumulated speech with current interim for better display
+            const combinedInterim = (accumulatedSpeech + ' ' + interim).trim();
+            interimBubble.update(combinedInterim);
+            setVoiceWaveActive(true);
+            isUserSpeaking = true;
             
             // Clear any existing timeout when new speech is detected
             if (speechTimeout) {
                 clearTimeout(speechTimeout);
                 speechTimeout = null;
             }
+            if (speechPauseTimeout) {
+                clearTimeout(speechPauseTimeout);
+                speechPauseTimeout = null;
+            }
         }
 
-        // Process final transcript with 1-second delay to wait for complete thoughts
+        // Handle final transcript - accumulate but don't process immediately
         if (hasFinal && finalTranscript.trim()) {
             // Clear any existing timeout
             if (speechTimeout) {
                 clearTimeout(speechTimeout);
             }
             
-            // Set a 1-second timeout to wait for user to complete their thought
-            speechTimeout = window.setTimeout(() => {
-                // Process the final transcript after the delay
-                processUserInput(finalTranscript.trim());
-                finalTranscript = '';
-                speechTimeout = null;
-                
-                // Don't remove the interim bubble - let it stay for continuity
-                // The interim bubble will continue to show new words as they come in
-            }, 500); // 0.5 second delay
+            // Set a 1 second pause detection timeout for conversational flow
+            speechPauseTimeout = window.setTimeout(() => {
+                if (finalTranscript.trim().length > 0) {
+                    // Use the most complete speech available
+                    const speechToProcess = finalTranscript.trim();
+                    finalTranscript = '';
+                    
+                    if (speechToProcess.length > 0) {
+                        processUserInput(speechToProcess);
+                        accumulatedSpeech = '';
+                        // Clear any interim bubble to prevent duplicate processing
+                        const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
+                        if (interimBubbleElement) {
+                            interimBubbleElement.textContent = '';
+                        }
+                    }
+                }
+                speechPauseTimeout = null;
+                isUserSpeaking = false;
+            }, 1000); // Wait 1 second of silence before processing
         }
     };
 
@@ -455,27 +491,68 @@ function startListening() {
     recognition.onend = () => {
         isRecognitionActive = false;
         if (isListening && !isProcessing) {
-            // Only restart if not already active
-            if (!isRecognitionActive) {
+            // Restart recognition immediately if we're still supposed to be listening
+            if (!isRecognitionActive && isListening) {
                 // Preserve the current interim transcript before restarting
                 const currentInterimText = interimBubble ? interimBubble.getText() : '';
+                const currentFinalText = finalTranscript;
+                const currentAccumulatedSpeech = accumulatedSpeech;
                 
-                recognition?.start();
-                
-                // If we had interim text, make sure it's preserved
-                if (currentInterimText && interimBubble) {
-                    // Small delay to ensure recognition has restarted
-                    setTimeout(() => {
-                        if (interimBubble) {
-                            interimBubble.update(currentInterimText);
+                // Restart immediately to avoid gaps in speech capture
+                setTimeout(() => {
+                    if (isListening && !isRecognitionActive) {
+                        recognition?.start();
+                        
+                        // Restore interim text if we had one
+                        if (currentInterimText && interimBubble) {
+                            setTimeout(() => {
+                                if (interimBubble) {
+                                    interimBubble.update(currentInterimText);
+                                }
+                            }, 50);
                         }
-                    }, 100);
-                }
+                        
+                        // Restore final transcript and accumulated speech if we had any
+                        if (currentFinalText) {
+                            finalTranscript = currentFinalText;
+                        }
+                        if (currentAccumulatedSpeech) {
+                            accumulatedSpeech = currentAccumulatedSpeech;
+                        }
+                    }
+                }, 50); // Minimal delay to restart recognition
             }
         }
     };
 
     recognition.start();
+}
+
+// Function to clear only audio playback (not speech recognition)
+function clearAudioPlaybackOnly() {
+    // Stop any ongoing AI speech
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    // Stop current audio source if playing
+    if (currentSource) {
+        try {
+            currentSource.stop();
+            currentSource.disconnect();
+        } catch (e) {
+            console.log('Audio source already stopped');
+        }
+        currentSource = null;
+    }
+
+    // Clear audio buffer queue
+    audioBufferQueue = [];
+    audioPlaybackQueue = [];
+
+    // Reset audio playing state
+    isAudioPlaying = false;
+    isPlayingQueue = false;
+
+    console.log('Audio playback cleared');
 }
 
 // Function to clear all outstanding audio
@@ -496,9 +573,11 @@ function clearAllOutstandingAudio() {
 
     // Clear audio buffer queue
     audioBufferQueue = [];
+    audioPlaybackQueue = [];
 
     // Reset audio playing state
     isAudioPlaying = false;
+    isPlayingQueue = false;
 
     // Clear any remaining text chunks
     textChunks = [];
@@ -523,85 +602,205 @@ function stopListening() {
         }
     }
     
-    // Clear speech timeout and process any pending final transcript immediately
+    // Clear all timeouts
     if (speechTimeout) {
         clearTimeout(speechTimeout);
         speechTimeout = null;
-        
-        // If there's pending final transcript, process it immediately when stopping
-        if (finalTranscript && finalTranscript.trim()) {
-            processUserInput(finalTranscript.trim());
-            finalTranscript = '';
+    }
+    
+    // Process any remaining speech immediately (only if not already processed)
+    let speechToProcess = '';
+    
+    // Only process if we have unprocessed speech
+    if (accumulatedSpeech.trim() || finalTranscript.trim()) {
+        // Combine all available speech data
+        const allSpeech: string[] = [];
+        if (accumulatedSpeech && accumulatedSpeech.trim()) {
+            allSpeech.push(accumulatedSpeech.trim());
         }
+        if (finalTranscript && finalTranscript.trim()) {
+            allSpeech.push(finalTranscript.trim());
+        }
+        
+        // Check for interim text
+        const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
+        if (interimBubbleElement && interimBubbleElement.textContent && interimBubbleElement.textContent.trim()) {
+            const interimText = interimBubbleElement.textContent.trim();
+            if (interimText.length > 0) {
+                allSpeech.push(interimText);
+            }
+        }
+        
+        // Combine all speech and remove duplicates, ensuring complete capture
+        if (allSpeech.length > 0) {
+            // Remove duplicates while preserving order and getting the most complete version
+            const uniqueSpeech = allSpeech.filter((item, index) => allSpeech.indexOf(item) === index);
+            speechToProcess = uniqueSpeech.join(' ').replace(/\s+/g, ' ').trim();
+            console.log('Processing complete speech on stop:', speechToProcess);
+            
+            if (speechToProcess.length > 0) {
+                processUserInput(speechToProcess);
+            }
+        }
+    }
+    
+    // Clear all speech data
+    finalTranscript = '';
+    accumulatedSpeech = '';
+    const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
+    if (interimBubbleElement) {
+        interimBubbleElement.textContent = '';
     }
     
     console.log('Listening stopped');
 }
 
+// Cartesia TTS functions
 async function speak(text: string) {
-    const response = await fetch('https://api.sws.speechify.com/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Bearer fsMaQJ15FuAGsz5jwm_qNR7V-gCZ8Jp-rZxq5Ytwh4s=',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            input: text,
-            voice_id: 'steven',
-            audio_format: 'mp3'
-        })
-    });
-    const data = await response.json();
-    playBase64Audio(data.audio_data, 'mp3');
-}
-
-// New streaming speak function using Speechify's stream API
-async function speakStream(text: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        fetch('https://api.sws.speechify.com/v1/audio/stream', {
+    try {
+        const response = await fetch('/tts', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer fsMaQJ15FuAGsz5jwm_qNR7V-gCZ8Jp-rZxq5Ytwh4s=',
-                'Accept': 'audio/mpeg',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                input: text,
-                voice_id: 'steven'
-            })
+            body: JSON.stringify({ text })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        await playBase64Audio(data.audio_data, 'pcm_f32le', data.sample_rate);
+    } catch (error) {
+        console.error('Cartesia TTS error:', error);
+        // Fallback to browser speech synthesis
+        if (window.speechSynthesis) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+}
+
+// Streaming TTS using Cartesia
+async function speakStream(text: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        fetch('/tts_stream', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
         }).then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            // Convert stream to blob and play
-            response.blob().then(blob => {
-                const audioUrl = URL.createObjectURL(blob);
-                const audio = new Audio(audioUrl);
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let audioChunks: Uint8Array[] = [];
 
-                audio.onended = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    resolve();
-                };
+            async function read() {
+                try {
+                    const { done, value } = await reader!.read();
+                    if (done) {
+                        // Combine all audio chunks and play
+                        if (audioChunks.length > 0) {
+                            const combinedAudio = new Uint8Array(audioChunks.reduce((acc, chunk) => acc + chunk.length, 0));
+                            let offset = 0;
+                            for (const chunk of audioChunks) {
+                                combinedAudio.set(chunk, offset);
+                                offset += chunk.length;
+                            }
+                            await playAudioBuffer(combinedAudio.buffer, 44100);
+                        }
+                        resolve();
+                        return;
+                    }
 
-                audio.onerror = (err) => {
-                    URL.revokeObjectURL(audioUrl);
-                    reject(err);
-                };
+                    buffer += decoder.decode(value, { stream: true });
+                    let lines = buffer.split(/\r?\n/);
+                    buffer = lines.pop() || '';
 
-                audio.play().catch(reject);
-            }).catch(reject);
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const payload = JSON.parse(line.slice(6));
+                                if (payload.audio_chunk) {
+                                    const audioData = Uint8Array.from(atob(payload.audio_chunk), c => c.charCodeAt(0));
+                                    audioChunks.push(audioData);
+                                } else if (payload.status === 'complete') {
+                                    // Audio streaming complete
+                                } else if (payload.error) {
+                                    reject(new Error(payload.error));
+                                }
+                            } catch (e) {
+                                // Ignore JSON parse errors
+                            }
+                        }
+                    }
+                    read();
+                } catch (error) {
+                    reject(error);
+                }
+            }
+            read();
         }).catch(reject);
     });
 }
 
-function playBase64Audio(base64: string, format: string = 'mp3') {
+async function playBase64Audio(base64: string, format: string = 'pcm_f32le', sampleRate: number = 44100) {
     if (currentSpeechAudio) {
         currentSpeechAudio.pause();
         currentSpeechAudio.currentTime = 0;
     }
-    currentSpeechAudio = new Audio(`data:audio/${format};base64,${base64}`);
-    currentSpeechAudio.play();
+    
+    // Convert base64 to audio buffer and play
+    const audioData = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    await playAudioBuffer(audioData.buffer, sampleRate);
+}
+
+async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    // Resume audio context if it's suspended (required for autoplay policies)
+    if (audioContext.state === 'suspended') {
+        try {
+            await audioContext.resume();
+        } catch (error) {
+            console.error('Failed to resume audio context:', error);
+            return;
+        }
+    }
+
+    try {
+        // For raw PCM data, we need to create an AudioBuffer manually
+        const audioBuffer = audioContext.createBuffer(1, buffer.byteLength / 4, sampleRate); // 4 bytes per float32
+        const channelData = audioBuffer.getChannelData(0);
+        
+        // Copy the PCM data to the audio buffer
+        const view = new Float32Array(buffer);
+        channelData.set(view);
+        
+        if (currentSource) {
+            currentSource.stop();
+            currentSource.disconnect();
+        }
+
+        currentSource = audioContext.createBufferSource();
+        currentSource.buffer = audioBuffer;
+        currentSource.connect(audioContext.destination);
+        currentSource.start();
+        
+        console.log('Raw PCM audio playback started successfully');
+    } catch (error) {
+        console.error('Error playing raw PCM audio:', error);
+    }
 }
 
 function processUserInput(text: string) {
@@ -658,10 +857,13 @@ function processUserInput(text: string) {
 // Determine if we should create a chunk based only on natural sentence boundaries
 function shouldCreateChunk(text: string): boolean {
     // Create chunk if we hit sentence boundaries (., !, ?)
-    if (/[.?]\s*$/.test(text)) return true;
+    if (/[.!?]\s*$/.test(text)) return true;
 
     // Create chunk if we have a natural pause (comma followed by space)
     if (/, \s*$/.test(text)) return true;
+
+    // Create chunk if we have a substantial amount of text (prevent very long chunks)
+    if (text.length > 150) return true; // Reduced from 200 to 150 for faster processing
 
     return false;
 }
@@ -681,198 +883,147 @@ function splitIntoNaturalChunks(text: string): string[] {
         return [trimmedText];
     }
 
+    // If text is very long, split at the last sentence boundary
+    if (trimmedText.length > 150) { // Reduced from 200 to 150
+        const lastSentenceMatch = trimmedText.match(/.*[.!?]\s*$/);
+        if (lastSentenceMatch) {
+            return [lastSentenceMatch[0].trim()];
+        }
+    }
+
     // If no natural boundary, don't create a chunk yet
     return [];
 }
 
-// Add Speechify SDK script to the page
-function loadSpeechifySDK() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.speechify.com/sdk/v1/speechify.js';
-    script.onload = () => {
-        console.log('Speechify SDK loaded');
-        initializeSpeechify();
-    };
-    document.head.appendChild(script);
-}
+// Audio queue system for sequential playback
 
-// Initialize Speechify SDK
-function initializeSpeechify() {
-    if (typeof (window as any).Speechify !== 'undefined') {
-        (window as any).Speechify.init({
-            apiKey: 'fsMaQJ15FuAGsz5jwm_qNR7V-gCZ8Jp-rZxq5Ytwh4s='
-        });
+async function playNextInQueue() {
+    if (audioPlaybackQueue.length === 0 || isPlayingQueue) return;
+    
+    isPlayingQueue = true;
+    
+    while (audioPlaybackQueue.length > 0) {
+        const audioBuffer = audioPlaybackQueue.shift()!;
+        try {
+            await playAudioBuffer(audioBuffer, 44100);
+            
+            // Wait for audio to finish before playing next
+            if (currentSource) {
+                await new Promise<void>((resolve) => {
+                    currentSource!.onended = () => resolve();
+                });
+            }
+        } catch (error) {
+            console.error('Error playing audio from queue:', error);
+        }
     }
+    
+    isPlayingQueue = false;
 }
 
-// Load SDK when page loads
-loadSpeechifySDK();
-
-// Replace the API-based audio function with SDK-based approach
-async function getAudioBufferFromSpeechify(text: string): Promise<AudioBuffer> {
-    return new Promise((resolve, reject) => {
-        if (typeof (window as any).Speechify === 'undefined') {
-            reject(new Error('Speechify SDK not loaded'));
-            return;
-        }
-
-        (window as any).Speechify.speak({
-            text: text,
-            voice: 'steven',
-            format: 'mp3',
-            onStart: () => {
-                console.log('Audio started for:', text);
-            },
-            onEnd: () => {
-                console.log('Audio ended for:', text);
-            },
-            onError: (error: any) => {
-                console.error('Speechify error:', error);
-                reject(error);
-            }
-        }).then((audioBuffer: AudioBuffer) => {
-            resolve(audioBuffer);
-        }).catch(reject);
-    });
-}
-
-// Alternative: Use SDK's streaming method for better sync
-async function speakWithSDK(text: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (typeof (window as any).Speechify === 'undefined') {
-            reject(new Error('Speechify SDK not loaded'));
-            return;
-        }
-
-        (window as any).Speechify.stream({
-            text: text,
-            voice: 'steven',
-            onChunk: (chunk: any) => {
-                // Handle streaming audio chunks
-                if (audioContext) {
-                    audioContext.decodeAudioData(chunk).then(audioBuffer => {
-                        audioBufferQueue.push(audioBuffer);
-
-                        // Start playing immediately when we have the first audio buffer
-                        if (audioBufferQueue.length === 1 && !isAudioPlaying) {
-                            startContinuousAudioPlayback();
-                        }
-                    });
-                }
-            },
-            onComplete: () => {
-                resolve();
-            },
-            onError: (error: any) => {
-                reject(error);
-            }
-        });
-    });
-}
-
-// Update the pre-buffering system to use SDK
+// Update the pre-buffering system to use Cartesia with proper queuing
 async function startPreBuffering() {
     if (isBuffering) return;
     isBuffering = true;
 
     while (textChunks.length > 0) {
-        // Take up to 3 chunks for buffering
-        const chunksToBuffer = textChunks.splice(0, 3);
+        // Take up to 2 chunks for buffering (reduced from 3 for faster processing)
+        const chunksToBuffer = textChunks.splice(0, 2);
 
-        // Process chunks and start playing immediately when first is ready
+        // Process chunks and add to audio queue
         for (let i = 0; i < chunksToBuffer.length; i++) {
             const chunk = chunksToBuffer[i];
             try {
-                await speakWithSDK(chunk);
-
-                // Start playing immediately when we have the first audio buffer
-                if (audioBufferQueue.length === 1 && !isAudioPlaying) {
-                    startContinuousAudioPlayback();
+                // Get audio data and add to queue instead of playing immediately
+                const audioBuffer = await getAudioBuffer(chunk);
+                audioPlaybackQueue.push(audioBuffer);
+                
+                // Start playing queue if not already playing
+                if (!isPlayingQueue) {
+                    playNextInQueue();
                 }
             } catch (err) {
-                console.error('Speechify SDK error:', err);
-                // Fallback to API if SDK fails
+                console.error('Cartesia TTS error:', err);
+                // Fallback to simple speak function
                 try {
-                    const audioBuffer = await getAudioBufferFromSpeechifyAPI(chunk);
-                    audioBufferQueue.push(audioBuffer);
-
-                    // Start playing immediately when we have the first audio buffer
-                    if (audioBufferQueue.length === 1 && !isAudioPlaying) {
-                        startContinuousAudioPlayback();
-                    }
-                } catch (apiErr) {
-                    console.error('API fallback error:', apiErr);
+                    await speak(chunk);
+                } catch (fallbackErr) {
+                    console.error('Fallback TTS error:', fallbackErr);
                 }
             }
         }
-
-        // Reduced delay for SDK
-        await new Promise(resolve => setTimeout(resolve, 20));
     }
 
     isBuffering = false;
 }
 
-// Keep the original API function as fallback
-async function getAudioBufferFromSpeechifyAPI(text: string): Promise<AudioBuffer> {
+// Helper function to get audio buffer without playing
+async function getAudioBuffer(text: string): Promise<ArrayBuffer> {
     return new Promise((resolve, reject) => {
-        fetch('https://api.sws.speechify.com/v1/audio/stream', {
+        fetch('/tts_stream', {
             method: 'POST',
             headers: {
-                'Authorization': 'Bearer fsMaQJ15FuAGsz5jwm_qNR7V-gCZ8Jp-rZxq5Ytwh4s=',
-                'Accept': 'audio/mpeg',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                input: text,
-                voice_id: 'steven'
-            })
+            body: JSON.stringify({ text })
         }).then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            response.arrayBuffer().then(buffer => {
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                }
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            let audioChunks: Uint8Array[] = [];
 
-                audioContext.decodeAudioData(buffer).then(resolve).catch(reject);
-            }).catch(reject);
+            async function read() {
+                try {
+                    const { done, value } = await reader!.read();
+                    if (done) {
+                        // Combine all audio chunks and return buffer
+                        if (audioChunks.length > 0) {
+                            const combinedAudio = new Uint8Array(audioChunks.reduce((acc, chunk) => acc + chunk.length, 0));
+                            let offset = 0;
+                            for (const chunk of audioChunks) {
+                                combinedAudio.set(chunk, offset);
+                                offset += chunk.length;
+                            }
+                            resolve(combinedAudio.buffer);
+                        } else {
+                            reject(new Error('No audio data received'));
+                        }
+                        return;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    let lines = buffer.split(/\r?\n/);
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const payload = JSON.parse(line.slice(6));
+                                if (payload.audio_chunk) {
+                                    const audioData = Uint8Array.from(atob(payload.audio_chunk), c => c.charCodeAt(0));
+                                    audioChunks.push(audioData);
+                                } else if (payload.status === 'complete') {
+                                    // Audio streaming complete
+                                } else if (payload.error) {
+                                    reject(new Error(payload.error));
+                                }
+                            } catch (e) {
+                                // Ignore JSON parse errors
+                            }
+                        }
+                    }
+                    read();
+                } catch (error) {
+                    reject(error);
+                }
+            }
+            read();
         }).catch(reject);
     });
-}
-
-function startContinuousAudioPlayback() {
-    if (isAudioPlaying || audioBufferQueue.length === 0 || !audioContext) return;
-
-    isAudioPlaying = true;
-    playNextAudioBuffer();
-}
-
-function playNextAudioBuffer() {
-    if (audioBufferQueue.length === 0) {
-        isAudioPlaying = false;
-        return;
-    }
-
-    const audioBuffer = audioBufferQueue.shift();
-    if (!audioBuffer || !audioContext) return;
-
-    currentSource = audioContext.createBufferSource();
-    currentSource.buffer = audioBuffer;
-    currentSource.connect(audioContext.destination);
-
-    currentSource.onended = () => {
-        // Immediately play next buffer if available
-        if (audioBufferQueue.length > 0) {
-            playNextAudioBuffer();
-        } else {
-            isAudioPlaying = false;
-        }
-    };
-
-    currentSource.start();
 }
 
 // Helper to add a transcript item and allow updating its content (hidden)
@@ -970,71 +1121,46 @@ function setVoiceWaveActive(active: boolean) {
     });
 }
 
-// Show final transcript in a modal
-function showFinalTranscript() {
-    // Create modal overlay
-    const modal = document.createElement('div');
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100vw';
-    modal.style.height = '100vh';
-    modal.style.background = 'rgba(0,0,0,0.8)';
-    modal.style.zIndex = '1000';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.padding = '20px';
+// Navigate to analysis page with transcript data
+function navigateToAnalysis() {
+    // Store transcript in sessionStorage
+    sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
+    
+    // Navigate to analysis page
+    window.location.href = '/analysis.html';
+}
 
-    // Create modal content
-    const modalContent = document.createElement('div');
-    modalContent.style.background = 'white';
-    modalContent.style.borderRadius = '16px';
-    modalContent.style.padding = '32px';
-    modalContent.style.maxWidth = '800px';
-    modalContent.style.maxHeight = '80vh';
-    modalContent.style.overflowY = 'auto';
-    modalContent.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
-
-    // Create transcript content
-    const transcriptContent = document.createElement('div');
-    transcriptContent.innerHTML = `
-        <h2 style="margin: 0 0 24px 0; color: #23272f; font-size: 24px; font-weight: 600;">Conversation Transcript</h2>
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-            ${transcriptHistory.map(item => `
-                <div style="display: flex; gap: 12px; align-items: flex-start;">
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: ${item.sender === 'AI' ? '#e0e7ef' : '#fbeee0'}; display: flex; align-items: center; justify-content: center; font-size: 16px; color: ${item.sender === 'AI' ? '#2563eb' : '#eab308'}; flex-shrink: 0;">
-                        ${item.sender === 'AI' ? '🤖' : '🧑'}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="background: ${item.sender === 'AI' ? '#f8fafc' : '#fefefe'}; border: 1px solid ${item.sender === 'AI' ? '#e2e8f0' : '#f1f5f9'}; border-radius: 12px; padding: 16px; margin-bottom: 4px;">
-                            ${item.text}
-                        </div>
-                        <div style="font-size: 12px; color: #64748b; text-align: right;">
-                            ${item.sender} • ${item.time}
-                        </div>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-        <div style="margin-top: 24px; text-align: center;">
-            <button onclick="this.closest('.modal-overlay').remove()" style="background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500;">
-                Close Transcript
-            </button>
-        </div>
-    `;
-
-    modalContent.appendChild(transcriptContent);
-    modal.appendChild(modalContent);
-    modal.className = 'modal-overlay';
-    document.body.appendChild(modal);
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
+// Calculate confidence score based on conversation quality
+function calculateConfidence(transcript: { sender: 'AI' | 'You', text: string, time: string }[]): number {
+    if (transcript.length === 0) return 0;
+    
+    let score = 0;
+    let totalExchanges = transcript.length;
+    
+    // Base score for having a conversation
+    score += 20;
+    
+    // Points for each exchange (up to 50 points)
+    score += Math.min(totalExchanges * 2, 50);
+    
+    // Points for longer responses (indicates engagement)
+    const userResponses = transcript.filter(t => t.sender === 'You');
+    const avgResponseLength = userResponses.reduce((sum, t) => sum + t.text.length, 0) / userResponses.length || 0;
+    
+    if (avgResponseLength > 50) score += 15;
+    else if (avgResponseLength > 20) score += 10;
+    else if (avgResponseLength > 10) score += 5;
+    
+    // Points for conversation flow (AI responses after user responses)
+    let flowScore = 0;
+    for (let i = 1; i < transcript.length; i++) {
+        if (transcript[i-1].sender === 'You' && transcript[i].sender === 'AI') {
+            flowScore += 2;
         }
-    });
+    }
+    score += Math.min(flowScore, 15);
+    
+    return Math.min(score, 100);
 }
 
 let isChatActive = false;
@@ -1047,7 +1173,7 @@ micBtn.onclick = () => {
         resetTranscript();
         startTimer();
         setVoiceWaveActive(true); // Activate voice wave animation
-        const welcome = "Hello! How can I help you today?";
+        const welcome ="Hey, who's this?"
         addTranscript('AI', welcome);
         speak(welcome);
         startListening();
@@ -1064,10 +1190,10 @@ micBtn.onclick = () => {
         micBtn.style.background = 'rgba(37,99,235,0.95)';
         isChatActive = false;
         
-        // Show final transcript after a short delay
+        // Navigate to analysis page after a short delay
         setTimeout(() => {
             if (transcriptHistory.length > 0) {
-                showFinalTranscript();
+                navigateToAnalysis();
             }
         }, 500);
     }
@@ -1077,4 +1203,16 @@ micBtn.onclick = () => {
 micBtn.innerHTML = micIcon;
 micBtn.style.background = 'rgba(37,99,235,0.95)';
 isChatActive = false;
-setRecordingIndicator(false); 
+setRecordingIndicator(false);
+
+// Add user interaction handler to resume AudioContext
+document.addEventListener('click', async () => {
+    if (audioContext && audioContext.state === 'suspended') {
+        try {
+            await audioContext.resume();
+            console.log('AudioContext resumed on user interaction');
+        } catch (error) {
+            console.error('Failed to resume AudioContext:', error);
+        }
+    }
+}, { once: true }); 
