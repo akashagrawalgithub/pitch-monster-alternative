@@ -284,7 +284,7 @@ function createUI() {
     document.head.appendChild(style);
 
     // Add ocean waves (hidden by default)
-    function showOceanAnimation(active) {
+    function showOceanAnimation(active: boolean) {
         ocean.innerHTML = '';
         if (active) {
             for (let i = 0; i < 2; i++) {
@@ -302,7 +302,7 @@ function createUI() {
         }
     }
     // Expose for use in setRecordingIndicator
-    window['showOceanAnimation'] = showOceanAnimation;
+    (window as any)['showOceanAnimation'] = showOceanAnimation;
 }
 
 // --- Logic (same as before, but query elements after UI creation) ---
@@ -327,6 +327,15 @@ let currentSource: AudioBufferSourceNode | null = null;
 let textChunks: string[] = [];
 let isBuffering = false;
 let finalTranscript = '';
+
+// Audio recording variables
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+let isRecording = false;
+let recordingStream: MediaStream | null = null;
+let recordingStartTime = 0;
+let audioDestination: MediaStreamAudioDestinationNode | null = null;
+let audioSource: MediaStreamAudioSourceNode | null = null;
 
 const micBtn = document.getElementById('micBtn') as HTMLButtonElement;
 const timerEl = document.getElementById('timer') as HTMLSpanElement;
@@ -410,6 +419,9 @@ function startListening() {
     recognition.onresult = (event: any) => {
         // Clear audio playback immediately when user starts speaking
         clearAudioPlaybackOnly();
+        
+        // Handle user interruption (recording continues)
+        handleUserInterruption();
 
         let interim = '';
         let hasFinal = false;
@@ -555,6 +567,11 @@ function clearAudioPlaybackOnly() {
     console.log('Audio playback cleared');
 }
 
+// Function to handle user interruption (no longer stops recording)
+function handleUserInterruption() {
+    console.log('User interrupted AI, continuing recording');
+}
+
 // Function to clear all outstanding audio
 function clearAllOutstandingAudio() {
     // Stop any ongoing AI speech
@@ -679,6 +696,13 @@ async function speak(text: string) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.9;
             utterance.pitch = 1.0;
+            
+            // For browser speech synthesis, we need to capture it differently
+            // since it doesn't go through our audio context
+            if (isRecording) {
+                console.log('Using browser speech synthesis - audio will be captured via microphone');
+            }
+            
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -752,7 +776,7 @@ async function speakStream(text: string): Promise<void> {
     });
 }
 
-async function playBase64Audio(base64: string, format: string = 'pcm_f32le', sampleRate: number = 44100) {
+async function playBase64Audio(base64: string, _format: string = 'pcm_f32le', sampleRate: number = 44100) {
     if (currentSpeechAudio) {
         currentSpeechAudio.pause();
         currentSpeechAudio.currentTime = 0;
@@ -794,7 +818,13 @@ async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
 
         currentSource = audioContext.createBufferSource();
         currentSource.buffer = audioBuffer;
+        
+        // Connect to both speakers and recording destination
         currentSource.connect(audioContext.destination);
+        if (audioDestination && isRecording) {
+            currentSource.connect(audioDestination);
+        }
+        
         currentSource.start();
         
         console.log('Raw PCM audio playback started successfully');
@@ -807,6 +837,7 @@ function processUserInput(text: string) {
     if (isProcessing) return;
     isProcessing = true;
     addTranscript('You', text);
+    
     // Streaming version using /chat_stream and SSE
     const aiTranscript = addStreamingTranscript('AI');
     let fullReply = '';
@@ -919,6 +950,11 @@ async function playNextInQueue() {
     }
     
     isPlayingQueue = false;
+    
+    // Check if AI has finished speaking after queue is empty
+    setTimeout(() => {
+        checkAIFinishedSpeaking();
+    }, 500);
 }
 
 // Update the pre-buffering system to use Cartesia with proper queuing
@@ -955,6 +991,13 @@ async function startPreBuffering() {
     }
 
     isBuffering = false;
+}
+
+// Function to check if AI has finished speaking (no longer stops recording)
+function checkAIFinishedSpeaking() {
+    if (!isBuffering && audioPlaybackQueue.length === 0 && !isPlayingQueue) {
+        console.log('AI finished speaking, recording continues');
+    }
 }
 
 // Helper function to get audio buffer without playing
@@ -1095,7 +1138,7 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
     });
 }
 
-function setRecordingIndicator(active) {
+function setRecordingIndicator(active: boolean) {
     const dot = document.getElementById('recordingDot');
     if (dot) {
         if (active) {
@@ -1104,8 +1147,8 @@ function setRecordingIndicator(active) {
             dot.classList.remove('active');
         }
     }
-    if (window['showOceanAnimation']) {
-        window['showOceanAnimation'](active);
+    if ((window as any)['showOceanAnimation']) {
+        (window as any)['showOceanAnimation'](active);
     }
 }
 
@@ -1121,13 +1164,121 @@ function setVoiceWaveActive(active: boolean) {
     });
 }
 
-// Navigate to analysis page with transcript data
+// Start audio recording
+async function startAudioRecording() {
+    try {
+        // Get user's microphone stream
+        const userStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 44100
+            } 
+        });
+        
+        // Create audio context for mixing user and AI audio
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        
+        // Create audio destination to capture all audio
+        audioDestination = audioContext.createMediaStreamDestination();
+        
+        // Create source from user's microphone
+        audioSource = audioContext.createMediaStreamSource(userStream);
+        audioSource.connect(audioDestination);
+        
+        // Try different MIME types for better browser compatibility
+        let mimeType = 'audio/webm;codecs=opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/webm';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/mp4';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/ogg;codecs=opus';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/wav';
+        }
+        
+        console.log('Using MIME type for recording:', mimeType);
+        
+        // Create MediaRecorder from the destination stream
+        mediaRecorder = new MediaRecorder(audioDestination.stream, {
+            mimeType: mimeType
+        });
+        
+        audioChunks = [];
+        isRecording = true;
+        recordingStartTime = Date.now();
+        
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
+        };
+        
+        mediaRecorder.onstop = () => {
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: mimeType });
+                
+                // Store recording duration
+                const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
+                sessionStorage.setItem('recordingDuration', recordingDuration.toString());
+                
+                // Convert blob to base64 for storage
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result as string;
+                    sessionStorage.setItem('hasRecording', 'true');
+                    sessionStorage.setItem('conversationRecording', base64Data);
+                    console.log('Audio recording saved to sessionStorage, duration:', recordingDuration);
+                };
+                reader.readAsDataURL(audioBlob);
+            }
+            
+            // Clean up
+            if (audioSource) {
+                audioSource.disconnect();
+                audioSource = null;
+            }
+            if (audioDestination) {
+                audioDestination.disconnect();
+                audioDestination = null;
+            }
+            if (userStream) {
+                userStream.getTracks().forEach(track => track.stop());
+            }
+        };
+        
+        mediaRecorder.start(1000); // Collect data every second
+        console.log('Audio recording started - will capture both user and AI audio');
+        
+    } catch (error) {
+        console.error('Error starting audio recording:', error);
+        alert('Could not access microphone for recording. Please allow microphone access and try again.');
+    }
+}
+
+// Stop audio recording
+function stopAudioRecording() {
+    if (mediaRecorder && isRecording) {
+        isRecording = false;
+        mediaRecorder.stop();
+        console.log('Audio recording stopped');
+    }
+}
+
+// Navigate to success page with transcript data
 function navigateToAnalysis() {
     // Store transcript in sessionStorage
     sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
     
-    // Navigate to analysis page
-    window.location.href = '/analysis.html';
+    // Navigate to success page first, which will redirect to analysis after 3 seconds
+    window.location.href = '/success.html';
 }
 
 // Calculate confidence score based on conversation quality
@@ -1173,6 +1324,10 @@ micBtn.onclick = () => {
         resetTranscript();
         startTimer();
         setVoiceWaveActive(true); // Activate voice wave animation
+        
+        // Start audio recording
+        startAudioRecording();
+        
         const welcome ="Hey, who's this?"
         addTranscript('AI', welcome);
         speak(welcome);
@@ -1186,6 +1341,13 @@ micBtn.onclick = () => {
         stopListening();
         stopTimer();
         setVoiceWaveActive(false); // Deactivate voice wave animation
+        
+        // Stop audio recording only when user clicks mic_off
+        if (isRecording) {
+            console.log('User stopped conversation, stopping audio recording');
+            stopAudioRecording();
+        }
+        
         micBtn.innerHTML = micIcon;
         micBtn.style.background = 'rgba(37,99,235,0.95)';
         isChatActive = false;
@@ -1204,6 +1366,16 @@ micBtn.innerHTML = micIcon;
 micBtn.style.background = 'rgba(37,99,235,0.95)';
 isChatActive = false;
 setRecordingIndicator(false);
+
+// Set up periodic check for AI speaking status (no longer stops recording)
+setInterval(() => {
+    if (!isBuffering && audioPlaybackQueue.length === 0 && !isPlayingQueue) {
+        // Double-check that we're not in the middle of processing
+        if (!isProcessing) {
+            console.log('Periodic check: AI finished speaking, recording continues');
+        }
+    }
+}, 3000); // Check every 3 seconds
 
 // Add user interaction handler to resume AudioContext
 document.addEventListener('click', async () => {

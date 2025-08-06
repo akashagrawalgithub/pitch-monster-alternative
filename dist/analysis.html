@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Training Analysis Report</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Left Sidebar - Chat Transcript */
+        .transcript-sidebar {
+            width: 23%;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .transcript-header {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+
+        .session-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .session-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .session-details h3 {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .session-details p {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .session-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 8px;
+        }
+
+        .transcript-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .transcript-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .transcript-item.ai {
+            flex-direction: row;
+        }
+
+        .transcript-item.you {
+            flex-direction: row-reverse;
+        }
+
+        .transcript-avatar-small {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .transcript-item.ai .transcript-avatar-small {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .transcript-item.you .transcript-avatar-small {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .transcript-content {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px 18px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 280px;
+            word-wrap: break-word;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .transcript-item.you .transcript-content {
+            background: #fefefe;
+            border: 1px solid #f1f5f9;
+        }
+
+        .transcript-meta {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 6px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .transcript-item.you .transcript-meta {
+            text-align: left;
+        }
+
+        /* Voice Recording Player */
+        .recording-player {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        .play-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .audio-progress {
+            flex: 1;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .audio-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .audio-time {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 32px;
+            padding: 12px 20px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(37, 99, 235, 0.15);
+            transform: translateX(-4px);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 32px;
+            padding: 0;
+        }
+
+        .report-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .session-details-main {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .scenario-badge {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .overall-score {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: #1e293b;
+        }
+
+        .score-value {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .score-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .practice-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .practice-btn:hover {
+            background: #1d4ed8;
+        }
+
+        /* Key Metrics Grid */
+        .key-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+
+        .metric-card:hover {
+            border-color: #cbd5e1;
+        }
+
+        .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 18px;
+        }
+
+        .metric-card.conversation-time .metric-icon {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .metric-card.exchanges .metric-icon {
+            background: #e9d5ff;
+            color: #7c3aed;
+        }
+
+        .metric-card.avg-response .metric-icon {
+            background: #fed7aa;
+            color: #d97706;
+        }
+
+        .metric-value {
+            font-size: 22px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        /* Analysis Sections */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+
+        .analysis-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .audio-analysis .section-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .ai-ratings .section-icon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* Audio Analysis Metrics */
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .metric-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .metric-label-detailed {
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .metric-description {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .metric-bar {
+            width: 120px;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .metric-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+
+        .metric-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        .metric-fill.grammar { background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
+        .metric-fill.fluency { background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%); }
+        .metric-fill.hesitation { background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%); }
+        .metric-fill.pace { background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%); }
+        .metric-fill.enthusiasm { background: linear-gradient(90deg, #ec4899 0%, #db2777 100%); }
+        .metric-fill.clarity { background: linear-gradient(90deg, #10b981 0%, #059669 100%); }
+
+        .metric-value-detailed {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1e293b;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        /* AI Ratings */
+        .rating-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .rating-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .rating-label {
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .rating-description {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 4px;
+        }
+
+        .star {
+            font-size: 18px;
+            color: #e2e8f0;
+            transition: color 0.2s;
+        }
+
+        .star.filled {
+            color: #fbbf24;
+        }
+
+        .rating-score {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-left: 12px;
+        }
+
+        /* Insights Section */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+
+        .insights-section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .strengths .section-icon {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .improvements .section-icon {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .insights-list {
+            list-style: none;
+        }
+
+        .insights-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .insights-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #22c55e;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .improvements .insights-list li::before {
+            content: '⚠';
+            color: #ef4444;
+        }
+
+        /* Conversation Flow Analysis */
+        .conversation-flow {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 24px;
+            position: relative;
+        }
+
+        .flow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e2e8f0;
+            z-index: 1;
+        }
+
+        .flow-step:last-child::after {
+            display: none;
+        }
+
+        .flow-step.completed::after {
+            background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+        }
+
+        .flow-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .flow-step.completed .flow-icon {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        }
+
+        .flow-step.partial .flow-icon {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .flow-step.missed .flow-icon {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .flow-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .flow-score {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-top: 4px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .transcript-sidebar {
+                width: 260px;
+            }
+            
+            .key-metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .transcript-sidebar {
+                width: 100%;
+                height: 400px;
+                border-right: none;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            }
+            
+            .key-metrics {
+                grid-template-columns: 1fr;
+            }
+            
+            .flow-steps {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .flow-step::after {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .report-header {
+                flex-direction: column;
+                gap: 24px;
+            }
+            
+            .overall-score {
+                align-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar - Chat Transcript -->
+        <div class="transcript-sidebar">
+            <div class="transcript-header">
+                <div class="session-info">
+                    <div class="session-avatar">🎯</div>
+                    <div class="session-details">
+                        <h3 id="sessionTitle">Sales Training Session</h3>
+                        <p id="sessionType">Conversation Analysis</p>
+                    </div>
+                </div>
+                <div class="session-stats">
+                    <span id="sessionDuration">Duration: --</span>
+                    <span id="sessionExchanges">Exchanges: --</span>
+                </div>
+            </div>
+            
+            <!-- Voice Recording Player -->
+            <div class="recording-player" id="recordingPlayer" style="display: none;">
+                <div class="audio-controls">
+                    <button class="play-btn" id="playBtn">
+                        <span class="material-icons" id="playIcon">play_arrow</span>
+                    </button>
+                    <div class="audio-progress" id="audioProgress">
+                        <div class="audio-progress-fill" id="audioProgressFill"></div>
+                    </div>
+                    <div class="audio-time" id="audioTime">00:00</div>
+                </div>
+            </div>
+            
+            <div class="transcript-list" id="transcriptList">
+                <!-- Transcript items will be populated here -->
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <div class="report-header">
+                <div>
+                    <div class="session-details-main">
+                        <span id="sessionDate">Session completed on --</span>
+                        <span>•</span>
+                        <span id="sessionConfidence" style="color: #10b981; font-weight: 500;">Confidence: --</span>
+                    </div>
+                </div>
+                <div class="overall-score">
+                    <div>
+                        <div class="score-value" id="overallScore">Overall Score: --</div>
+                    </div>
+                    <button class="practice-btn">Practice Again</button>
+                </div>
+            </div>
+
+            <!-- Conversation Flow Analysis -->
+            <div class="conversation-flow">
+                <div class="section-header">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white;">
+                        <span class="material-icons">timeline</span>
+                    </div>
+                    <h3 class="section-title">Sales Process Flow</h3>
+                </div>
+                <div class="flow-steps">
+                    <div class="flow-step" id="introStep">
+                        <div class="flow-icon">
+                            <span class="material-icons">person_add</span>
+                        </div>
+                        <div class="flow-label">Introduction</div>
+                        <div class="flow-score">--</div>
+                    </div>
+                    
+                    <div class="flow-step" id="discoveryStep">
+                        <div class="flow-icon">
+                            <span class="material-icons">search</span>
+                        </div>
+                        <div class="flow-label">Discovery</div>
+                        <div class="flow-score">--</div>
+                    </div>
+                    
+                    <div class="flow-step" id="presentationStep">
+                        <div class="flow-icon">
+                            <span class="material-icons">present_to_all</span>
+                        </div>
+                        <div class="flow-label">Presentation</div>
+                        <div class="flow-score">--</div>
+                    </div>
+                    
+                    <div class="flow-step" id="objectionStep">
+                        <div class="flow-icon">
+                            <span class="material-icons">support_agent</span>
+                        </div>
+                        <div class="flow-label">Objection Handling</div>
+                        <div class="flow-score">--</div>
+                    </div>
+                    
+                    <div class="flow-step" id="closeStep">
+                        <div class="flow-icon">
+                            <span class="material-icons">handshake</span>
+                        </div>
+                        <div class="flow-label">Close</div>
+                        <div class="flow-score">--</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Analysis Grid -->
+            <div class="analysis-grid">
+                <!-- Audio Analysis -->
+                <div class="analysis-section audio-analysis">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <span class="material-icons">mic</span>
+                        </div>
+                        <h3 class="section-title">Voice & Delivery Analysis</h3>
+                    </div>
+                    
+                    <div class="metric-item" id="grammarMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Grammar & Clarity</div>
+                                <div class="metric-description">Proper sentence structure and pronunciation</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill grammar" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                    
+                    <div class="metric-item" id="fluencyMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Fluency & Flow</div>
+                                <div class="metric-description">Smooth speech without interruptions</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill fluency" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                    
+                    <div class="metric-item" id="confidenceMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Confidence Level</div>
+                                <div class="metric-description">Reduced hesitation and uncertainty</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill hesitation" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                    
+                    <div class="metric-item" id="paceMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Speaking Pace</div>
+                                <div class="metric-description">Optimal speed for understanding</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill pace" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                    
+                    <div class="metric-item" id="enthusiasmMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Enthusiasm</div>
+                                <div class="metric-description">Energy and passion in delivery</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill enthusiasm" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                    
+                    <div class="metric-item" id="clarityMetric">
+                        <div class="metric-info">
+                            <div>
+                                <div class="metric-label-detailed">Message Clarity</div>
+                                <div class="metric-description">Clear and understandable communication</div>
+                            </div>
+                        </div>
+                        <div class="metric-bar">
+                            <div class="metric-fill clarity" style="width: 0%"></div>
+                        </div>
+                        <div class="metric-value-detailed">--</div>
+                    </div>
+                </div>
+
+                <!-- AI-Generated Ratings -->
+                <div class="analysis-section ai-ratings">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <span class="material-icons">psychology</span>
+                        </div>
+                        <h3 class="section-title">Sales Skills Assessment</h3>
+                    </div>
+                    
+                    <div class="rating-item" id="introRating">
+                        <div class="rating-info">
+                            <div class="rating-label">Introduction Quality</div>
+                            <div class="rating-description">Engaging opening and rapport building</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div class="star-rating">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <div class="rating-score">--</div>
+                        </div>
+                    </div>
+                    
+                    <div class="rating-item" id="needAnalysisRating">
+                        <div class="rating-info">
+                            <div class="rating-label">Need Analysis</div>
+                            <div class="rating-description">Discovery questions and understanding</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div class="star-rating">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <div class="rating-score">--</div>
+                        </div>
+                    </div>
+                    
+                    <div class="rating-item" id="objectionRating">
+                        <div class="rating-info">
+                            <div class="rating-label">Objection Handling</div>
+                            <div class="rating-description">Addressing concerns effectively</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div class="star-rating">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <div class="rating-score">--</div>
+                        </div>
+                    </div>
+                    
+                    <div class="rating-item" id="closingRating">
+                        <div class="rating-info">
+                            <div class="rating-label">Closing Skills</div>
+                            <div class="rating-description">Creating urgency and asking for commitment</div>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div class="star-rating">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <div class="rating-score">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Grid -->
+            <div class="insights-grid">
+                <!-- Strengths -->
+                <div class="insights-section strengths">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <span class="material-icons">check_circle</span>
+                        </div>
+                        <h3 class="section-title">Key Strengths</h3>
+                    </div>
+                    <ul class="insights-list" id="strengthsList">
+                        <li>Loading analysis...</li>
+                    </ul>
+                </div>
+
+                <!-- Areas for Improvement -->
+                <div class="insights-section improvements">
+                    <div class="section-header">
+                        <div class="section-icon">
+                            <span class="material-icons">warning</span>
+                        </div>
+                        <h3 class="section-title">Areas for Improvement</h3>
+                    </div>
+                    <ul class="insights-list" id="improvementsList">
+                        <li>Loading analysis...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Audio recording variables
+        let audioPlayer = null;
+        let isPlaying = false;
+        let recordingUrl = null;
+
+        // Function to populate transcript from sessionStorage
+        function populateTranscript() {
+            const transcriptList = document.getElementById('transcriptList');
+            const transcriptData = sessionStorage.getItem('chatTranscript');
+            
+            if (transcriptData) {
+                const transcript = JSON.parse(transcriptData);
+                
+                // Calculate session metrics
+                calculateSessionMetrics(transcript);
+                
+                transcript.forEach((item, index) => {
+                    const transcriptItem = document.createElement('div');
+                    transcriptItem.className = `transcript-item ${item.sender.toLowerCase()}`;
+                    transcriptItem.style.animationDelay = `${index * 0.1}s`;
+                    
+                    transcriptItem.innerHTML = `
+                        <div class="transcript-avatar-small">
+                            ${item.sender === 'AI' ? '🤖' : '🧑'}
+                        </div>
+                        <div class="transcript-content">
+                            ${item.text}
+                        </div>
+                        <div class="transcript-meta">
+                            ${item.sender} • ${item.time}
+                        </div>
+                    `;
+                    
+                    transcriptList.appendChild(transcriptItem);
+                });
+                
+                // Scroll to bottom of transcript
+                transcriptList.scrollTop = transcriptList.scrollHeight;
+            }
+        }
+
+        // Function to calculate session metrics from transcript
+        function calculateSessionMetrics(transcript) {
+            if (!transcript || transcript.length === 0) return;
+
+            // Try to get actual recording duration first
+            const storedDuration = sessionStorage.getItem('recordingDuration');
+            let totalSeconds = 0;
+            
+            if (storedDuration) {
+                // Use actual recording duration
+                totalSeconds = parseFloat(storedDuration);
+                console.log('Using actual recording duration:', totalSeconds);
+            } else {
+                // Fallback to transcript-based duration
+                transcript.forEach(item => {
+                    const timeParts = item.time.split(':');
+                    if (timeParts.length === 2) {
+                        const minutes = parseInt(timeParts[0]);
+                        const seconds = parseInt(timeParts[1]);
+                        totalSeconds = Math.max(totalSeconds, minutes * 60 + seconds);
+                    }
+                });
+                console.log('Using transcript-based duration:', totalSeconds);
+            }
+
+            const durationMinutes = Math.floor(totalSeconds / 60);
+            const durationSeconds = Math.floor(totalSeconds % 60);
+            const durationText = `${durationMinutes}m ${durationSeconds}s`;
+
+            // Calculate exchanges
+            const exchanges = transcript.length;
+
+            // Get current date
+            const now = new Date();
+            const sessionDate = now.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            // Update UI elements
+            const sessionDurationEl = document.getElementById('sessionDuration');
+            const sessionExchangesEl = document.getElementById('sessionExchanges');
+            const sessionDateEl = document.getElementById('sessionDate');
+            const keyMetricsTimeEl = document.querySelector('.metric-card.conversation-time .metric-value');
+            const keyMetricsExchangesEl = document.querySelector('.metric-card.exchanges .metric-value');
+
+            if (sessionDurationEl) sessionDurationEl.textContent = `Duration: ${durationText}`;
+            if (sessionExchangesEl) sessionExchangesEl.textContent = `Exchanges: ${exchanges}`;
+            if (sessionDateEl) sessionDateEl.textContent = `Session completed on ${sessionDate}`;
+            if (keyMetricsTimeEl) keyMetricsTimeEl.textContent = durationText;
+            if (keyMetricsExchangesEl) keyMetricsExchangesEl.textContent = exchanges;
+
+            // Calculate average response time (simplified)
+            const avgResponseTime = exchanges > 1 ? `${Math.round(totalSeconds / exchanges)}s` : '--';
+            const keyMetricsResponseEl = document.querySelector('.metric-card.avg-response .metric-value');
+            if (keyMetricsResponseEl) keyMetricsResponseEl.textContent = avgResponseTime;
+        }
+
+        // Function to setup voice recording player
+        function setupRecordingPlayer() {
+            const recordingPlayer = document.getElementById('recordingPlayer');
+            const playBtn = document.getElementById('playBtn');
+            const playIcon = document.getElementById('playIcon');
+            const audioProgress = document.getElementById('audioProgress');
+            const audioProgressFill = document.getElementById('audioProgressFill');
+            const audioTime = document.getElementById('audioTime');
+
+            console.log('Setting up recording player...');
+            console.log('hasRecording:', sessionStorage.getItem('hasRecording'));
+            console.log('conversationRecording:', sessionStorage.getItem('conversationRecording'));
+            console.log('recordingDuration:', sessionStorage.getItem('recordingDuration'));
+
+            // Check if recording exists
+            const hasRecording = sessionStorage.getItem('hasRecording');
+            if (hasRecording === 'true') {
+                const recordingData = sessionStorage.getItem('conversationRecording');
+                const storedDuration = sessionStorage.getItem('recordingDuration');
+                
+                if (recordingData && recordingData.startsWith('data:audio/')) {
+                    console.log('Found valid recording data (base64)');
+                    console.log('Data length:', recordingData.length);
+                    console.log('Stored duration:', storedDuration);
+                    recordingPlayer.style.display = 'block';
+                    
+                    // Create audio element from base64 data
+                    audioPlayer = new Audio(recordingData);
+                    
+                    // Set duration from stored value if available
+                    if (storedDuration) {
+                        audioPlayer.duration = parseFloat(storedDuration);
+                        console.log('Set audio duration from stored value:', audioPlayer.duration);
+                    }
+                    
+                    // Add error handling
+                    audioPlayer.addEventListener('error', (e) => {
+                        console.error('Audio playback error:', e);
+                        console.error('Audio error details:', audioPlayer.error);
+                        console.error('Audio error code:', audioPlayer.error?.code);
+                        console.error('Audio error message:', audioPlayer.error?.message);
+                        
+                        // Show user-friendly error message
+                        const errorMessage = audioPlayer.error?.message || 'Audio format not supported';
+                        console.log('Audio playback failed:', errorMessage);
+                        
+                        // Update the time display to show duration from stored value
+                        if (storedDuration) {
+                            const duration = parseFloat(storedDuration);
+                            audioTime.textContent = `00:00 / ${formatTime(duration)}`;
+                            console.log('Showing duration from stored value due to playback error');
+                        }
+                    });
+                    
+                    // Add load event
+                    audioPlayer.addEventListener('loadeddata', () => {
+                        console.log('Audio loaded successfully, duration:', audioPlayer.duration);
+                        // If duration is still not available, try to set it from stored value
+                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                            if (storedDuration) {
+                                audioPlayer.duration = parseFloat(storedDuration);
+                                console.log('Set duration from stored value after load:', audioPlayer.duration);
+                            }
+                        }
+                    });
+                    
+                    // Add metadata loaded event
+                    audioPlayer.addEventListener('loadedmetadata', () => {
+                        console.log('Audio metadata loaded, duration:', audioPlayer.duration);
+                        // If duration is still not available, use stored value
+                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                            if (storedDuration) {
+                                audioPlayer.duration = parseFloat(storedDuration);
+                                console.log('Set duration from stored value after metadata:', audioPlayer.duration);
+                            }
+                        }
+                    });
+                    
+                    // Play/Pause functionality
+                    playBtn.addEventListener('click', async () => {
+                        try {
+                            if (isPlaying) {
+                                audioPlayer.pause();
+                                playIcon.textContent = 'play_arrow';
+                                isPlaying = false;
+                            } else {
+                                await audioPlayer.play();
+                                playIcon.textContent = 'pause';
+                                isPlaying = true;
+                            }
+                        } catch (error) {
+                            console.error('Play/pause error:', error);
+                            alert('Error playing audio: ' + error.message);
+                        }
+                    });
+                    
+                    // Update progress bar and time
+                    audioPlayer.addEventListener('timeupdate', () => {
+                        let duration = audioPlayer.duration;
+                        
+                        // Use stored duration if browser can't detect it
+                        if (!duration || isNaN(duration)) {
+                            duration = storedDuration ? parseFloat(storedDuration) : 0;
+                        }
+                        
+                        if (duration && duration > 0) {
+                            const progress = (audioPlayer.currentTime / duration) * 100;
+                            audioProgressFill.style.width = progress + '%';
+                            
+                            const currentTime = formatTime(audioPlayer.currentTime);
+                            const totalTime = formatTime(duration);
+                            audioTime.textContent = `${currentTime} / ${totalTime}`;
+                        } else {
+                            // Fallback: show only current time
+                            const currentTime = formatTime(audioPlayer.currentTime);
+                            audioTime.textContent = `${currentTime}`;
+                        }
+                    });
+                    
+                    // Handle audio end
+                    audioPlayer.addEventListener('ended', () => {
+                        playIcon.textContent = 'play_arrow';
+                        isPlaying = false;
+                        audioProgressFill.style.width = '0%';
+                        if (storedDuration) {
+                            audioTime.textContent = `00:00 / ${formatTime(parseFloat(storedDuration))}`;
+                        } else {
+                            audioTime.textContent = '00:00';
+                        }
+                    });
+                    
+                    // Click on progress bar to seek
+                    audioProgress.addEventListener('click', (e) => {
+                        let duration = audioPlayer.duration;
+                        
+                        // Use stored duration if browser can't detect it
+                        if (!duration || isNaN(duration)) {
+                            duration = storedDuration ? parseFloat(storedDuration) : 0;
+                        }
+                        
+                        if (duration && duration > 0) {
+                            const rect = audioProgress.getBoundingClientRect();
+                            const clickX = e.clientX - rect.left;
+                            const progress = clickX / rect.width;
+                            audioPlayer.currentTime = progress * duration;
+                        }
+                    });
+                    
+                    console.log('Recording player setup complete');
+                } else {
+                    console.error('No valid recording data found in sessionStorage');
+                    console.log('Available data:', recordingData ? 'Data exists but invalid format' : 'No data');
+                }
+            } else {
+                console.log('No recording found in sessionStorage');
+            }
+        }
+
+        // Helper function to format time
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Animate metric bars on page load
+        function animateMetrics() {
+            const metricFills = document.querySelectorAll('.metric-fill');
+            metricFills.forEach((fill, index) => {
+                setTimeout(() => {
+                    const width = fill.style.width;
+                    fill.style.width = '0%';
+                    setTimeout(() => {
+                        fill.style.width = width;
+                    }, 100);
+                }, index * 200);
+            });
+        }
+
+        // Populate transcript and animate when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            populateTranscript();
+            setupRecordingPlayer();
+            await loadDynamicAnalysis();
+            setTimeout(animateMetrics, 500);
+        });
+
+        // Function to load dynamic analysis data
+        async function loadDynamicAnalysis() {
+            console.log('=== DEBUG: loadDynamicAnalysis started ===');
+            
+            try {
+                // First check if we have pre-computed analysis data
+                const preComputedAnalysis = sessionStorage.getItem('analysisData');
+                console.log('Pre-computed analysis data:', preComputedAnalysis ? 'Found' : 'Not found');
+                
+                if (preComputedAnalysis) {
+                    console.log('Using pre-computed analysis data');
+                    const analysisData = JSON.parse(preComputedAnalysis);
+                    console.log('Parsed pre-computed data:', analysisData);
+                    updateAnalysisUI(analysisData);
+                    // Clear the pre-computed data to avoid using stale data
+                    sessionStorage.removeItem('analysisData');
+                    return;
+                }
+
+                const transcriptData = sessionStorage.getItem('chatTranscript');
+                console.log('Transcript data available:', transcriptData ? 'Yes' : 'No');
+                
+                if (!transcriptData) {
+                    console.log('No transcript data found, calculating basic metrics');
+                    calculateBasicMetrics();
+                    return;
+                }
+
+                const transcript = JSON.parse(transcriptData);
+                console.log('Parsed transcript:', transcript);
+                console.log('Transcript length:', transcript.length);
+                
+                // Show loading state
+                showLoadingState();
+                
+                // Call the analysis endpoint
+                console.log('Calling analysis endpoint...');
+                const response = await fetch('/analyze_conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ transcript: transcript })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const analysisData = await response.json();
+                console.log('=== DEBUG: Analysis API Response ===');
+                console.log('Raw analysis data:', analysisData);
+                console.log('Analysis data type:', typeof analysisData);
+                console.log('Analysis data keys:', Object.keys(analysisData || {}));
+                
+                // Update the UI with dynamic data
+                updateAnalysisUI(analysisData);
+                
+            } catch (error) {
+                console.error('Error loading dynamic analysis:', error);
+                console.error('Error details:', error.message);
+                console.error('Error stack:', error.stack);
+                // Fall back to basic metrics if analysis fails
+                console.log('Falling back to basic metrics calculation');
+                calculateBasicMetrics();
+            }
+        }
+
+        // Function to calculate basic metrics when analysis is not available
+        function calculateBasicMetrics() {
+            const transcriptData = sessionStorage.getItem('chatTranscript');
+            if (!transcriptData) {
+                console.log('No transcript data available for basic metrics');
+                return;
+            }
+
+            const transcript = JSON.parse(transcriptData);
+            
+            // Calculate basic overall score based on conversation length and quality
+            let overallScore = 50; // Base score
+            
+            // Add points for conversation length (more exchanges = better engagement)
+            if (transcript.length >= 10) overallScore += 20;
+            else if (transcript.length >= 5) overallScore += 15;
+            else if (transcript.length >= 3) overallScore += 10;
+            
+            // Add points for user responses (more user messages = better interaction)
+            const userMessages = transcript.filter(item => item.sender === 'You').length;
+            if (userMessages >= 5) overallScore += 15;
+            else if (userMessages >= 3) overallScore += 10;
+            else if (userMessages >= 1) overallScore += 5;
+            
+            // Add points for conversation duration (longer = more engagement)
+            let totalSeconds = 0;
+            transcript.forEach(item => {
+                const timeParts = item.time.split(':');
+                if (timeParts.length === 2) {
+                    const minutes = parseInt(timeParts[0]);
+                    const seconds = parseInt(timeParts[1]);
+                    totalSeconds = Math.max(totalSeconds, minutes * 60 + seconds);
+                }
+            });
+            
+            if (totalSeconds >= 300) overallScore += 10; // 5+ minutes
+            else if (totalSeconds >= 180) overallScore += 8; // 3+ minutes
+            else if (totalSeconds >= 60) overallScore += 5; // 1+ minute
+            
+            // Cap the score at 100
+            overallScore = Math.min(overallScore, 100);
+            
+            // Update overall score
+            const scoreValue = document.getElementById('overallScore');
+            if (scoreValue) {
+                scoreValue.textContent = `Overall Score: ${overallScore}%`;
+            }
+            
+            // Update confidence level
+            const confidenceEl = document.getElementById('sessionConfidence');
+            if (confidenceEl) {
+                const confidence = Math.min(overallScore + 10, 100);
+                confidenceEl.textContent = `Confidence: ${confidence}%`;
+                confidenceEl.style.color = confidence >= 80 ? '#10b981' : 
+                                         confidence >= 60 ? '#f59e0b' : '#ef4444';
+            }
+            
+            // Calculate basic voice metrics
+            const basicVoiceMetrics = {
+                grammar_clarity: { score: Math.min(overallScore + 5, 100) },
+                fluency_flow: { score: Math.min(overallScore + 3, 100) },
+                confidence_level: { score: Math.min(overallScore + 2, 100) },
+                speaking_pace: { score: Math.min(overallScore + 7, 100) },
+                enthusiasm: { score: Math.min(overallScore + 4, 100) },
+                message_clarity: { score: Math.min(overallScore + 6, 100) }
+            };
+            
+            // Calculate basic sales skills
+            const basicSalesSkills = {
+                introduction_quality: { stars: Math.ceil(overallScore / 20), score: Math.min(overallScore / 20, 5) },
+                need_analysis: { stars: Math.ceil(overallScore / 25), score: Math.min(overallScore / 25, 5) },
+                objection_handling: { stars: Math.ceil(overallScore / 22), score: Math.min(overallScore / 22, 5) },
+                closing_skills: { stars: Math.ceil(overallScore / 30), score: Math.min(overallScore / 30, 5) }
+            };
+            
+            // Calculate basic sales process flow
+            const basicSalesProcess = {
+                introduction: { status: 'completed', score: Math.min(overallScore + 10, 100) },
+                discovery: { status: userMessages >= 2 ? 'completed' : 'partial', score: Math.min(overallScore + 5, 100) },
+                presentation: { status: 'partial', score: Math.min(overallScore + 3, 100) },
+                objection_handling: { status: 'partial', score: Math.min(overallScore + 8, 100) },
+                close: { status: 'missed', score: Math.min(overallScore - 10, 100) }
+            };
+            
+            // Generate basic insights
+            const basicStrengths = [
+                'Engaged in conversation with the prospect',
+                'Maintained professional communication',
+                'Responded to questions and concerns'
+            ];
+            
+            const basicImprovements = [
+                'Practice more discovery questions',
+                'Work on objection handling techniques',
+                'Develop stronger closing skills',
+                'Improve overall conversation flow'
+            ];
+            
+            // Update UI with basic metrics
+            updateVoiceAnalysis(basicVoiceMetrics);
+            updateSalesSkills(basicSalesSkills);
+            updateSalesProcess(basicSalesProcess);
+            updateInsights(basicStrengths, basicImprovements);
+            
+            console.log('Basic metrics calculated and applied');
+        }
+
+        // Function to show loading state
+        function showLoadingState() {
+            // Add loading indicators to key sections
+            const sections = document.querySelectorAll('.analysis-section, .insights-section, .conversation-flow');
+            sections.forEach(section => {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'loading-indicator';
+                loadingDiv.innerHTML = '<div class="loading-spinner"></div><p>Analyzing conversation...</p>';
+                loadingDiv.style.cssText = `
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 40px;
+                    color: #64748b;
+                `;
+                section.appendChild(loadingDiv);
+            });
+        }
+
+        // Function to update UI with dynamic analysis data
+        function updateAnalysisUI(data) {
+            console.log('=== DEBUG: updateAnalysisUI called ===');
+            console.log('Full analysis data received:', data);
+            console.log('Data type:', typeof data);
+            console.log('Data keys:', Object.keys(data || {}));
+            
+            // Remove loading indicators
+            document.querySelectorAll('.loading-indicator').forEach(el => el.remove());
+
+            // Debug each section
+            console.log('=== Session Info Debug ===');
+            console.log('session_info:', data.session_info);
+            updateSessionInfo(data.session_info);
+            
+            console.log('=== Overall Score Debug ===');
+            console.log('overall_score:', data.overall_score);
+            updateOverallScore(data.overall_score);
+            
+            console.log('=== Key Metrics Debug ===');
+            console.log('key_metrics:', data.key_metrics);
+            updateKeyMetrics(data.key_metrics);
+            
+            console.log('=== Voice Analysis Debug ===');
+            console.log('voice_delivery_analysis:', data.voice_delivery_analysis);
+            updateVoiceAnalysis(data.voice_delivery_analysis);
+            
+            console.log('=== Sales Skills Debug ===');
+            console.log('sales_skills_assessment:', data.sales_skills_assessment);
+            updateSalesSkills(data.sales_skills_assessment);
+            
+            console.log('=== Sales Process Debug ===');
+            console.log('sales_process_flow:', data.sales_process_flow);
+            updateSalesProcess(data.sales_process_flow);
+            
+            console.log('=== Insights Debug ===');
+            console.log('strengths:', data.strengths);
+            console.log('improvements:', data.improvements);
+            updateInsights(data.strengths, data.improvements);
+            
+            console.log('=== DEBUG: updateAnalysisUI completed ===');
+        }
+
+        // Update session information
+        function updateSessionInfo(sessionInfo) {
+            console.log('updateSessionInfo called with:', sessionInfo);
+            
+            const sessionTitleEl = document.getElementById('sessionTitle');
+            const sessionTypeEl = document.getElementById('sessionType');
+            const sessionConfidenceEl = document.getElementById('sessionConfidence');
+
+            console.log('Found elements:', {
+                sessionTitleEl: !!sessionTitleEl,
+                sessionTypeEl: !!sessionTypeEl,
+                sessionConfidenceEl: !!sessionConfidenceEl
+            });
+
+            if (sessionTitleEl && sessionInfo && sessionInfo.scenario_type) {
+                console.log('Updating session title with:', sessionInfo.scenario_type);
+                sessionTitleEl.textContent = `${sessionInfo.scenario_type} Training Session`;
+            }
+
+            if (sessionTypeEl && sessionInfo && sessionInfo.prospect_role) {
+                console.log('Updating session type with:', sessionInfo.prospect_role);
+                sessionTypeEl.textContent = `${sessionInfo.prospect_role} Conversation`;
+            }
+
+            if (sessionConfidenceEl && sessionInfo && sessionInfo.confidence_level !== undefined) {
+                console.log('Updating confidence with:', sessionInfo.confidence_level);
+                sessionConfidenceEl.textContent = `Confidence: ${sessionInfo.confidence_level}%`;
+                sessionConfidenceEl.style.color = sessionInfo.confidence_level >= 80 ? '#10b981' : 
+                                                sessionInfo.confidence_level >= 60 ? '#f59e0b' : '#ef4444';
+            } else {
+                console.log('Confidence not updated - missing data or element');
+                console.log('sessionInfo:', sessionInfo);
+                console.log('confidence_level:', sessionInfo?.confidence_level);
+            }
+        }
+
+        // Update overall score
+        function updateOverallScore(overallScore) {
+            console.log('updateOverallScore called with:', overallScore);
+            
+            const scoreValue = document.getElementById('overallScore');
+            console.log('Found overallScore element:', !!scoreValue);
+            
+            if (scoreValue && overallScore && overallScore.percentage !== undefined) {
+                console.log('Updating overall score with:', overallScore.percentage);
+                scoreValue.textContent = `Overall Score: ${overallScore.percentage}%`;
+            } else {
+                console.log('Overall score not updated - missing data or element');
+                console.log('overallScore:', overallScore);
+                console.log('percentage:', overallScore?.percentage);
+            }
+        }
+
+        // Update key metrics
+        function updateKeyMetrics(keyMetrics) {
+            const metricCards = document.querySelectorAll('.metric-card');
+            metricCards.forEach(card => {
+                const valueEl = card.querySelector('.metric-value');
+                const labelEl = card.querySelector('.metric-label');
+                
+                if (card.classList.contains('conversation-time') && keyMetrics.conversation_time) {
+                    valueEl.textContent = keyMetrics.conversation_time;
+                } else if (card.classList.contains('exchanges') && keyMetrics.exchanges) {
+                    valueEl.textContent = keyMetrics.exchanges;
+                } else if (card.classList.contains('avg-response') && keyMetrics.avg_response_time) {
+                    valueEl.textContent = keyMetrics.avg_response_time;
+                }
+            });
+        }
+
+        // Update voice delivery analysis
+        function updateVoiceAnalysis(voiceAnalysis) {
+            const metrics = [
+                { id: 'grammarMetric', key: 'grammar_clarity', class: 'grammar' },
+                { id: 'fluencyMetric', key: 'fluency_flow', class: 'fluency' },
+                { id: 'confidenceMetric', key: 'confidence_level', class: 'hesitation' },
+                { id: 'paceMetric', key: 'speaking_pace', class: 'pace' },
+                { id: 'enthusiasmMetric', key: 'enthusiasm', class: 'enthusiasm' },
+                { id: 'clarityMetric', key: 'message_clarity', class: 'clarity' }
+            ];
+
+            metrics.forEach(metric => {
+                const metricEl = document.getElementById(metric.id);
+                if (metricEl) {
+                    const fillEl = metricEl.querySelector('.metric-fill');
+                    const valueEl = metricEl.querySelector('.metric-value-detailed');
+                    
+                    if (voiceAnalysis[metric.key] && voiceAnalysis[metric.key].score !== undefined) {
+                        const score = voiceAnalysis[metric.key].score;
+                        fillEl.style.width = `${score}%`;
+                        valueEl.textContent = `${score}%`;
+                    }
+                }
+            });
+        }
+
+        // Update sales skills assessment
+        function updateSalesSkills(salesSkills) {
+            const ratings = [
+                { id: 'introRating', key: 'introduction_quality' },
+                { id: 'needAnalysisRating', key: 'need_analysis' },
+                { id: 'objectionRating', key: 'objection_handling' },
+                { id: 'closingRating', key: 'closing_skills' }
+            ];
+
+            ratings.forEach(rating => {
+                const ratingEl = document.getElementById(rating.id);
+                if (ratingEl) {
+                    const starsEl = ratingEl.querySelector('.star-rating');
+                    const scoreEl = ratingEl.querySelector('.rating-score');
+                    
+                    if (salesSkills[rating.key] && salesSkills[rating.key].stars !== undefined) {
+                        const stars = salesSkills[rating.key].stars;
+                        const score = salesSkills[rating.key].score || stars;
+                        
+                        // Update stars
+                        const starElements = starsEl.querySelectorAll('.star');
+                        starElements.forEach((star, index) => {
+                            if (index < stars) {
+                                star.classList.add('filled');
+                            } else {
+                                star.classList.remove('filled');
+                            }
+                        });
+                        
+                        // Update score
+                        scoreEl.textContent = score;
+                    }
+                }
+            });
+        }
+
+        // Update sales process flow
+        function updateSalesProcess(salesProcess) {
+            const steps = [
+                { id: 'introStep', key: 'introduction' },
+                { id: 'discoveryStep', key: 'discovery' },
+                { id: 'presentationStep', key: 'presentation' },
+                { id: 'objectionStep', key: 'objection_handling' },
+                { id: 'closeStep', key: 'close' }
+            ];
+
+            steps.forEach(step => {
+                const stepEl = document.getElementById(step.id);
+                if (stepEl) {
+                    const scoreEl = stepEl.querySelector('.flow-score');
+                    const iconEl = stepEl.querySelector('.flow-icon');
+                    
+                    if (salesProcess[step.key] && salesProcess[step.key].status && salesProcess[step.key].score !== undefined) {
+                        const status = salesProcess[step.key].status;
+                        const score = salesProcess[step.key].score;
+                        
+                        // Update status classes
+                        stepEl.className = `flow-step ${status}`;
+                        
+                        // Update score
+                        scoreEl.textContent = `${score}%`;
+                        
+                        // Update icon background based on status
+                        if (status === 'completed') {
+                            iconEl.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                        } else if (status === 'partial') {
+                            iconEl.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                        } else {
+                            iconEl.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update insights
+        function updateInsights(strengths, improvements) {
+            // Update strengths
+            const strengthsList = document.getElementById('strengthsList');
+            if (strengthsList && strengths && strengths.length > 0) {
+                strengthsList.innerHTML = '';
+                strengths.forEach(strength => {
+                    const li = document.createElement('li');
+                    li.textContent = strength;
+                    strengthsList.appendChild(li);
+                });
+            }
+            
+            // Update improvements
+            const improvementsList = document.getElementById('improvementsList');
+            if (improvementsList && improvements && improvements.length > 0) {
+                improvementsList.innerHTML = '';
+                improvements.forEach(improvement => {
+                    const li = document.createElement('li');
+                    li.textContent = improvement;
+                    improvementsList.appendChild(li);
+                });
+            }
+        }
+
+        // Handle Practice Again button
+        document.querySelector('.practice-btn').addEventListener('click', () => {
+            // Clear transcript and recording data
+            sessionStorage.removeItem('chatTranscript');
+            sessionStorage.removeItem('conversationRecording');
+            sessionStorage.removeItem('conversationRecordingBlob');
+            sessionStorage.removeItem('hasRecording');
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html> 

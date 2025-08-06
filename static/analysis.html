@@ -1133,19 +1133,29 @@
         function calculateSessionMetrics(transcript) {
             if (!transcript || transcript.length === 0) return;
 
-            // Calculate duration
+            // Try to get actual recording duration first
+            const storedDuration = sessionStorage.getItem('recordingDuration');
             let totalSeconds = 0;
-            transcript.forEach(item => {
-                const timeParts = item.time.split(':');
-                if (timeParts.length === 2) {
-                    const minutes = parseInt(timeParts[0]);
-                    const seconds = parseInt(timeParts[1]);
-                    totalSeconds = Math.max(totalSeconds, minutes * 60 + seconds);
-                }
-            });
+            
+            if (storedDuration) {
+                // Use actual recording duration
+                totalSeconds = parseFloat(storedDuration);
+                console.log('Using actual recording duration:', totalSeconds);
+            } else {
+                // Fallback to transcript-based duration
+                transcript.forEach(item => {
+                    const timeParts = item.time.split(':');
+                    if (timeParts.length === 2) {
+                        const minutes = parseInt(timeParts[0]);
+                        const seconds = parseInt(timeParts[1]);
+                        totalSeconds = Math.max(totalSeconds, minutes * 60 + seconds);
+                    }
+                });
+                console.log('Using transcript-based duration:', totalSeconds);
+            }
 
             const durationMinutes = Math.floor(totalSeconds / 60);
-            const durationSeconds = totalSeconds % 60;
+            const durationSeconds = Math.floor(totalSeconds % 60);
             const durationText = `${durationMinutes}m ${durationSeconds}s`;
 
             // Calculate exchanges
@@ -1190,18 +1200,28 @@
             console.log('Setting up recording player...');
             console.log('hasRecording:', sessionStorage.getItem('hasRecording'));
             console.log('conversationRecording:', sessionStorage.getItem('conversationRecording'));
+            console.log('recordingDuration:', sessionStorage.getItem('recordingDuration'));
 
             // Check if recording exists
             const hasRecording = sessionStorage.getItem('hasRecording');
             if (hasRecording === 'true') {
                 const recordingData = sessionStorage.getItem('conversationRecording');
+                const storedDuration = sessionStorage.getItem('recordingDuration');
+                
                 if (recordingData && recordingData.startsWith('data:audio/')) {
                     console.log('Found valid recording data (base64)');
                     console.log('Data length:', recordingData.length);
+                    console.log('Stored duration:', storedDuration);
                     recordingPlayer.style.display = 'block';
                     
                     // Create audio element from base64 data
                     audioPlayer = new Audio(recordingData);
+                    
+                    // Set duration from stored value if available
+                    if (storedDuration) {
+                        audioPlayer.duration = parseFloat(storedDuration);
+                        console.log('Set audio duration from stored value:', audioPlayer.duration);
+                    }
                     
                     // Add error handling
                     audioPlayer.addEventListener('error', (e) => {
@@ -1209,12 +1229,41 @@
                         console.error('Audio error details:', audioPlayer.error);
                         console.error('Audio error code:', audioPlayer.error?.code);
                         console.error('Audio error message:', audioPlayer.error?.message);
-                        alert('Error playing recording. Please try again.');
+                        
+                        // Show user-friendly error message
+                        const errorMessage = audioPlayer.error?.message || 'Audio format not supported';
+                        console.log('Audio playback failed:', errorMessage);
+                        
+                        // Update the time display to show duration from stored value
+                        if (storedDuration) {
+                            const duration = parseFloat(storedDuration);
+                            audioTime.textContent = `00:00 / ${formatTime(duration)}`;
+                            console.log('Showing duration from stored value due to playback error');
+                        }
                     });
                     
                     // Add load event
                     audioPlayer.addEventListener('loadeddata', () => {
                         console.log('Audio loaded successfully, duration:', audioPlayer.duration);
+                        // If duration is still not available, try to set it from stored value
+                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                            if (storedDuration) {
+                                audioPlayer.duration = parseFloat(storedDuration);
+                                console.log('Set duration from stored value after load:', audioPlayer.duration);
+                            }
+                        }
+                    });
+                    
+                    // Add metadata loaded event
+                    audioPlayer.addEventListener('loadedmetadata', () => {
+                        console.log('Audio metadata loaded, duration:', audioPlayer.duration);
+                        // If duration is still not available, use stored value
+                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                            if (storedDuration) {
+                                audioPlayer.duration = parseFloat(storedDuration);
+                                console.log('Set duration from stored value after metadata:', audioPlayer.duration);
+                            }
+                        }
                     });
                     
                     // Play/Pause functionality
@@ -1237,13 +1286,24 @@
                     
                     // Update progress bar and time
                     audioPlayer.addEventListener('timeupdate', () => {
-                        if (audioPlayer.duration && !isNaN(audioPlayer.duration)) {
-                            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                        let duration = audioPlayer.duration;
+                        
+                        // Use stored duration if browser can't detect it
+                        if (!duration || isNaN(duration)) {
+                            duration = storedDuration ? parseFloat(storedDuration) : 0;
+                        }
+                        
+                        if (duration && duration > 0) {
+                            const progress = (audioPlayer.currentTime / duration) * 100;
                             audioProgressFill.style.width = progress + '%';
                             
                             const currentTime = formatTime(audioPlayer.currentTime);
-                            const totalTime = formatTime(audioPlayer.duration);
+                            const totalTime = formatTime(duration);
                             audioTime.textContent = `${currentTime} / ${totalTime}`;
+                        } else {
+                            // Fallback: show only current time
+                            const currentTime = formatTime(audioPlayer.currentTime);
+                            audioTime.textContent = `${currentTime}`;
                         }
                     });
                     
@@ -1252,16 +1312,27 @@
                         playIcon.textContent = 'play_arrow';
                         isPlaying = false;
                         audioProgressFill.style.width = '0%';
-                        audioTime.textContent = '00:00';
+                        if (storedDuration) {
+                            audioTime.textContent = `00:00 / ${formatTime(parseFloat(storedDuration))}`;
+                        } else {
+                            audioTime.textContent = '00:00';
+                        }
                     });
                     
                     // Click on progress bar to seek
                     audioProgress.addEventListener('click', (e) => {
-                        if (audioPlayer.duration && !isNaN(audioPlayer.duration)) {
+                        let duration = audioPlayer.duration;
+                        
+                        // Use stored duration if browser can't detect it
+                        if (!duration || isNaN(duration)) {
+                            duration = storedDuration ? parseFloat(storedDuration) : 0;
+                        }
+                        
+                        if (duration && duration > 0) {
                             const rect = audioProgress.getBoundingClientRect();
                             const clickX = e.clientX - rect.left;
                             const progress = clickX / rect.width;
-                            audioPlayer.currentTime = progress * audioPlayer.duration;
+                            audioPlayer.currentTime = progress * duration;
                         }
                     });
                     

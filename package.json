@@ -1,6 +1,17 @@
 {
+  "name": "voice-web-chat",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "serve": "python app.py"
+  },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^5.0.0",
+    "@types/node": "^20.0.0"
   },
   "dependencies": {
     "@speechify/api": "^1.0.0"
