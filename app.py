@@ -1,15 +1,19 @@
 from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
+from flask_cors import CORS
 import openai
 import os
 from datetime import datetime
 import time
-from prompts import agentPrompt
+from prompts import agentPrompt, analysisPrompt
 import asyncio
 from cartesia import Cartesia
 import base64
 import numpy as np
+import json
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
+
 OPENAI_API_KEY = "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"
 CARTESIA_API_KEY = "sk_car_VDpnj5rbG3FKJsfs4xrZyT"
 
@@ -36,13 +40,55 @@ def process_raw_audio(audio_bytes, sample_rate=44100):
         print(f"Error processing raw audio: {e}")
         return audio_bytes
 
+import os
+
+# Check if we're in development or production
+IS_DEVELOPMENT = os.environ.get('FLASK_ENV') == 'development'
+
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    if IS_DEVELOPMENT:
+        # In development, redirect to Vite dev server
+        return send_from_directory('static', 'index.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'index.html')
 
 @app.route('/analysis.html')
 def analysis():
-    return send_from_directory('static', 'analysis.html')
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'analysis.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'analysis.html')
+
+@app.route('/success.html')
+def success():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'success.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'success.html')
+
+@app.route('/test_analysis.html')
+def test_analysis_page():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'test_analysis.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'test_analysis.html')
+
+@app.route('/test_redirect.html')
+def test_redirect_page():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'test_redirect.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'test_redirect.html')
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
@@ -198,7 +244,7 @@ def chat():
         start_time = time.time()
         
         response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+            model="gpt-3.5-turbo-0125",
             messages=messages,
             max_tokens=70,
             temperature=0.3,  # Balanced for natural responses
@@ -259,7 +305,7 @@ def chat_stream():
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo-0125",
                 messages=messages,
-                max_tokens=70,
+                max_tokens=50,
                 temperature=0.3,
                 presence_penalty=0.6,
                 frequency_penalty=0.4,
@@ -292,9 +338,178 @@ def chat_stream():
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+@app.route('/analyze_conversation', methods=['POST'])
+def analyze_conversation():
+    """Analyze conversation transcript and return comprehensive feedback"""
+    try:
+        data = request.json
+        transcript = data.get('transcript', [])
+        
+        if not transcript:
+            return jsonify({"error": "No transcript provided"}), 400
+        
+        # Convert transcript to a readable format for analysis
+        conversation_text = ""
+        for i, exchange in enumerate(transcript, 1):
+            sender = exchange.get('sender', 'Unknown')
+            text = exchange.get('text', '')
+            time_stamp = exchange.get('time', '')
+            conversation_text += f"Exchange {i} ({time_stamp}):\n{sender}: {text}\n\n"
+        
+        # Prepare the analysis prompt with the conversation
+        analysis_messages = [
+            {
+                "role": "system",
+                "content": analysisPrompt
+            },
+            {
+                "role": "user",
+                "content": f"Please analyze the following sales conversation transcript and provide feedback in the specified JSON format:\n\n{conversation_text}"
+            }
+        ]
+        
+        # Call OpenAI for analysis
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",  # Using GPT-4 for better analysis
+            messages=analysis_messages,
+            max_tokens=2000,
+            temperature=0.1,  # Low temperature for consistent analysis
+            response_format={"type": "json_object"}  # Ensure JSON response
+        )
+        
+        analysis_result = response.choices[0].message.content.strip()
+        
+        # Parse the JSON response
+        try:
+            analysis_data = json.loads(analysis_result)
+            
+            # Validate required fields
+            required_fields = [
+                'session_info', 'overall_score', 'key_metrics', 
+                'voice_delivery_analysis', 'sales_skills_assessment', 
+                'sales_process_flow', 'strengths', 'improvements'
+            ]
+            
+            for field in required_fields:
+                if field not in analysis_data:
+                    return jsonify({"error": f"Missing required field: {field}"}), 500
+            
+            return jsonify(analysis_data)
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Raw response: {analysis_result}")
+            return jsonify({"error": "Invalid JSON response from analysis"}), 500
+            
+    except openai.error.RateLimitError:
+        return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+    except openai.error.Timeout:
+        return jsonify({"error": "Analysis request timed out. Please try again."}), 408
+    except openai.error.APIError as e:
+        return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
+    except Exception as e:
+        print(f"Analysis error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
+
+@app.route('/test_analysis', methods=['GET'])
+def test_analysis():
+    """Test endpoint to verify analysis system with sample data"""
+    sample_transcript = [
+        {
+            "sender": "AI",
+            "text": "Hi, I'm calling from Volza. We help businesses find international suppliers. How can I assist you today?",
+            "time": "00:00"
+        },
+        {
+            "sender": "You",
+            "text": "Hi, I'm Mike from Global Trade Solutions. We're currently evaluating platforms to help us find international suppliers for our business. I came across Volza and would love to understand what makes your platform stand out.",
+            "time": "00:05"
+        },
+        {
+            "sender": "AI",
+            "text": "Great question, Mike! Volza stands out through our comprehensive global trade database with real-time import/export data from over 200 countries. We provide detailed supplier profiles, shipment histories, and competitive intelligence that other platforms simply don't offer.",
+            "time": "00:12"
+        },
+        {
+            "sender": "You",
+            "text": "That sounds interesting. How does Volza ensure the accuracy and freshness of its global import/export data?",
+            "time": "00:20"
+        },
+        {
+            "sender": "AI",
+            "text": "Excellent question! We source our data directly from customs authorities and shipping manifests, updating our database daily. We also have a team of data analysts who verify and cross-reference information to maintain 99.7% accuracy. Plus, we provide data freshness indicators so you know exactly when each record was last updated.",
+            "time": "00:28"
+        }
+    ]
+    
+    try:
+        # Convert transcript to a readable format for analysis
+        conversation_text = ""
+        for i, exchange in enumerate(sample_transcript, 1):
+            sender = exchange.get('sender', 'Unknown')
+            text = exchange.get('text', '')
+            time_stamp = exchange.get('time', '')
+            conversation_text += f"Exchange {i} ({time_stamp}):\n{sender}: {text}\n\n"
+        
+        # Prepare the analysis prompt with the conversation
+        analysis_messages = [
+            {
+                "role": "system",
+                "content": analysisPrompt
+            },
+            {
+                "role": "user",
+                "content": f"Please analyze the following sales conversation transcript and provide feedback in the specified JSON format:\n\n{conversation_text}"
+            }
+        ]
+        
+        # Call OpenAI for analysis
+        response = openai.ChatCompletion.create(
+            # model="gpt-4-turbo-preview",
+            model="gpt-4o-mini",
+            messages=analysis_messages,
+            max_tokens=2000,
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+        
+        analysis_result = response.choices[0].message.content.strip()
+        
+        # Parse the JSON response
+        try:
+            analysis_data = json.loads(analysis_result)
+            return jsonify({
+                "success": True,
+                "analysis": analysis_data,
+                "sample_transcript": sample_transcript
+            })
+            
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "success": False,
+                "error": f"JSON parsing error: {str(e)}",
+                "raw_response": analysis_result
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Analysis failed: {str(e)}"
+        }), 500
+
 @app.route('/health')
 def health():
     return jsonify({"status": "healthy"})
+
+# Serve static assets from dist folder in production
+@app.route('/<path:filename>')
+def serve_static(filename):
+    if IS_DEVELOPMENT:
+        return send_from_directory('static', filename)
+    else:
+        return send_from_directory('dist', filename)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
