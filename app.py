@@ -1,10 +1,10 @@
 from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 import os
 from datetime import datetime
 import time
-from prompts import agentPrompt, analysisPrompt
+from prompts import agentPrompt, analysisPrompt, bestPitchPrompt
 import asyncio
 from cartesia import Cartesia
 import base64
@@ -17,7 +17,8 @@ CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
 OPENAI_API_KEY = "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"
 CARTESIA_API_KEY = "sk_car_VDpnj5rbG3FKJsfs4xrZyT"
 
-openai.api_key = OPENAI_API_KEY
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Initialize Cartesia client
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
@@ -43,7 +44,7 @@ def process_raw_audio(audio_bytes, sample_rate=44100):
 import os
 
 # Check if we're in development or production
-IS_DEVELOPMENT = os.environ.get('FLASK_ENV') == 'development'
+IS_DEVELOPMENT = False  # Set to False to use built dist files
 
 @app.route('/')
 def index():
@@ -160,7 +161,7 @@ def text_to_speech_stream():
                     transcript=text,
                     voice={
                         "mode": "id",
-                        "id": "4df027cb-2920-4a1f-8c34-f21529d5c3fe",  # Barbershop Man - good for conversations
+                        "id": "4df027cb-2920-4a1f-8c34-f21529d5c3fe",
                     },
                     language="en",
                     output_format={
@@ -198,23 +199,6 @@ def text_to_speech_stream():
     except Exception as e:
         return jsonify({"error": "TTS streaming failed"}), 500
 
-@app.route('/voices', methods=['GET'])
-def list_voices():
-    """List available Cartesia voices"""
-    try:
-        voices = list(cartesia_client.voices.list())
-        voice_list = []
-        for voice in voices:
-            voice_list.append({
-                "id": voice.id,
-                "name": voice.name,
-                "language": voice.language,
-                "description": voice.description
-            })
-        return jsonify({"voices": voice_list})
-    except Exception as e:
-        print(f"Error listing voices: {str(e)}")
-        return jsonify({"error": "Failed to list voices"}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -243,7 +227,7 @@ def chat():
     try:
         start_time = time.time()
         
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-0125",
             messages=messages,
             max_tokens=70,
@@ -270,15 +254,17 @@ def chat():
         
         return jsonify({"reply": reply})
 
-    except openai.error.RateLimitError:
-        return jsonify({"reply": "Too many requests. Please wait a moment."}), 429
-    except openai.error.Timeout:
-        return jsonify({"reply": "Request timed out. Please try again."}), 408
-    except openai.error.APIError as e:
-        return jsonify({"reply": "Service temporarily unavailable."}), 503
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
+        error_message = str(e).lower()
+        if "rate limit" in error_message:
+            return jsonify({"reply": "Too many requests. Please wait a moment."}), 429
+        elif "timeout" in error_message:
+            return jsonify({"reply": "Request timed out. Please try again."}), 408
+        elif "api" in error_message:
+            return jsonify({"reply": "Service temporarily unavailable."}), 503
+        else:
+            print(f"Error: {str(e)}")
+            return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
@@ -302,7 +288,7 @@ def chat_stream():
 
     def generate():
         try:
-            response = openai.ChatCompletion.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo-0125",
                 messages=messages,
                 max_tokens=50,
@@ -313,7 +299,7 @@ def chat_stream():
             )
             full_reply = ""
             for chunk in response:
-                delta = chunk["choices"][0]["delta"].get("content", "")
+                delta = chunk.choices[0].delta.content
                 if delta:
                     full_reply += delta
                     # Send as SSE event
@@ -326,15 +312,17 @@ def chat_stream():
             })
             if len(conversation_history) > 40:
                 conversation_history[:] = conversation_history[-40:]
-        except openai.error.RateLimitError:
-            yield 'data: {"reply": "Too many requests. Please wait a moment."}\n\n'
-        except openai.error.Timeout:
-            yield 'data: {"reply": "Request timed out. Please try again."}\n\n'
-        except openai.error.APIError as e:
-            yield 'data: {"reply": "Service temporarily unavailable."}\n\n'
         except Exception as e:
-            print(f"Error: {str(e)}")
-            yield 'data: {"reply": "Sorry, I\'m having trouble. Please try again."}\n\n'
+            error_message = str(e).lower()
+            if "rate limit" in error_message:
+                yield 'data: {"reply": "Too many requests. Please wait a moment."}\n\n'
+            elif "timeout" in error_message:
+                yield 'data: {"reply": "Request timed out. Please try again."}\n\n'
+            elif "api" in error_message:
+                yield 'data: {"reply": "Service temporarily unavailable."}\n\n'
+            else:
+                print(f"Error: {str(e)}")
+                yield 'data: {"reply": "Sorry, I\'m having trouble. Please try again."}\n\n'
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
@@ -369,7 +357,7 @@ def analyze_conversation():
         ]
         
         # Call OpenAI for analysis
-        response = openai.ChatCompletion.create(
+        response = openai_client.chat.completions.create(
             model="gpt-4o-mini",  # Using GPT-4 for better analysis
             messages=analysis_messages,
             max_tokens=2000,
@@ -401,107 +389,112 @@ def analyze_conversation():
             print(f"Raw response: {analysis_result}")
             return jsonify({"error": "Invalid JSON response from analysis"}), 500
             
-    except openai.error.RateLimitError:
-        return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
-    except openai.error.Timeout:
-        return jsonify({"error": "Analysis request timed out. Please try again."}), 408
-    except openai.error.APIError as e:
-        return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
     except Exception as e:
-        print(f"Analysis error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
+        error_message = str(e).lower()
+        if "rate limit" in error_message:
+            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+        elif "timeout" in error_message:
+            return jsonify({"error": "Analysis request timed out. Please try again."}), 408
+        elif "api" in error_message:
+            return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
+        else:
+            print(f"Analysis error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
 
-@app.route('/test_analysis', methods=['GET'])
-def test_analysis():
-    """Test endpoint to verify analysis system with sample data"""
-    sample_transcript = [
-        {
-            "sender": "AI",
-            "text": "Hi, I'm calling from Volza. We help businesses find international suppliers. How can I assist you today?",
-            "time": "00:00"
-        },
-        {
-            "sender": "You",
-            "text": "Hi, I'm Mike from Global Trade Solutions. We're currently evaluating platforms to help us find international suppliers for our business. I came across Volza and would love to understand what makes your platform stand out.",
-            "time": "00:05"
-        },
-        {
-            "sender": "AI",
-            "text": "Great question, Mike! Volza stands out through our comprehensive global trade database with real-time import/export data from over 200 countries. We provide detailed supplier profiles, shipment histories, and competitive intelligence that other platforms simply don't offer.",
-            "time": "00:12"
-        },
-        {
-            "sender": "You",
-            "text": "That sounds interesting. How does Volza ensure the accuracy and freshness of its global import/export data?",
-            "time": "00:20"
-        },
-        {
-            "sender": "AI",
-            "text": "Excellent question! We source our data directly from customs authorities and shipping manifests, updating our database daily. We also have a team of data analysts who verify and cross-reference information to maintain 99.7% accuracy. Plus, we provide data freshness indicators so you know exactly when each record was last updated.",
-            "time": "00:28"
-        }
-    ]
-    
+@app.route('/best-pitch', methods=['POST'])
+def best_pitch():
     try:
-        # Convert transcript to a readable format for analysis
+        data = request.json
+        transcript = data.get('transcript', [])
+        analysis_data = data.get('analysis_data', None)  # Optional: previous analysis for context
+        
+        if not transcript:
+            return jsonify({"error": "No transcript provided"}), 400
+        
+        perfect_pitch_prompt = bestPitchPrompt
         conversation_text = ""
-        for i, exchange in enumerate(sample_transcript, 1):
+        for i, exchange in enumerate(transcript, 1):
             sender = exchange.get('sender', 'Unknown')
             text = exchange.get('text', '')
             time_stamp = exchange.get('time', '')
             conversation_text += f"Exchange {i} ({time_stamp}):\n{sender}: {text}\n\n"
         
-        # Prepare the analysis prompt with the conversation
-        analysis_messages = [
+        # Add context from previous analysis if available
+        context_info = ""
+        if analysis_data:
+            overall_score = analysis_data.get('overall_score', {}).get('percentage', 0)
+            conversation_length = len(transcript)
+            voice_analysis = analysis_data.get('voice_delivery_analysis', {})
+            sales_skills = analysis_data.get('sales_skills_assessment', {})
+            
+            context_info = f"""
+
+ANALYSIS CONTEXT FOR DYNAMIC SCORING:
+- Original Overall Score: {overall_score}%
+- Total Conversation Exchanges: {conversation_length}
+- Voice Analysis Scores: {voice_analysis}
+- Sales Skills Scores: {sales_skills}
+
+INSTRUCTIONS:
+- Use the original score ({overall_score}%) as the baseline
+- Only process the {conversation_length} exchanges that actually happened
+- Calculate realistic perfect score based on conversation length and complexity
+- Show improvement from {overall_score}% to realistic perfect score
+"""
+        
+        # Prepare the analysis messages
+        messages = [
             {
-                "role": "system",
-                "content": analysisPrompt
+                "role": "system", 
+                "content": perfect_pitch_prompt
             },
             {
                 "role": "user",
-                "content": f"Please analyze the following sales conversation transcript and provide feedback in the specified JSON format:\n\n{conversation_text}"
+                "content": f"Please analyze this sales conversation and provide the perfect pitch version with dynamic scoring based on actual performance:\n\n{conversation_text}{context_info}"
             }
         ]
         
-        # Call OpenAI for analysis
-        response = openai.ChatCompletion.create(
-            # model="gpt-4-turbo-preview",
+        # Call OpenAI for perfect pitch generation
+        response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=analysis_messages,
-            max_tokens=2000,
-            temperature=0.1,
+            messages=messages,
+            max_tokens=3000,
+            temperature=0.2,
             response_format={"type": "json_object"}
         )
         
-        analysis_result = response.choices[0].message.content.strip()
-        
-        # Parse the JSON response
+        perfect_pitch_result = response.choices[0].message.content.strip()
         try:
-            analysis_data = json.loads(analysis_result)
-            return jsonify({
-                "success": True,
-                "analysis": analysis_data,
-                "sample_transcript": sample_transcript
-            })
+            perfect_pitch_data = json.loads(perfect_pitch_result)
+            required_fields = ['perfect_conversation', 'overall_improvements', 'score_improvement']
+            for field in required_fields:
+                if field not in perfect_pitch_data:
+                    return jsonify({"error": f"Missing required field: {field}"}), 500
+            return jsonify(perfect_pitch_data)
             
         except json.JSONDecodeError as e:
-            return jsonify({
-                "success": False,
-                "error": f"JSON parsing error: {str(e)}",
-                "raw_response": analysis_result
-            }), 500
+            return jsonify({"error": "Invalid JSON response from perfect pitch generation"}), 500
             
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"Analysis failed: {str(e)}"
-        }), 500
-
-@app.route('/health')
-def health():
-    return jsonify({"status": "healthy"})
+        import traceback
+        traceback.print_exc()
+        
+        error_message = str(e).lower()
+        if "rate limit" in error_message:
+            return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+        elif "timeout" in error_message:
+            return jsonify({"error": "Perfect pitch request timed out. Please try again."}), 408
+        elif "api" in error_message or "openai" in error_message:
+            return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
+        else:
+            # Return a more detailed error message for debugging
+                         return jsonify({
+                 "error": f"Perfect pitch generation failed: {str(e)}",
+                 "error_type": type(e).__name__,
+                 "debug_info": "Check server logs for more details"
+             }), 500
 
 # Serve static assets from dist folder in production
 @app.route('/<path:filename>')

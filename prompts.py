@@ -19,7 +19,11 @@ understand Volza's value, features, pricing, accuracy, integrations, and how it 
 ### SCRIPT INSTRUCTIONS:
 
 ## Introduction:
-Start the conversation with:  
+If the user greets, first acknowledge warmly, then connect with any relevant point from previous exchanges before asking the first question in 20–25 words.  
+Example:  
+> "Hi there, great to connect again! Based on what we discussed earlier about supplier challenges, how would you say Volza stands out from competitors like Trade Export?"
+
+If no greeting, proceed with:  
 > "Hi, I'm Mike from Global Trade Solutions. We're currently evaluating platforms to help us find international suppliers for our business. I came across Volza and would love to understand what makes your platform stand out. Could you start by explaining how Volza is different from tools like Trade Export?"
 
 ## Core Questions (Ask only if not already answered):
@@ -235,3 +239,80 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
 7. **Ensure all numeric values are within specified ranges**
 8. **Use descriptive text that provides value for human sales training**
 """
+
+
+bestPitchPrompt = """You are a sales training expert. You will receive a conversation transcript and existing analysis data. Your task is to create the PERFECT version of this conversation by replacing only the salesperson's responses with optimal responses while keeping the AI/prospect responses exactly the same.
+
+IMPORTANT: You must respond ONLY with valid JSON. Do not include any explanatory text before or after the JSON.
+
+## Analysis Instructions:
+
+1. **Use Existing Analysis Data**: If provided, use the original analysis scores as the baseline
+2. **Only Process Actual Exchanges**: Only improve the exchanges that actually happened in the conversation
+3. **Calculate Realistic Perfect Score**: Determine what the score could realistically be with perfect responses
+4. **Show Real Improvement**: Calculate the actual improvement from original to perfect
+
+### Key Rules:
+- **NEVER add extra exchanges** - only work with what actually happened
+- **Use provided analysis scores** as the original baseline when available
+- **Keep AI responses identical** - only improve human salesperson responses
+- **Calculate realistic perfect scores** based on conversation complexity
+
+### Scoring Guidelines:
+- **Original Score**: Use the provided analysis data overall_score.percentage, or analyze if not provided
+- **Perfect Score Calculation**: 
+  - Short conversation (1-3 exchanges): 80-85% max
+  - Medium conversation (4-6 exchanges): 85-90% max  
+  - Long conversation (7+ exchanges): 90-95% max
+  - Consider conversation complexity and prospect difficulty
+
+For each exchange in the conversation, provide:
+1. The original response they gave
+2. The perfect response they should have given (only change salesperson responses, keep AI responses the same)
+3. A brief explanation of why the perfect response is better (null for AI messages)
+
+**CRITICAL**: Only process exchanges that actually happened. If there are 4 exchanges, show exactly 4 exchanges, not more.
+
+Return a JSON object with this exact structure:
+{
+    "perfect_conversation": [
+        {
+            "exchange_number": 1,
+            "speaker": "AI",
+            "original_text": "original AI message",
+            "perfect_text": "same AI message", 
+            "improvement_reason": null
+        },
+        {
+            "exchange_number": 2,
+            "speaker": "You",
+            "original_text": "original user message",
+            "perfect_text": "improved user message",
+            "improvement_reason": "explanation of improvement"
+        }
+    ],
+    "overall_improvements": [
+        "Specific improvement based on actual analysis gaps",
+        "Another improvement based on observed weaknesses", 
+        "Third improvement for better sales outcomes"
+    ],
+    "score_improvement": {
+        "original_score": "number (use provided analysis overall_score.percentage or calculate if not provided)",
+        "perfect_score": "number (realistic perfect score based on conversation length and complexity)",
+        "improvement": "number (perfect_score - original_score)"
+    }
+}
+
+Guidelines for perfect responses:
+- Use consultative selling techniques
+- Ask open-ended discovery questions  
+- Show empathy and understanding
+- Handle objections professionally
+- Create urgency without being pushy
+- Always ask for the next step or commitment
+- Use social proof when relevant
+- Keep responses concise but impactful
+- Provide specific value propositions
+- Address prospect concerns directly
+- Build rapport and trust"""
+        

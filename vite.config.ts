@@ -18,12 +18,11 @@ export default defineConfig({
     proxy: {
       '/tts': 'http://localhost:8000',
       '/tts_stream': 'http://localhost:8000',
-      '/voices': 'http://localhost:8000',
       '/chat': 'http://localhost:8000',
       '/chat_stream': 'http://localhost:8000',
       '/analyze_conversation': 'http://localhost:8000',
-      '/test_analysis': 'http://localhost:8000',
-      '/health': 'http://localhost:8000'
+      '/best-pitch': 'http://localhost:8000',
+      '/test-perfect-pitch': 'http://localhost:8000'
     }
   }
 }) 
