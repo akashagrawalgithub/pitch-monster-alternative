@@ -16,7 +16,9 @@ import string
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
 
-
+# Get API keys from environment variables
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
