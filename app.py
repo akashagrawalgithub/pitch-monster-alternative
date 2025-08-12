@@ -10,6 +10,8 @@ from cartesia import Cartesia
 import base64
 import numpy as np
 import json
+import random
+import string
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
@@ -24,6 +26,9 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
 
 conversation_history = []
+
+# In-memory storage for OTP (in production, use Redis or database)
+otp_storage = {}
 
 def process_raw_audio(audio_bytes, sample_rate=44100):
     """Process raw PCM f32le audio data efficiently"""
@@ -90,6 +95,15 @@ def test_redirect_page():
     else:
         # In production, serve from dist folder
         return send_from_directory('dist', 'test_redirect.html')
+
+@app.route('/login.html')
+def login_page():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'login.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'login.html')
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
@@ -495,6 +509,86 @@ INSTRUCTIONS:
                  "error_type": type(e).__name__,
                  "debug_info": "Check server logs for more details"
              }), 500
+
+# OTP functionality
+def generate_otp():
+    """Generate a 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
+@app.route('/send-otp', methods=['POST'])
+def send_otp():
+    """Send OTP to phone number"""
+    try:
+        data = request.json
+        phone = data.get('phone')
+        
+        if not phone or len(phone) != 10:
+            return jsonify({'error': 'Invalid phone number'}), 400
+        
+        # Generate OTP
+        otp = generate_otp()
+        
+        # Store OTP with timestamp (5 minutes expiry)
+        otp_storage[phone] = {
+            'otp': otp,
+            'timestamp': time.time(),
+            'attempts': 0
+        }
+        
+        # In production, integrate with SMS service like Twilio
+        print(f"OTP for {phone}: {otp}")
+        
+        return jsonify({
+            'message': 'OTP sent successfully',
+            'otp': otp  # Remove this in production
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    """Verify OTP"""
+    try:
+        data = request.json
+        phone = data.get('phone')
+        otp = data.get('otp')
+        
+        if not phone or not otp:
+            return jsonify({'error': 'Phone and OTP are required'}), 400
+        
+        # Check if OTP exists and is not expired
+        if phone not in otp_storage:
+            return jsonify({'error': 'OTP not found or expired'}), 400
+        
+        stored_data = otp_storage[phone]
+        
+        # Check expiry (5 minutes)
+        if time.time() - stored_data['timestamp'] > 300:
+            del otp_storage[phone]
+            return jsonify({'error': 'OTP expired'}), 400
+        
+        # Check attempts
+        if stored_data['attempts'] >= 3:
+            del otp_storage[phone]
+            return jsonify({'error': 'Too many attempts. Please request a new OTP'}), 400
+        
+        # Increment attempts
+        stored_data['attempts'] += 1
+        
+        # Verify OTP
+        if stored_data['otp'] == otp:
+            # Clear OTP after successful verification
+            del otp_storage[phone]
+            return jsonify({
+                'message': 'OTP verified successfully',
+                'success': True
+            })
+        else:
+            return jsonify({'error': 'Invalid OTP'}), 400
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Serve static assets from dist folder in production
 @app.route('/<path:filename>')

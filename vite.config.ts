@@ -9,7 +9,8 @@ export default defineConfig({
       input: {
         main: 'static/index.html',
         analysis: 'static/analysis.html',
-        success: 'static/success.html'
+        success: 'static/success.html',
+        login: 'static/login.html'
       }
     }
   },

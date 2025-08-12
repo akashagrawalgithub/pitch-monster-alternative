@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales AI Training - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #eff6ff, #ffffff, #eef2ff);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .left-section {
+            width: 60%;
+            padding: 60px 50px;
+            color: #333;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-img {
+            height: 40px;
+            width: auto;
+            margin-right: 12px;
+        }
+
+        .logo-text {
+            font-size:1.5rem;
+            font-weight:600;
+            color: #333;
+        }
+
+        
+
+        .main-title {
+            font-size: 2.05rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: #4b5563;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: grid;
+            gap: 30px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .feature-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .feature-content p {
+            font-size: 0.95rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .right-section {
+            flex: 1;
+            padding: 60px 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .phone-input-container {
+            position: relative;
+        }
+
+        .country-code {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-weight: 500;
+            z-index: 1;
+        }
+
+        .phone-input {
+            padding-left: 50px;
+        }
+
+        .otp-container {
+            display: none;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .otp-input {
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .otp-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f8fafc;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+
+        .btn-secondary:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .resend-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .resend-link a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .resend-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .success-message {
+            color: #059669;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                max-width: 100%;
+            }
+            
+            .left-section {
+                width: 100%;
+                padding: 40px 30px;
+            }
+            
+            .right-section {
+                padding: 30px;
+            }
+            
+            .main-title {
+                font-size: 2.2rem;
+            }
+            
+            .feature {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-section">
+            <div class="logo">
+                <img src="https://blog.volza.com/wp-content/uploads/2024/08/volza-logo-1.png" alt="Volza Logo" class="logo-img" style="width:70px; height: 35px; object-fit: contain;">
+                <div class="logo-text">Sales AI Training</div>
+            </div>
+            
+            <h1 class="main-title">Master Your Sales Skills with AI-Powered Training</h1>
+            <p class="subtitle">Practice real sales scenarios with intelligent AI personas and get instant feedback to improve your performance.</p>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <div class="feature-content">
+                        <h3>AI-Powered Training</h3>
+                        <p>Practice with intelligent AI personas that adapt to your skill level</p>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-content">
+                        <h3>Detailed Analytics</h3>
+                        <p>Get comprehensive feedback on your performance with actionable insights</p>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">👥</div>
+                    <div class="feature-content">
+                        <h3>Multiple Scenarios</h3>
+                        <p>Train across various sales situations from cold calls to closing deals</p>
+                    </div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-content">
+                        <h3>Real-time Feedback</h3>
+                        <p>Receive instant analysis of your communication skills and techniques</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="right-section">
+            <div class="login-card">
+                <div class="login-header">
+                    <h2 class="login-title">Welcome Back</h2>
+                    <p class="login-subtitle">Sign in to continue your sales training journey</p>
+                </div>
+                
+                <form id="loginForm">
+                    <div class="form-group" id="phoneGroup">
+                        <label class="form-label">Phone Number</label>
+                        <div class="phone-input-container">
+                            <span class="country-code">+91</span>
+                            <input type="tel" class="form-input phone-input" id="phoneInput" placeholder="Enter your phone number" maxlength="10">
+                        </div>
+                        <div class="error-message" id="phoneError"></div>
+                    </div>
+                    
+                                         <div class="form-group" id="otpGroup" style="display: none;">
+                          <label class="form-label">Enter OTP</label>
+                          <div class="otp-container" id="otpContainer">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="0">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="1">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="2">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="3">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="4">
+                              <input type="text" class="form-input otp-input" maxlength="1" data-index="5">
+                          </div>
+                          <div class="error-message" id="otpError"></div>
+                          <div class="success-message" id="otpSuccess"></div>
+                     </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Send OTP</button>
+                    
+                    <div class="resend-link" id="resendLink" style="display: none;">
+                        <a href="#" id="resendOtp">Resend OTP</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PhoneLogin {
+            constructor() {
+                this.form = document.getElementById('loginForm');
+                this.phoneInput = document.getElementById('phoneInput');
+                this.otpGroup = document.getElementById('otpGroup');
+                this.otpContainer = document.getElementById('otpContainer');
+                this.otpInputs = document.querySelectorAll('.otp-input');
+                this.submitBtn = document.getElementById('submitBtn');
+                this.resendLink = document.getElementById('resendLink');
+                this.phoneGroup = document.getElementById('phoneGroup');
+                
+                this.isOtpSent = false;
+                this.otpTimer = null;
+                this.countdown = 30;
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                this.phoneInput.addEventListener('input', (e) => this.formatPhoneNumber(e));
+                this.otpInputs.forEach(input => {
+                    input.addEventListener('input', (e) => this.handleOtpInput(e));
+                    input.addEventListener('keydown', (e) => this.handleOtpKeydown(e));
+                });
+                
+                document.getElementById('resendOtp').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.resendOtp();
+                });
+            }
+            
+            formatPhoneNumber(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 10) {
+                    value = value.slice(0, 10);
+                }
+                e.target.value = value;
+            }
+            
+            handleSubmit(e) {
+                e.preventDefault();
+                
+                if (!this.isOtpSent) {
+                    this.sendOtp();
+                } else {
+                    this.verifyOtp();
+                }
+            }
+            
+            sendOtp() {
+                const phone = this.phoneInput.value;
+                
+                if (!this.validatePhone(phone)) {
+                    return;
+                }
+                
+                this.submitBtn.textContent = 'Sending...';
+                this.submitBtn.disabled = true;
+                
+                // Simulate API call delay
+                setTimeout(() => {
+                    this.isOtpSent = true;
+                    this.showOtpSection();
+                    this.startOtpTimer();
+                    this.submitBtn.textContent = 'Sign In';
+                    this.submitBtn.disabled = false;
+                    this.showMessage('otpSuccess', 'OTP sent successfully!');
+                    const demoOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                }, 1500);
+            }
+            
+            verifyOtp() {
+                const otp = Array.from(this.otpInputs).map(input => input.value).join('');
+                if (otp.length !== 6) {
+                    this.showMessage('otpError', 'Please enter the complete 6-digit OTP');
+                    return;
+                }
+                this.submitBtn.textContent = 'Verifying...';
+                this.submitBtn.disabled = true;
+                
+                // Simulate verification delay
+                setTimeout(() => {
+                    // For demo: accept any 6-digit OTP
+                    this.showMessage('otpSuccess', 'Login successful! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                }, 1000);
+            }
+            
+            resendOtp() {
+                if (this.countdown > 0) return;
+                this.sendOtp();
+                this.startOtpTimer();
+            }
+            
+            showOtpSection() {
+                this.otpGroup.style.display = 'block';
+                this.otpContainer.style.display = 'flex';
+                this.resendLink.style.display = 'block';
+                this.otpInputs[0].focus();
+            }
+            
+            startOtpTimer() {
+                this.countdown = 30;
+                const resendLink = document.getElementById('resendOtp');
+                this.otpTimer = setInterval(() => {
+                    if (this.countdown > 0) {
+                        resendLink.textContent = `Resend OTP (${this.countdown}s)`;
+                        this.countdown--;
+                    } else {
+                        resendLink.textContent = 'Resend OTP';
+                        clearInterval(this.otpTimer);
+                    }
+                }, 1000);
+            }
+            
+            handleOtpInput(e) {
+                const input = e.target;
+                const value = input.value;
+                const index = parseInt(input.dataset.index);
+                if (value.length === 1 && index < 5) {
+                    this.otpInputs[index + 1].focus();
+                }
+            }
+            
+            handleOtpKeydown(e) {
+                const input = e.target;
+                const index = parseInt(input.dataset.index);
+                if (e.key === 'Backspace' && input.value === '' && index > 0) {
+                    this.otpInputs[index - 1].focus();
+                }
+            }
+            
+            clearOtpInputs() {
+                this.otpInputs.forEach(input => input.value = '');
+            }
+            
+            validatePhone(phone) {
+                if (!phone) {
+                    this.showMessage('phoneError', 'Please enter your phone number');
+                    return false;
+                }
+                
+                if (phone.length !== 10) {
+                    this.showMessage('phoneError', 'Please enter a valid 10-digit phone number');
+                    return false;
+                }
+                
+                this.hideMessage('phoneError');
+                return true;
+            }
+            
+            showMessage(elementId, message) {
+                const element = document.getElementById(elementId);
+                element.textContent = message;
+                element.style.display = 'block';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+            
+            hideMessage(elementId) {
+                const element = document.getElementById(elementId);
+                element.style.display = 'none';
+            }
+        }
+        
+        // Initialize the login functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            new PhoneLogin();
+        });
+    </script>
+</body>
+</html> 
