@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your AI Training Persona</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Left Sidebar - User Details */
+        .user-sidebar {
+            width: 200px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size:16px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .user-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .user-info p {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .user-menu {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #64748b;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+            color: #3b82f6;
+        }
+
+        .menu-item.active {
+            background: #eff6ff;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 200px;
+            flex: 1;
+            padding: 40px;
+        }
+
+        .page-header {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: #64748b;
+            max-width: 600px;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .agent-card {
+            background: #ffffff;
+            border-radius: 16px ;
+            padding:24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .agent-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .difficulty-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .difficulty-easy {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .difficulty-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .difficulty-hard {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .agent-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .agent-description {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .start-button:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar - User Details -->
+        <div class="user-sidebar">
+            <div class="user-header">
+                <div class="user-avatar" id="userAvatar">JD</div>
+                <div class="user-info">
+                    <h4 id="userName">John Doe</h4>
+                </div>
+            </div>
+            
+            
+                        <div class="user-menu">
+                <a href="/login.html" class="menu-item">
+                    <span class="material-icons">logout</span>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">Choose Your AI Training Persona</h1>
+                <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and challenges.</p>
+            </div>
+
+            <div class="agents-grid">
+                <!-- Payment Follow-up -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon" >$</div>
+                        <div class="difficulty-badge difficulty-medium">Medium</div>
+                    </div>
+                    <h3 class="agent-title">Payment Follow-up</h3>
+                    <p class="agent-description">Practice handling overdue payment conversations with challenging clients who have various excuses and objections.</p>
+                    <button class="start-button" onclick="startTraining('payment-followup')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+
+                <!-- Competitor Objection -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon" >💬</div>
+                        <div class="difficulty-badge difficulty-hard">Hard</div>
+                    </div>
+                    <h3 class="agent-title">Competitor Objection</h3>
+                    <p class="agent-description">Handle objections when prospects mention competitors, learn to differentiate and highlight unique value propositions.</p>
+                    <button class="start-button" onclick="startTraining('competitor-objection')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+
+                <!-- Lead to Demo -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon">👥</div>
+                        <div class="difficulty-badge difficulty-easy">Easy</div>
+                    </div>
+                    <h3 class="agent-title">Lead to Demo</h3>
+                    <p class="agent-description">Convert interested leads into demo bookings through effective questioning and value proposition delivery.</p>
+                    <button class="start-button" onclick="startTraining('lead-to-demo')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+
+                <!-- Closing Skills -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon">🤝</div>
+                        <div class="difficulty-badge difficulty-hard">Hard</div>
+                    </div>
+                    <h3 class="agent-title">Closing Skills</h3>
+                    <p class="agent-description">Master the art of closing deals with various closing techniques and handling last-minute objections.</p>
+                    <button class="start-button" onclick="startTraining('closing-skills')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+
+                <!-- Cold Calling -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon">📞</div>
+                        <div class="difficulty-badge difficulty-medium">Medium</div>
+                    </div>
+                    <h3 class="agent-title">Cold Calling</h3>
+                    <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and capture prospect attention quickly.</p>
+                    <button class="start-button" onclick="startTraining('cold-calling')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+
+                <!-- Discovery Call -->
+                <div class="agent-card">
+                    <div class="card-header">
+                        <div class="agent-icon" >🔍</div>
+                        <div class="difficulty-badge difficulty-medium">Medium</div>
+                    </div>
+                    <h3 class="agent-title">Discovery Call</h3>
+                    <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget, and decision-making processes.</p>
+                    <button class="start-button" onclick="startTraining('discovery-call')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load user data from localStorage or set defaults
+        function loadUserData() {
+            const userData = JSON.parse(localStorage.getItem('userData')) || {
+                name: 'John Doe',
+                avatar: 'JD'
+            };
+
+            document.getElementById('userName').textContent = userData.name;
+            document.getElementById('userAvatar').textContent = userData.avatar;
+        }
+
+        // Start training session
+        function startTraining(agentType) {
+            // Store the selected agent type
+            localStorage.setItem('selectedAgentType', agentType);
+            
+            // Redirect to the main training page
+            window.location.href = '/';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserData();
+        });
+    </script>
+</body>
+</html> 

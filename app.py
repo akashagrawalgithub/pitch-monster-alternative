@@ -16,8 +16,7 @@ import string
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
 
-OPENAI_API_KEY = "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"
-CARTESIA_API_KEY = "sk_car_VDpnj5rbG3FKJsfs4xrZyT"
+
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -104,6 +103,15 @@ def login_page():
     else:
         # In production, serve from dist folder
         return send_from_directory('dist', 'login.html')
+
+@app.route('/agents.html')
+def agents_page():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'agents.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'agents.html')
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():

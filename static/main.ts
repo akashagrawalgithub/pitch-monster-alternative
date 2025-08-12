@@ -29,8 +29,43 @@ function createUI() {
     topBar.style.boxShadow = '0 2px 16px rgba(44,62,80,0.07)';
     topBar.style.overflow = 'visible';
 
+    // Back button
+    const backButton = document.createElement('button');
+    backButton.innerHTML = '← Back to Agents';
+    backButton.style.position = 'absolute';
+    backButton.style.left = '18px';
+    backButton.style.background = 'rgba(255,255,255,0.8)';
+    backButton.style.border = '1px solid rgba(0,0,0,0.1)';
+    backButton.style.borderRadius = '8px';
+    backButton.style.padding = '8px 16px';
+    backButton.style.fontSize = '14px';
+    backButton.style.fontWeight = '500';
+    backButton.style.color = '#374151';
+    backButton.style.cursor = 'pointer';
+    backButton.style.transition = 'all 0.2s';
+    backButton.onclick = () => window.location.href = '/agents.html';
+    backButton.onmouseover = () => {
+        backButton.style.background = 'rgba(255,255,255,0.95)';
+        backButton.style.transform = 'translateY(-1px)';
+    };
+    backButton.onmouseout = () => {
+        backButton.style.background = 'rgba(255,255,255,0.8)';
+        backButton.style.transform = 'translateY(0)';
+    };
+
+    // Get agent type from localStorage and set appropriate title
+    const agentType = localStorage.getItem('selectedAgentType') || 'payment-followup';
+    const agentTitles = {
+        'payment-followup': 'Payment Follow-up Training',
+        'competitor-objection': 'Competitor Objection Training',
+        'lead-to-demo': 'Lead to Demo Training',
+        'closing-skills': 'Closing Skills Training',
+        'cold-calling': 'Cold Calling Training',
+        'discovery-call': 'Discovery Call Training'
+    };
+    
     const appTitle = document.createElement('div');
-    appTitle.textContent = 'Import/Export Analytics Consultant';
+    appTitle.textContent = agentTitles[agentType] || 'Sales Training';
     appTitle.style.fontSize = '18px';
     appTitle.style.fontWeight = '500';
     appTitle.style.letterSpacing = '0.5px';
@@ -61,6 +96,7 @@ function createUI() {
     timerWrap.appendChild(timerEl);
     timerWrap.appendChild(dot);
 
+    topBar.appendChild(backButton);
     topBar.appendChild(appTitle);
     topBar.appendChild(timerWrap);
     document.body.appendChild(topBar);

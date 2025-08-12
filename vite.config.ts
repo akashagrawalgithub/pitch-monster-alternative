@@ -10,7 +10,8 @@ export default defineConfig({
         main: 'static/index.html',
         analysis: 'static/analysis.html',
         success: 'static/success.html',
-        login: 'static/login.html'
+        login: 'static/login.html',
+        agents: 'static/agents.html'
       }
     }
   },
