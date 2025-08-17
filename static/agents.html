@@ -434,12 +434,17 @@
                     const isAuthenticated = localStorage.getItem('authenticated');
                     const accessToken = localStorage.getItem('accessToken');
                     
+                    console.log('Auth check - isAuthenticated:', isAuthenticated);
+                    console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
+                    
                     if (!isAuthenticated || !accessToken) {
+                        console.log('Missing auth data, redirecting to login');
                         window.location.href = '/login.html';
                         return;
                     }
                     
                     // Verify token with backend
+                    console.log('Making auth check request to backend...');
                     const response = await fetch('/auth/check', {
                         method: 'GET',
                         headers: {
@@ -447,14 +452,18 @@
                         }
                     });
                     
+                    console.log('Auth check response status:', response.status);
+                    
                     if (!response.ok) {
                         // Token is invalid, redirect to login
+                        console.log('Auth check failed, clearing storage and redirecting');
                         localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
                     
                     const data = await response.json();
+                    console.log('Auth check successful, user data:', data.user);
                     this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);

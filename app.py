@@ -12,7 +12,7 @@ import numpy as np
 import json
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
+CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
@@ -563,28 +563,39 @@ def check_auth():
     """Check if user is authenticated"""
     try:
         auth_header = request.headers.get('Authorization')
+        print(f"Auth check - auth_header: {auth_header[:50] if auth_header else 'None'}...")
+        
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("Auth check - No valid auth header")
             return jsonify({'authenticated': False}), 401
         
         token = auth_header.split(' ')[1]
+        print(f"Auth check - token: {token[:50]}...")
         
         # Verify token with Supabase
-        user = supabase.auth.get_user(token)
+        response = supabase.auth.get_user(token)
+        print(f"Auth check - response: {response}")
+        print(f"Auth check - response.user: {response.user if response else 'None'}")
         
-        if user:
+        if response.user:
+            user_data = {
+                'id': response.user.id,
+                'email': response.user.email,
+                'name': response.user.user_metadata.get('name', response.user.email.split('@')[0])
+            }
+            print(f"Auth check - user_data: {user_data}")
             return jsonify({
                 'authenticated': True,
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'name': user.user_metadata.get('name', user.email.split('@')[0])
-                }
+                'user': user_data
             })
         else:
+            print("Auth check - No user in response")
             return jsonify({'authenticated': False}), 401
             
     except Exception as e:
         print(f"Auth check error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'authenticated': False}), 401
 
 # Serve static assets from dist folder in production
