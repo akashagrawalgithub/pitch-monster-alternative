@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Choose Your AI Training Persona</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
     <style>
         * {
             margin: 0;
@@ -28,7 +32,7 @@
 
         /* Left Sidebar - User Details */
         .user-sidebar {
-            width: 200px;
+            width: 250px;
             background: #ffffff;
             border-right: 1px solid #e2e8f0;
             overflow: hidden;
@@ -59,7 +63,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size:16px;
+            font-size: 16px;
             font-weight: 500;
             color: white;
         }
@@ -76,6 +80,7 @@
             color: #64748b;
             margin-bottom: 8px;
         }
+
         .user-menu {
             margin-top: auto;
             padding-top: 16px;
@@ -107,7 +112,7 @@
 
         /* Main Content */
         .main-content {
-            margin-left: 200px;
+            margin-left: 250px;
             flex: 1;
             padding: 40px;
         }
@@ -139,8 +144,8 @@
 
         .agent-card {
             background: #ffffff;
-            border-radius: 16px ;
-            padding:24px;
+            border-radius: 16px;
+            padding: 24px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transition: all 0.3s ease;
             border: 1px solid #e2e8f0;
@@ -235,10 +240,9 @@
         .start-button:active {
             transform: translateY(0);
         }
-
-
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Left Sidebar - User Details -->
@@ -249,10 +253,10 @@
                     <h4 id="userName">John Doe</h4>
                 </div>
             </div>
-            
-            
-                        <div class="user-menu">
-                <a href="/login.html" class="menu-item">
+
+
+            <div class="user-menu">
+                <a href="#" class="menu-item" id="logoutBtn">
                     <span class="material-icons">logout</span>
                     Logout
                 </a>
@@ -263,18 +267,20 @@
         <div class="main-content">
             <div class="page-header">
                 <h1 class="page-title">Choose Your AI Training Persona</h1>
-                <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and challenges.</p>
+                <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and
+                    challenges.</p>
             </div>
 
             <div class="agents-grid">
                 <!-- Payment Follow-up -->
                 <div class="agent-card">
                     <div class="card-header">
-                        <div class="agent-icon" >$</div>
+                        <div class="agent-icon">$</div>
                         <div class="difficulty-badge difficulty-medium">Medium</div>
                     </div>
                     <h3 class="agent-title">Payment Follow-up</h3>
-                    <p class="agent-description">Practice handling overdue payment conversations with challenging clients who have various excuses and objections.</p>
+                    <p class="agent-description">Practice handling overdue payment conversations with challenging
+                        clients who have various excuses and objections.</p>
                     <button class="start-button" onclick="startTraining('payment-followup')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -284,11 +290,12 @@
                 <!-- Competitor Objection -->
                 <div class="agent-card">
                     <div class="card-header">
-                        <div class="agent-icon" >💬</div>
+                        <div class="agent-icon">💬</div>
                         <div class="difficulty-badge difficulty-hard">Hard</div>
                     </div>
                     <h3 class="agent-title">Competitor Objection</h3>
-                    <p class="agent-description">Handle objections when prospects mention competitors, learn to differentiate and highlight unique value propositions.</p>
+                    <p class="agent-description">Handle objections when prospects mention competitors, learn to
+                        differentiate and highlight unique value propositions.</p>
                     <button class="start-button" onclick="startTraining('competitor-objection')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -302,7 +309,8 @@
                         <div class="difficulty-badge difficulty-easy">Easy</div>
                     </div>
                     <h3 class="agent-title">Lead to Demo</h3>
-                    <p class="agent-description">Convert interested leads into demo bookings through effective questioning and value proposition delivery.</p>
+                    <p class="agent-description">Convert interested leads into demo bookings through effective
+                        questioning and value proposition delivery.</p>
                     <button class="start-button" onclick="startTraining('lead-to-demo')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -316,7 +324,8 @@
                         <div class="difficulty-badge difficulty-hard">Hard</div>
                     </div>
                     <h3 class="agent-title">Closing Skills</h3>
-                    <p class="agent-description">Master the art of closing deals with various closing techniques and handling last-minute objections.</p>
+                    <p class="agent-description">Master the art of closing deals with various closing techniques and
+                        handling last-minute objections.</p>
                     <button class="start-button" onclick="startTraining('closing-skills')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -330,7 +339,8 @@
                         <div class="difficulty-badge difficulty-medium">Medium</div>
                     </div>
                     <h3 class="agent-title">Cold Calling</h3>
-                    <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and capture prospect attention quickly.</p>
+                    <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and
+                        capture prospect attention quickly.</p>
                     <button class="start-button" onclick="startTraining('cold-calling')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -340,11 +350,12 @@
                 <!-- Discovery Call -->
                 <div class="agent-card">
                     <div class="card-header">
-                        <div class="agent-icon" >🔍</div>
+                        <div class="agent-icon">🔍</div>
                         <div class="difficulty-badge difficulty-medium">Medium</div>
                     </div>
                     <h3 class="agent-title">Discovery Call</h3>
-                    <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget, and decision-making processes.</p>
+                    <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget,
+                        and decision-making processes.</p>
                     <button class="start-button" onclick="startTraining('discovery-call')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
@@ -355,30 +366,81 @@
     </div>
 
     <script>
-        // Load user data from localStorage or set defaults
-        function loadUserData() {
-            const userData = JSON.parse(localStorage.getItem('userData')) || {
-                name: 'John Doe',
-                avatar: 'JD'
-            };
+        // Supabase configuration
+        const SUPABASE_URL = 'https://hblifaxxsqkgwzcwxzxo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0';
 
-            document.getElementById('userName').textContent = userData.name;
-            document.getElementById('userAvatar').textContent = userData.avatar;
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        class AgentsPage {
+            constructor() {
+                this.initializeAuth();
+                this.initializeEventListeners();
+            }
+            
+            async initializeAuth() {
+                try {
+                    // Check if user is authenticated via Supabase
+                    const { data: { user }, error } = await supabase.auth.getUser();
+                    
+                    if (error || !user) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    this.loadUserData(user);
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    window.location.href = '/login.html';
+                }
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.handleLogout();
+                });
+            }
+            
+            loadUserData(user) {
+                const email = user.email || 'User';
+                const name = user.user_metadata?.name || email.split('@')[0];
+                const avatar = name.substring(0, 2).toUpperCase();
+                
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').textContent = avatar;
+            }
+
+            async handleLogout() {
+                try {
+                    // Sign out from Supabase
+                    await supabase.auth.signOut();
+                    
+                    // Clear session data
+                    sessionStorage.removeItem('authenticated');
+                    sessionStorage.removeItem('userEmail');
+                    sessionStorage.removeItem('userName');
+                    sessionStorage.removeItem('accessToken');
+                    
+                    window.location.href = '/login.html';
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                    // Still redirect even if logout fails
+                    window.location.href = '/login.html';
+                }
+            }
         }
 
-        // Start training session
         function startTraining(agentType) {
-            // Store the selected agent type
             localStorage.setItem('selectedAgentType', agentType);
-            
-            // Redirect to the main training page
             window.location.href = '/';
         }
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUserData();
+        document.addEventListener('DOMContentLoaded', function () {
+            new AgentsPage();
         });
     </script>
 </body>
-</html> 
+
+</html>

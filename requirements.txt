@@ -4,4 +4,6 @@ Werkzeug==2.3.7
 cartesia
 numpy
 flask-cors==4.0.0
-gunicorn==21.2.0 
+gunicorn==21.2.0
+requests==2.31.0
+supabase==2.0.0 

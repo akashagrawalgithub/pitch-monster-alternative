@@ -1,4 +1,14 @@
-// main.ts - Dynamic UI generation for Payment Follow-up Training
+
+function checkAuth() {
+    // Simple check for authentication using session storage
+    const isAuthenticated = sessionStorage.getItem('authenticated') === 'true';
+    
+    if (!isAuthenticated) {
+        window.location.href = '/login.html';
+        return false;
+    }
+    return true;
+}
 
 // --- UI Creation ---
 function createUI() {
@@ -342,7 +352,14 @@ function createUI() {
 }
 
 // --- Logic (same as before, but query elements after UI creation) ---
-createUI();
+// Check authentication before creating UI
+if (checkAuth()) {
+    createUI();
+} else {
+    // If not authenticated, the checkAuth function will redirect to login
+    // This is just a fallback
+    window.location.href = '/login.html';
+}
 
 let recognition: any = null;
 let isListening = false;

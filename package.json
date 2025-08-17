@@ -14,6 +14,7 @@
     "@types/node": "^20.0.0"
   },
   "dependencies": {
-    "@speechify/api": "^1.0.0"
+    "@speechify/api": "^1.0.0",
+    "@supabase/supabase-js": "^2.39.0"
   }
 }

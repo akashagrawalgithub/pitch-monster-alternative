@@ -10,15 +10,15 @@ from cartesia import Cartesia
 import base64
 import numpy as np
 import json
-import random
-import string
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000'])
 
-# Get API keys from environment variables
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
+OPENAI_API_KEY = "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"
+CARTESIA_API_KEY = "sk_car_VDpnj5rbG3FKJsfs4xrZyT"
+
+SUPABASE_URL = "https://hblifaxxsqkgwzcwxzxo.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0"
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
@@ -27,9 +27,6 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
 
 conversation_history = []
-
-# In-memory storage for OTP (in production, use Redis or database)
-otp_storage = {}
 
 def process_raw_audio(audio_bytes, sample_rate=44100):
     """Process raw PCM f32le audio data efficiently"""
@@ -520,85 +517,75 @@ INSTRUCTIONS:
                  "debug_info": "Check server logs for more details"
              }), 500
 
-# OTP functionality
-def generate_otp():
-    """Generate a 6-digit OTP"""
-    return ''.join(random.choices(string.digits, k=6))
+# Supabase integration for authentication
+from supabase import create_client, Client
 
-@app.route('/send-otp', methods=['POST'])
-def send_otp():
-    """Send OTP to phone number"""
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+@app.route('/login', methods=['POST'])
+def login():
+    """Supabase email/password login"""
     try:
         data = request.json
-        phone = data.get('phone')
+        email = data.get('email')
+        password = data.get('password')
         
-        if not phone or len(phone) != 10:
-            return jsonify({'error': 'Invalid phone number'}), 400
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
         
-        # Generate OTP
-        otp = generate_otp()
-        
-        # Store OTP with timestamp (5 minutes expiry)
-        otp_storage[phone] = {
-            'otp': otp,
-            'timestamp': time.time(),
-            'attempts': 0
-        }
-        
-        # In production, integrate with SMS service like Twilio
-        print(f"OTP for {phone}: {otp}")
-        
-        return jsonify({
-            'message': 'OTP sent successfully',
-            'otp': otp  # Remove this in production
+        # Authenticate with Supabase
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
         })
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/verify-otp', methods=['POST'])
-def verify_otp():
-    """Verify OTP"""
-    try:
-        data = request.json
-        phone = data.get('phone')
-        otp = data.get('otp')
-        
-        if not phone or not otp:
-            return jsonify({'error': 'Phone and OTP are required'}), 400
-        
-        # Check if OTP exists and is not expired
-        if phone not in otp_storage:
-            return jsonify({'error': 'OTP not found or expired'}), 400
-        
-        stored_data = otp_storage[phone]
-        
-        # Check expiry (5 minutes)
-        if time.time() - stored_data['timestamp'] > 300:
-            del otp_storage[phone]
-            return jsonify({'error': 'OTP expired'}), 400
-        
-        # Check attempts
-        if stored_data['attempts'] >= 3:
-            del otp_storage[phone]
-            return jsonify({'error': 'Too many attempts. Please request a new OTP'}), 400
-        
-        # Increment attempts
-        stored_data['attempts'] += 1
-        
-        # Verify OTP
-        if stored_data['otp'] == otp:
-            # Clear OTP after successful verification
-            del otp_storage[phone]
+        if response.user:
             return jsonify({
-                'message': 'OTP verified successfully',
-                'success': True
+                'message': 'Login successful',
+                'success': True,
+                'user': {
+                    'id': response.user.id,
+                    'email': response.user.email,
+                    'name': response.user.user_metadata.get('name', email.split('@')[0])
+                },
+                'access_token': response.session.access_token
             })
         else:
-            return jsonify({'error': 'Invalid OTP'}), 400
+            return jsonify({'error': 'Invalid email or password'}), 401
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Login error: {str(e)}")
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+@app.route('/auth/check', methods=['GET'])
+def check_auth():
+    """Check if user is authenticated"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'authenticated': False}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        # Verify token with Supabase
+        user = supabase.auth.get_user(token)
+        
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'name': user.user_metadata.get('name', user.email.split('@')[0])
+                }
+            })
+        else:
+            return jsonify({'authenticated': False}), 401
+            
+    except Exception as e:
+        print(f"Auth check error: {str(e)}")
+        return jsonify({'authenticated': False}), 401
 
 # Serve static assets from dist folder in production
 @app.route('/<path:filename>')

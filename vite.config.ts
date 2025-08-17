@@ -24,7 +24,9 @@ export default defineConfig({
       '/chat_stream': 'http://localhost:8000',
       '/analyze_conversation': 'http://localhost:8000',
       '/best-pitch': 'http://localhost:8000',
-      '/test-perfect-pitch': 'http://localhost:8000'
+      '/test-perfect-pitch': 'http://localhost:8000',
+      '/login': 'http://localhost:8000',
+      '/auth': 'http://localhost:8000'
     }
   }
 }) 
