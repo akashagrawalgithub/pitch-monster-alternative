@@ -358,11 +358,11 @@
                         this.submitBtn.textContent = 'Sign In';
                         this.submitBtn.disabled = false;
                     } else {
-                        // Set session storage for authentication
-                        sessionStorage.setItem('authenticated', 'true');
-                        sessionStorage.setItem('userEmail', email);
-                        sessionStorage.setItem('userName', data.user.name);
-                        sessionStorage.setItem('accessToken', data.access_token);
+                        // Set local storage for authentication
+                        localStorage.setItem('authenticated', 'true');
+                        localStorage.setItem('userEmail', email);
+                        localStorage.setItem('userName', data.user.name);
+                        localStorage.setItem('accessToken', data.access_token);
                         
                         this.showMessage('loginSuccess', 'Login successful! Redirecting...');
                         setTimeout(() => {

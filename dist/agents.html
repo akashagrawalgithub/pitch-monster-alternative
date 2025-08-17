@@ -430,9 +430,9 @@
             
             async initializeAuth() {
                 try {
-                    // Check if user is authenticated via session storage
-                    const isAuthenticated = sessionStorage.getItem('authenticated');
-                    const accessToken = sessionStorage.getItem('accessToken');
+                    // Check if user is authenticated via local storage
+                    const isAuthenticated = localStorage.getItem('authenticated');
+                    const accessToken = localStorage.getItem('accessToken');
                     
                     if (!isAuthenticated || !accessToken) {
                         window.location.href = '/login.html';
@@ -449,7 +449,7 @@
                     
                     if (!response.ok) {
                         // Token is invalid, redirect to login
-                        sessionStorage.clear();
+                        localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
@@ -458,7 +458,7 @@
                     this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
-                    sessionStorage.clear();
+                    localStorage.clear();
                     window.location.href = '/login.html';
                 }
             }
@@ -481,11 +481,11 @@
 
             async handleLogout() {
                 try {
-                    // Clear session data
-                    sessionStorage.removeItem('authenticated');
-                    sessionStorage.removeItem('userEmail');
-                    sessionStorage.removeItem('userName');
-                    sessionStorage.removeItem('accessToken');
+                    // Clear local storage data
+                    localStorage.removeItem('authenticated');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('accessToken');
                     
                     window.location.href = '/login.html';
                 } catch (error) {

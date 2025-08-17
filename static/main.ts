@@ -1,7 +1,7 @@
 
 function checkAuth() {
-    // Simple check for authentication using session storage
-    const isAuthenticated = sessionStorage.getItem('authenticated') === 'true';
+    // Simple check for authentication using local storage
+    const isAuthenticated = localStorage.getItem('authenticated') === 'true';
     
     if (!isAuthenticated) {
         window.location.href = '/login.html';
