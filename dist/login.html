@@ -309,8 +309,8 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
         // Supabase configuration
-        const SUPABASE_URL = 'https://hblifaxxsqkgwzcwxzxo.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0';
+        const SUPABASE_URL = os.environ.get("SUPABASE_URL")
+        const SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
         
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

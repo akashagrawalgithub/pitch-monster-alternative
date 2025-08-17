@@ -19,8 +19,7 @@
 
         body {
             font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);            
             color: #1e293b;
             line-height: 1.6;
         }
@@ -114,7 +113,7 @@
         .main-content {
             margin-left: 250px;
             flex: 1;
-            padding: 40px;
+            padding: 25px;
         }
 
         .page-header {
@@ -135,11 +134,23 @@
         }
 
         .agents-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 24px;
             max-width: 1200px;
             margin: 0 auto;
+        }
+
+        .agents-row {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .agent-card {
+            flex: 1;
+            min-width: 350px;
+            max-width: calc(50% - 12px);
         }
 
         .agent-card {
@@ -240,6 +251,44 @@
         .start-button:active {
             transform: translateY(0);
         }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .user-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 16px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+
+            .agents-row {
+                flex-direction: column;
+            }
+
+            .agent-card {
+                max-width: 100%;
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 20px;
+            }
+
+            .page-subtitle {
+                font-size: 14px;
+            }
+
+            .agent-card {
+                padding: 16px;
+            }
+        }
     </style>
 </head>
 
@@ -272,94 +321,103 @@
             </div>
 
             <div class="agents-grid">
-                <!-- Payment Follow-up -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">$</div>
-                        <div class="difficulty-badge difficulty-medium">Medium</div>
+                <!-- Row 1 -->
+                <div class="agents-row">
+                    <!-- Payment Follow-up -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">$</div>
+                            <div class="difficulty-badge difficulty-medium">Medium</div>
+                        </div>
+                        <h3 class="agent-title">Payment Follow-up</h3>
+                        <p class="agent-description">Practice handling overdue payment conversations with challenging
+                            clients who have various excuses and objections.</p>
+                        <button class="start-button" onclick="startTraining('payment-followup')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
                     </div>
-                    <h3 class="agent-title">Payment Follow-up</h3>
-                    <p class="agent-description">Practice handling overdue payment conversations with challenging
-                        clients who have various excuses and objections.</p>
-                    <button class="start-button" onclick="startTraining('payment-followup')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
+
+                    <!-- Competitor Objection -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">💬</div>
+                            <div class="difficulty-badge difficulty-hard">Hard</div>
+                        </div>
+                        <h3 class="agent-title">Competitor Objection</h3>
+                        <p class="agent-description">Handle objections when prospects mention competitors, learn to
+                            differentiate and highlight unique value propositions.</p>
+                        <button class="start-button" onclick="startTraining('competitor-objection')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Competitor Objection -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">💬</div>
-                        <div class="difficulty-badge difficulty-hard">Hard</div>
+                <!-- Row 2 -->
+                <div class="agents-row">
+                    <!-- Lead to Demo -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">👥</div>
+                            <div class="difficulty-badge difficulty-easy">Easy</div>
+                        </div>
+                        <h3 class="agent-title">Lead to Demo</h3>
+                        <p class="agent-description">Convert interested leads into demo bookings through effective
+                            questioning and value proposition delivery.</p>
+                        <button class="start-button" onclick="startTraining('lead-to-demo')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
                     </div>
-                    <h3 class="agent-title">Competitor Objection</h3>
-                    <p class="agent-description">Handle objections when prospects mention competitors, learn to
-                        differentiate and highlight unique value propositions.</p>
-                    <button class="start-button" onclick="startTraining('competitor-objection')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
+
+                    <!-- Closing Skills -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">🤝</div>
+                            <div class="difficulty-badge difficulty-hard">Hard</div>
+                        </div>
+                        <h3 class="agent-title">Closing Skills</h3>
+                        <p class="agent-description">Master the art of closing deals with various closing techniques and
+                            handling last-minute objections.</p>
+                        <button class="start-button" onclick="startTraining('closing-skills')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Lead to Demo -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">👥</div>
-                        <div class="difficulty-badge difficulty-easy">Easy</div>
+                <!-- Row 3 -->
+                <div class="agents-row">
+                    <!-- Cold Calling -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">📞</div>
+                            <div class="difficulty-badge difficulty-medium">Medium</div>
+                        </div>
+                        <h3 class="agent-title">Cold Calling</h3>
+                        <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and
+                            capture prospect attention quickly.</p>
+                        <button class="start-button" onclick="startTraining('cold-calling')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
                     </div>
-                    <h3 class="agent-title">Lead to Demo</h3>
-                    <p class="agent-description">Convert interested leads into demo bookings through effective
-                        questioning and value proposition delivery.</p>
-                    <button class="start-button" onclick="startTraining('lead-to-demo')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
-                </div>
 
-                <!-- Closing Skills -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">🤝</div>
-                        <div class="difficulty-badge difficulty-hard">Hard</div>
+                    <!-- Discovery Call -->
+                    <div class="agent-card">
+                        <div class="card-header">
+                            <div class="agent-icon">🔍</div>
+                            <div class="difficulty-badge difficulty-medium">Medium</div>
+                        </div>
+                        <h3 class="agent-title">Discovery Call</h3>
+                        <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget,
+                            and decision-making processes.</p>
+                        <button class="start-button" onclick="startTraining('discovery-call')">
+                            <span class="material-icons">play_arrow</span>
+                            Start Practice
+                        </button>
                     </div>
-                    <h3 class="agent-title">Closing Skills</h3>
-                    <p class="agent-description">Master the art of closing deals with various closing techniques and
-                        handling last-minute objections.</p>
-                    <button class="start-button" onclick="startTraining('closing-skills')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
-                </div>
-
-                <!-- Cold Calling -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">📞</div>
-                        <div class="difficulty-badge difficulty-medium">Medium</div>
-                    </div>
-                    <h3 class="agent-title">Cold Calling</h3>
-                    <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and
-                        capture prospect attention quickly.</p>
-                    <button class="start-button" onclick="startTraining('cold-calling')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
-                </div>
-
-                <!-- Discovery Call -->
-                <div class="agent-card">
-                    <div class="card-header">
-                        <div class="agent-icon">🔍</div>
-                        <div class="difficulty-badge difficulty-medium">Medium</div>
-                    </div>
-                    <h3 class="agent-title">Discovery Call</h3>
-                    <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget,
-                        and decision-making processes.</p>
-                    <button class="start-button" onclick="startTraining('discovery-call')">
-                        <span class="material-icons">play_arrow</span>
-                        Start Practice
-                    </button>
                 </div>
             </div>
         </div>
@@ -367,8 +425,8 @@
 
     <script>
         // Supabase configuration
-        const SUPABASE_URL = 'https://hblifaxxsqkgwzcwxzxo.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0';
+        const SUPABASE_URL = os.environ.get("SUPABASE_URL")
+        const SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
         // Initialize Supabase client
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
