@@ -1597,147 +1597,288 @@
             console.log('conversationRecording:', sessionStorage.getItem('conversationRecording'));
             console.log('recordingDuration:', sessionStorage.getItem('recordingDuration'));
 
-            // Check if recording exists
+            let recordingData = null;
+            let storedDuration = null;
+
+            // First check if we have recording from sessionStorage (new conversations)
             const hasRecording = sessionStorage.getItem('hasRecording');
             if (hasRecording === 'true') {
-                const recordingData = sessionStorage.getItem('conversationRecording');
-                const storedDuration = sessionStorage.getItem('recordingDuration');
+                recordingData = sessionStorage.getItem('conversationRecording');
+                storedDuration = sessionStorage.getItem('recordingDuration');
+                console.log('Using recording from sessionStorage');
+            }
+
+            // If we have recording data, set up the player
+            if (recordingData && recordingData.startsWith('data:audio/')) {
+                console.log('Found valid recording data (base64)');
+                console.log('Data length:', recordingData.length);
+                console.log('Stored duration:', storedDuration);
+                recordingPlayer.style.display = 'block';
                 
-                if (recordingData && recordingData.startsWith('data:audio/')) {
-                    console.log('Found valid recording data (base64)');
-                    console.log('Data length:', recordingData.length);
-                    console.log('Stored duration:', storedDuration);
-                    recordingPlayer.style.display = 'block';
+                // Create audio element from base64 data
+                audioPlayer = new Audio(recordingData);
+                
+                // Set duration from stored value if available
+                if (storedDuration) {
+                    audioPlayer.duration = parseFloat(storedDuration);
+                    console.log('Set audio duration from stored value:', audioPlayer.duration);
+                }
+                
+                // Add error handling
+                audioPlayer.addEventListener('error', (e) => {
+                    console.error('Audio playback error:', e);
+                    console.error('Audio error details:', audioPlayer.error);
+                    console.error('Audio error code:', audioPlayer.error?.code);
+                    console.error('Audio error message:', audioPlayer.error?.message);
                     
-                    // Create audio element from base64 data
-                    audioPlayer = new Audio(recordingData);
+                    // Show user-friendly error message
+                    const errorMessage = audioPlayer.error?.message || 'Audio format not supported';
+                    console.log('Audio playback failed:', errorMessage);
                     
-                    // Set duration from stored value if available
+                    // Update the time display to show duration from stored value
                     if (storedDuration) {
-                        audioPlayer.duration = parseFloat(storedDuration);
-                        console.log('Set audio duration from stored value:', audioPlayer.duration);
+                        const duration = parseFloat(storedDuration);
+                        audioTime.textContent = `00:00 / ${formatTime(duration)}`;
+                        console.log('Showing duration from stored value due to playback error');
+                    }
+                });
+                
+                // Add load event
+                audioPlayer.addEventListener('loadeddata', () => {
+                    console.log('Audio loaded successfully, duration:', audioPlayer.duration);
+                    // If duration is still not available, try to set it from stored value
+                    if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                        if (storedDuration) {
+                            audioPlayer.duration = parseFloat(storedDuration);
+                            console.log('Set duration from stored value after load:', audioPlayer.duration);
+                        }
+                    }
+                });
+                
+                // Add metadata loaded event
+                audioPlayer.addEventListener('loadedmetadata', () => {
+                    console.log('Audio metadata loaded, duration:', audioPlayer.duration);
+                    // If duration is still not available, use stored value
+                    if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                        if (storedDuration) {
+                            audioPlayer.duration = parseFloat(storedDuration);
+                            console.log('Set duration from stored value after metadata:', audioPlayer.duration);
+                        }
+                    }
+                });
+                
+                // Play/Pause functionality
+                playBtn.addEventListener('click', async () => {
+                    try {
+                        if (isPlaying) {
+                            audioPlayer.pause();
+                            playIcon.textContent = 'play_arrow';
+                            isPlaying = false;
+                        } else {
+                            await audioPlayer.play();
+                            playIcon.textContent = 'pause';
+                            isPlaying = true;
+                        }
+                    } catch (error) {
+                        console.error('Play/pause error:', error);
+                        alert('Error playing audio: ' + error.message);
+                    }
+                });
+                
+                // Update progress bar and time
+                audioPlayer.addEventListener('timeupdate', () => {
+                    let duration = audioPlayer.duration;
+                    
+                    // Use stored duration if browser can't detect it
+                    if (!duration || isNaN(duration)) {
+                        duration = storedDuration ? parseFloat(storedDuration) : 0;
                     }
                     
-                    // Add error handling
-                    audioPlayer.addEventListener('error', (e) => {
-                        console.error('Audio playback error:', e);
-                        console.error('Audio error details:', audioPlayer.error);
-                        console.error('Audio error code:', audioPlayer.error?.code);
-                        console.error('Audio error message:', audioPlayer.error?.message);
+                    if (duration && duration > 0) {
+                        const progress = (audioPlayer.currentTime / duration) * 100;
+                        audioProgressFill.style.width = progress + '%';
                         
-                        // Show user-friendly error message
-                        const errorMessage = audioPlayer.error?.message || 'Audio format not supported';
-                        console.log('Audio playback failed:', errorMessage);
-                        
-                        // Update the time display to show duration from stored value
-                        if (storedDuration) {
-                            const duration = parseFloat(storedDuration);
-                            audioTime.textContent = `00:00 / ${formatTime(duration)}`;
-                            console.log('Showing duration from stored value due to playback error');
-                        }
-                    });
+                        const currentTime = formatTime(audioPlayer.currentTime);
+                        const totalTime = formatTime(duration);
+                        audioTime.textContent = `${currentTime} / ${totalTime}`;
+                    } else {
+                        // Fallback: show only current time
+                        const currentTime = formatTime(audioPlayer.currentTime);
+                        audioTime.textContent = `${currentTime}`;
+                    }
+                });
+                
+                // Handle audio end
+                audioPlayer.addEventListener('ended', () => {
+                    playIcon.textContent = 'play_arrow';
+                    isPlaying = false;
+                    audioProgressFill.style.width = '0%';
+                    if (storedDuration) {
+                        audioTime.textContent = `00:00 / ${formatTime(parseFloat(storedDuration))}`;
+                    } else {
+                        audioTime.textContent = '00:00';
+                    }
+                });
+                
+                // Click on progress bar to seek
+                audioProgress.addEventListener('click', (e) => {
+                    let duration = audioPlayer.duration;
                     
-                    // Add load event
-                    audioPlayer.addEventListener('loadeddata', () => {
-                        console.log('Audio loaded successfully, duration:', audioPlayer.duration);
-                        // If duration is still not available, try to set it from stored value
-                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
-                            if (storedDuration) {
-                                audioPlayer.duration = parseFloat(storedDuration);
-                                console.log('Set duration from stored value after load:', audioPlayer.duration);
-                            }
-                        }
-                    });
+                    // Use stored duration if browser can't detect it
+                    if (!duration || isNaN(duration)) {
+                        duration = storedDuration ? parseFloat(storedDuration) : 0;
+                    }
                     
-                    // Add metadata loaded event
-                    audioPlayer.addEventListener('loadedmetadata', () => {
-                        console.log('Audio metadata loaded, duration:', audioPlayer.duration);
-                        // If duration is still not available, use stored value
-                        if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
-                            if (storedDuration) {
-                                audioPlayer.duration = parseFloat(storedDuration);
-                                console.log('Set duration from stored value after metadata:', audioPlayer.duration);
-                            }
-                        }
-                    });
-                    
-                    // Play/Pause functionality
-                    playBtn.addEventListener('click', async () => {
-                        try {
-                            if (isPlaying) {
-                                audioPlayer.pause();
-                                playIcon.textContent = 'play_arrow';
-                                isPlaying = false;
-                            } else {
-                                await audioPlayer.play();
-                                playIcon.textContent = 'pause';
-                                isPlaying = true;
-                            }
-                        } catch (error) {
-                            console.error('Play/pause error:', error);
-                            alert('Error playing audio: ' + error.message);
-                        }
-                    });
-                    
-                    // Update progress bar and time
-                    audioPlayer.addEventListener('timeupdate', () => {
-                        let duration = audioPlayer.duration;
-                        
-                        // Use stored duration if browser can't detect it
-                        if (!duration || isNaN(duration)) {
-                            duration = storedDuration ? parseFloat(storedDuration) : 0;
-                        }
-                        
-                        if (duration && duration > 0) {
-                            const progress = (audioPlayer.currentTime / duration) * 100;
-                            audioProgressFill.style.width = progress + '%';
-                            
-                            const currentTime = formatTime(audioPlayer.currentTime);
-                            const totalTime = formatTime(duration);
-                            audioTime.textContent = `${currentTime} / ${totalTime}`;
-                        } else {
-                            // Fallback: show only current time
-                            const currentTime = formatTime(audioPlayer.currentTime);
-                            audioTime.textContent = `${currentTime}`;
-                        }
-                    });
-                    
-                    // Handle audio end
-                    audioPlayer.addEventListener('ended', () => {
-                        playIcon.textContent = 'play_arrow';
-                        isPlaying = false;
-                        audioProgressFill.style.width = '0%';
-                        if (storedDuration) {
-                            audioTime.textContent = `00:00 / ${formatTime(parseFloat(storedDuration))}`;
-                        } else {
-                            audioTime.textContent = '00:00';
-                        }
-                    });
-                    
-                    // Click on progress bar to seek
-                    audioProgress.addEventListener('click', (e) => {
-                        let duration = audioPlayer.duration;
-                        
-                        // Use stored duration if browser can't detect it
-                        if (!duration || isNaN(duration)) {
-                            duration = storedDuration ? parseFloat(storedDuration) : 0;
-                        }
-                        
-                        if (duration && duration > 0) {
-                            const rect = audioProgress.getBoundingClientRect();
-                            const clickX = e.clientX - rect.left;
-                            const progress = clickX / rect.width;
-                            audioPlayer.currentTime = progress * duration;
-                        }
-                    });
-                    
-                    console.log('Recording player setup complete');
-                } else {
-                    console.error('No valid recording data found in sessionStorage');
-                    console.log('Available data:', recordingData ? 'Data exists but invalid format' : 'No data');
-                }
+                    if (duration && duration > 0) {
+                        const rect = audioProgress.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const progress = clickX / rect.width;
+                        audioPlayer.currentTime = progress * duration;
+                    }
+                });
+                
+                console.log('Recording player setup complete');
             } else {
-                console.log('No recording found in sessionStorage');
+                console.log('No valid recording data found');
+            }
+        }
+
+        // Function to setup recording player for past conversations
+        function setupPastConversationRecording(audioData, audioDuration) {
+            const recordingPlayer = document.getElementById('recordingPlayer');
+            const playBtn = document.getElementById('playBtn');
+            const playIcon = document.getElementById('playIcon');
+            const audioProgress = document.getElementById('audioProgress');
+            const audioProgressFill = document.getElementById('audioProgressFill');
+            const audioTime = document.getElementById('audioTime');
+
+            console.log('Setting up recording player for past conversation...');
+            console.log('Audio data length:', audioData ? audioData.length : 0);
+            console.log('Audio duration:', audioDuration);
+
+            if (audioData && audioData.length > 0) {
+                // Convert base64 to audio data URL
+                const audioDataUrl = `data:audio/wav;base64,${audioData}`;
+                
+                recordingPlayer.style.display = 'block';
+                
+                // Create audio element from base64 data
+                audioPlayer = new Audio(audioDataUrl);
+                
+                // Set duration from database value if available
+                if (audioDuration) {
+                    audioPlayer.duration = parseFloat(audioDuration);
+                    console.log('Set audio duration from database:', audioPlayer.duration);
+                }
+                
+                // Add error handling
+                audioPlayer.addEventListener('error', (e) => {
+                    console.error('Audio playback error:', e);
+                    console.error('Audio error details:', audioPlayer.error);
+                    
+                    // Update the time display to show duration from database value
+                    if (audioDuration) {
+                        const duration = parseFloat(audioDuration);
+                        audioTime.textContent = `00:00 / ${formatTime(duration)}`;
+                        console.log('Showing duration from database due to playback error');
+                    }
+                });
+                
+                // Add load event
+                audioPlayer.addEventListener('loadeddata', () => {
+                    console.log('Audio loaded successfully, duration:', audioPlayer.duration);
+                    if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                        if (audioDuration) {
+                            audioPlayer.duration = parseFloat(audioDuration);
+                            console.log('Set duration from database after load:', audioPlayer.duration);
+                        }
+                    }
+                });
+                
+                // Add metadata loaded event
+                audioPlayer.addEventListener('loadedmetadata', () => {
+                    console.log('Audio metadata loaded, duration:', audioPlayer.duration);
+                    if (!audioPlayer.duration || isNaN(audioPlayer.duration)) {
+                        if (audioDuration) {
+                            audioPlayer.duration = parseFloat(audioDuration);
+                            console.log('Set duration from database after metadata:', audioPlayer.duration);
+                        }
+                    }
+                });
+                
+                // Play/Pause functionality
+                playBtn.addEventListener('click', async () => {
+                    try {
+                        if (isPlaying) {
+                            audioPlayer.pause();
+                            playIcon.textContent = 'play_arrow';
+                            isPlaying = false;
+                        } else {
+                            await audioPlayer.play();
+                            playIcon.textContent = 'pause';
+                            isPlaying = true;
+                        }
+                    } catch (error) {
+                        console.error('Play/pause error:', error);
+                        alert('Error playing audio: ' + error.message);
+                    }
+                });
+                
+                // Update progress bar and time
+                audioPlayer.addEventListener('timeupdate', () => {
+                    let duration = audioPlayer.duration;
+                    
+                    // Use database duration if browser can't detect it
+                    if (!duration || isNaN(duration)) {
+                        duration = audioDuration ? parseFloat(audioDuration) : 0;
+                    }
+                    
+                    if (duration && duration > 0) {
+                        const progress = (audioPlayer.currentTime / duration) * 100;
+                        audioProgressFill.style.width = progress + '%';
+                        
+                        const currentTime = formatTime(audioPlayer.currentTime);
+                        const totalTime = formatTime(duration);
+                        audioTime.textContent = `${currentTime} / ${totalTime}`;
+                    } else {
+                        // Fallback: show only current time
+                        const currentTime = formatTime(audioPlayer.currentTime);
+                        audioTime.textContent = `${currentTime}`;
+                    }
+                });
+                
+                // Handle audio end
+                audioPlayer.addEventListener('ended', () => {
+                    playIcon.textContent = 'play_arrow';
+                    isPlaying = false;
+                    audioProgressFill.style.width = '0%';
+                    if (audioDuration) {
+                        audioTime.textContent = `00:00 / ${formatTime(parseFloat(audioDuration))}`;
+                    } else {
+                        audioTime.textContent = '00:00';
+                    }
+                });
+                
+                // Click on progress bar to seek
+                audioProgress.addEventListener('click', (e) => {
+                    let duration = audioPlayer.duration;
+                    
+                    // Use database duration if browser can't detect it
+                    if (!duration || isNaN(duration)) {
+                        duration = audioDuration ? parseFloat(audioDuration) : 0;
+                    }
+                    
+                    if (duration && duration > 0) {
+                        const rect = audioProgress.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const progress = clickX / rect.width;
+                        audioPlayer.currentTime = progress * duration;
+                    }
+                });
+                
+                console.log('Past conversation recording player setup complete');
+            } else {
+                console.log('No audio data found for past conversation');
             }
         }
 
@@ -1775,15 +1916,61 @@
             console.log('=== DEBUG: loadDynamicAnalysis started ===');
             
             try {
-                // First check if we have pre-computed analysis data
+                // First check if we have existing analysis data (from viewing past analysis)
+                const currentAnalysisData = sessionStorage.getItem('currentAnalysisData');
+                console.log('Current analysis data:', currentAnalysisData ? 'Found' : 'Not found');
+                
+                if (currentAnalysisData) {
+                    console.log('✅ Using existing analysis data from database - no need to call OpenAI');
+                    const analysisData = JSON.parse(currentAnalysisData);
+                    console.log('Parsed existing analysis data:', analysisData);
+                    
+                    // Update UI directly - no need to save to database again
+                    updateAnalysisUI(analysisData);
+                    
+                    // Set up recording player for past conversation
+                    const conversationId = sessionStorage.getItem('conversationId');
+                    if (conversationId) {
+                        // Get conversation data to access audio
+                        const conversationResponse = await fetch('/api/db/get_conversation_analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getAccessToken()}`
+                            },
+                            body: JSON.stringify({ conversation_id: conversationId })
+                        });
+                        
+                        if (conversationResponse.ok) {
+                            const conversationData = await conversationResponse.json();
+                            if (conversationData.success && conversationData.conversation) {
+                                const audioData = conversationData.conversation.audio_data;
+                                const audioDuration = conversationData.conversation.audio_duration_seconds;
+                                
+                                console.log('Setting up recording for past conversation...');
+                                setupPastConversationRecording(audioData, audioDuration);
+                            }
+                        }
+                    }
+                    
+                    return;
+                }
+                
+                // Check if we have pre-computed analysis data (from success.html)
                 const preComputedAnalysis = sessionStorage.getItem('analysisData');
                 console.log('Pre-computed analysis data:', preComputedAnalysis ? 'Found' : 'Not found');
                 
                 if (preComputedAnalysis) {
-                    console.log('Using pre-computed analysis data');
+                    console.log('Using pre-computed analysis data and saving to database');
                     const analysisData = JSON.parse(preComputedAnalysis);
                     console.log('Parsed pre-computed data:', analysisData);
+                    
+                    // Save the pre-computed analysis to database
+                    await saveAnalysisToDatabase(analysisData);
+                    
+                    // Update UI
                     updateAnalysisUI(analysisData);
+                    
                     // Clear the pre-computed data to avoid using stale data
                     sessionStorage.removeItem('analysisData');
                     return;
@@ -1805,9 +1992,19 @@
                 // Show loading state
                 showLoadingState();
                 
-                // Call the analysis endpoint
-                console.log('Calling analysis endpoint...');
-                const response = await fetch('/analyze_conversation', {
+                // Step 1: Get conversation ID (should already be saved from main.ts)
+                const conversationId = sessionStorage.getItem('conversationId');
+                
+                if (!conversationId) {
+                    console.error('No conversation ID found! Conversation should have been saved in main.ts');
+                    throw new Error('Conversation ID not found. Please try again.');
+                }
+                
+                console.log('✅ Using conversation ID from main.ts:', conversationId);
+
+                // Step 2: Get analysis from OpenAI
+                console.log('Step 2: Getting analysis from OpenAI...');
+                const analysisResponse = await fetch('/analyze_conversation', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1815,18 +2012,60 @@
                     body: JSON.stringify({ transcript: transcript })
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response ok:', response.ok);
+                console.log('Response status:', analysisResponse.status);
+                console.log('Response ok:', analysisResponse.ok);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                if (!analysisResponse.ok) {
+                    throw new Error(`HTTP error! status: ${analysisResponse.status}`);
                 }
 
-                const analysisData = await response.json();
+                const analysisData = await analysisResponse.json();
                 console.log('=== DEBUG: Analysis API Response ===');
                 console.log('Raw analysis data:', analysisData);
                 console.log('Analysis data type:', typeof analysisData);
                 console.log('Analysis data keys:', Object.keys(analysisData || {}));
+
+                // Step 3: Save analysis to database BEFORE updating UI
+                console.log('Step 3: Saving analysis to database...');
+                console.log('Using conversation ID for analysis:', conversationId);
+                
+                const saveAnalysisResponse = await fetch('/api/db/save_analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAccessToken()}`
+                    },
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        analysis_data: analysisData,
+                        analysis_version: "1.0",
+                        model_used: "gpt-4o-mini",
+                        status: "completed"
+                    })
+                });
+
+                console.log('Analysis save response status:', saveAnalysisResponse.status);
+                console.log('Analysis save response ok:', saveAnalysisResponse.ok);
+
+                if (!saveAnalysisResponse.ok) {
+                    const errorText = await saveAnalysisResponse.text();
+                    console.error('Analysis save error response:', errorText);
+                    throw new Error(`Failed to save analysis: ${saveAnalysisResponse.status} - ${errorText}`);
+                }
+
+                const saveAnalysisResult = await saveAnalysisResponse.json();
+                console.log('Analysis save result:', saveAnalysisResult);
+                
+                if (!saveAnalysisResult.success) {
+                    throw new Error(`Failed to save analysis: ${saveAnalysisResult.error}`);
+                }
+
+                const analysisId = saveAnalysisResult.analysis_id;
+                console.log('✅ Analysis saved:', analysisId);
+
+                // Store IDs for perfect pitch
+                sessionStorage.setItem('conversationId', conversationId);
+                sessionStorage.setItem('analysisId', analysisId);
                 
                 // Update the UI with dynamic data
                 updateAnalysisUI(analysisData);
@@ -1842,6 +2081,66 @@
                 // Fall back to basic metrics if analysis fails
                 console.log('Falling back to basic metrics calculation');
                 calculateBasicMetrics();
+            }
+        }
+
+        // Function to save analysis to database
+        async function saveAnalysisToDatabase(analysisData) {
+            try {
+                console.log('=== Saving analysis to database ===');
+                
+                // Get conversation ID (should already exist from main.ts)
+                const conversationId = sessionStorage.getItem('conversationId');
+                
+                if (!conversationId) {
+                    throw new Error('No conversation ID found! Conversation should have been saved in main.ts');
+                }
+                
+                console.log('✅ Using conversation ID for analysis:', conversationId);
+                
+                // Save analysis to database
+                console.log('Saving analysis to database with conversation ID:', conversationId);
+                const saveAnalysisResponse = await fetch('/api/db/save_analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAccessToken()}`
+                    },
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        analysis_data: analysisData,
+                        analysis_version: "1.0",
+                        model_used: "gpt-4o-mini",
+                        status: "completed"
+                    })
+                });
+
+                console.log('Analysis save response status:', saveAnalysisResponse.status);
+
+                if (!saveAnalysisResponse.ok) {
+                    const errorText = await saveAnalysisResponse.text();
+                    console.error('Analysis save error response:', errorText);
+                    throw new Error(`Failed to save analysis: ${saveAnalysisResponse.status} - ${errorText}`);
+                }
+
+                const saveAnalysisResult = await saveAnalysisResponse.json();
+                console.log('Analysis save result:', saveAnalysisResult);
+                
+                if (!saveAnalysisResult.success) {
+                    throw new Error(`Failed to save analysis: ${saveAnalysisResult.error}`);
+                }
+
+                const analysisId = saveAnalysisResult.analysis_id;
+                console.log('✅ Analysis saved to database:', analysisId);
+                
+                // Store analysis ID for best pitch
+                sessionStorage.setItem('analysisId', analysisId);
+                
+                return analysisId;
+                
+            } catch (error) {
+                console.error('Error saving analysis to database:', error);
+                throw error;
             }
         }
 
@@ -2244,21 +2543,82 @@
             btn.innerHTML = '<span class="material-icons">hourglass_empty</span>Generating...';
 
             try {
-                // Call the perfect pitch API with dynamic context
-                const response = await fetch('/best-pitch', {
+                // Step 1: Check if best pitch exists
+                const conversationId = sessionStorage.getItem('conversationId');
+                const analysisId = sessionStorage.getItem('analysisId');
+                
+                if (!conversationId || !analysisId) {
+                    throw new Error('Missing conversation or analysis ID');
+                }
+
+                console.log('Checking if best pitch exists...');
+                const checkResponse = await fetch('/api/db/check_best_pitch_exists', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAccessToken()}`
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({ conversation_id: conversationId })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                const checkResult = await checkResponse.json();
+                
+                let perfectPitchData;
+                
+                if (checkResult.success && checkResult.exists) {
+                    console.log('✅ Best pitch retrieved from database');
+                    perfectPitchData = checkResult.data;
+                } else {
+                    // Step 2: Generate new best pitch
+                    console.log('Generating new best pitch...');
+                    const response = await fetch('/best-pitch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
 
-                const perfectPitchData = await response.json();
-                console.log('Perfect pitch data:', perfectPitchData);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    perfectPitchData = await response.json();
+                    console.log('Perfect pitch data:', perfectPitchData);
+
+                    // Step 3: Save best pitch to database
+                    console.log('Saving best pitch to database...');
+                    console.log('Using conversation ID for best pitch:', conversationId);
+                    console.log('Using analysis ID for best pitch:', analysisId);
+                    
+                    const saveResponse = await fetch('/api/db/save_best_pitch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getAccessToken()}`
+                        },
+                        body: JSON.stringify({
+                            conversation_id: conversationId,
+                            analysis_id: analysisId,
+                            best_pitch_data: perfectPitchData,
+                            original_conversation: getConversationHistory(),
+                            model_used: "gpt-4o-mini",
+                            generation_version: "1.0",
+                            status: "completed"
+                        })
+                    });
+
+                    if (!saveResponse.ok) {
+                        throw new Error(`Failed to save best pitch: ${saveResponse.status}`);
+                    }
+
+                    const saveResult = await saveResponse.json();
+                    if (!saveResult.success) {
+                        throw new Error(`Failed to save best pitch: ${saveResult.error}`);
+                    }
+
+                    console.log('✅ Best pitch saved:', saveResult.best_pitch_id);
+                }
 
                 // Update modal content with perfect pitch data
                 displayPerfectPitch(perfectPitchData);
@@ -2327,6 +2687,46 @@
                 document.getElementById('perfectPitchModal').classList.remove('show');
             }
         });
+
+        // Helper functions for database operations
+        function getAccessToken() {
+            // Get access token from sessionStorage or localStorage
+            return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+        }
+
+        function getCallDuration() {
+            const startTime = sessionStorage.getItem('callStartTime');
+            if (startTime) {
+                return Math.floor((Date.now() - parseInt(startTime)) / 1000);
+            }
+            return 180; // Default 3 minutes
+        }
+
+        function getConversationHistory() {
+            const transcript = sessionStorage.getItem('chatTranscript');
+            if (transcript) {
+                return JSON.parse(transcript);
+            }
+            return [];
+        }
+
+        function getAudioDuration() {
+            return getCallDuration();
+        }
+
+        function getBase64Audio() {
+            return sessionStorage.getItem('conversationRecording') || null;
+        }
+
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                return 'unknown';
+            }
+        }
 
         // Function to display perfect pitch data in modal
         function displayPerfectPitch(data) {

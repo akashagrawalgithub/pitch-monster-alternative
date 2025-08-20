@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Conversations - Sales Training</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: #1e293b;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Left Sidebar - User Details */
+        .user-sidebar {
+            width: 250px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .user-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .user-info p {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .user-menu {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #64748b;
+            text-decoration: none;
+            margin-bottom: 8px;
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+            color: #3b82f6;
+        }
+
+        .menu-item.active {
+            background: #eff6ff;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 32px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-button:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+
+
+
+        /* Conversations Grid */
+        .conversations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .conversation-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .conversation-card:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .card-date {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .card-meta {
+            
+            margin-bottom: 20px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .conversation-preview {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #64748b;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .conversation-status {
+            margin-bottom: 16px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-short {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-standard {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-detailed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-completed {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .card-id {
+            font-size: 12px;
+            color: #94a3b8;
+            font-family: 'Courier New', monospace;
+            background: #f8fafc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .view-analysis-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .view-analysis-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+
+
+        /* Loading and Empty States */
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #ef4444;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .conversations-grid {
+                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            }
+        }
+
+        
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar - User Details -->
+        <div class="user-sidebar">
+            <div class="user-header">
+                <div class="user-avatar" id="userAvatar">JD</div>
+                <div class="user-info">
+                    <h4 id="userName">John Doe</h4>
+                </div>
+            </div>
+
+            <div class="user-menu">
+                <a href="/agents.html" class="menu-item">
+                    <span class="material-icons">home</span>
+                    Dashboard
+                </a>
+                <a href="#" class="menu-item active">
+                    <span class="material-icons">history</span>
+                    Past Conversations
+                </a>
+                <a href="#" class="menu-item" id="logoutBtn">
+                    <span class="material-icons">logout</span>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <span class="material-icons">history</span>
+                    Past Conversations
+                </h1>
+                <a href="/agents.html" class="back-button">
+                    <span class="material-icons">arrow_back</span>
+                    Back to Dashboard
+                </a>
+            </div>
+
+
+
+            <!-- Conversations Grid -->
+            <div class="conversations-grid" id="conversationsGrid">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading your conversations...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class PastConversationsPage {
+            constructor() {
+                this.conversations = [];
+                this.initializeAuth();
+                this.initializeEventListeners();
+                this.loadConversations();
+            }
+            
+            async initializeAuth() {
+                try {
+                    // Check if user is authenticated via local storage
+                    const isAuthenticated = localStorage.getItem('authenticated');
+                    const accessToken = localStorage.getItem('accessToken');
+                    
+                    console.log('Auth check - isAuthenticated:', isAuthenticated);
+                    console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
+                    
+                    if (!isAuthenticated || !accessToken) {
+                        console.log('Missing auth data, redirecting to login');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    // Verify token with backend
+                    console.log('Making auth check request to backend...');
+                    const response = await fetch('/auth/check', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    
+                    console.log('Auth check response status:', response.status);
+                    
+                    if (!response.ok) {
+                        // Token is invalid, redirect to login
+                        console.log('Auth check failed, clearing storage and redirecting');
+                        localStorage.clear();
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Auth check successful, user data:', data.user);
+                    this.loadUserData(data.user);
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                }
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.handleLogout();
+                });
+            }
+            
+            loadUserData(user) {
+                const email = user.email || 'User';
+                const name = user.name || email.split('@')[0];
+                const avatar = name.substring(0, 2).toUpperCase();
+                
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').textContent = avatar;
+            }
+
+            async handleLogout() {
+                try {
+                    // Clear local storage data
+                    localStorage.removeItem('authenticated');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('accessToken');
+                    
+                    window.location.href = '/login.html';
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                    // Still redirect even if logout fails
+                    window.location.href = '/login.html';
+                }
+            }
+
+            async loadConversations() {
+                try {
+                    // Fetch all conversations
+                    const accessToken = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/db/get_all_conversations', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.conversations) {
+                        this.conversations = data.conversations;
+                        this.displayConversations();
+                    } else {
+                        throw new Error(data.error || 'Failed to fetch conversations');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error fetching conversations:', error);
+                    this.showError(error.message);
+                }
+            }
+
+            displayConversations() {
+                const conversationsGrid = document.getElementById('conversationsGrid');
+                
+                if (!this.conversations || this.conversations.length === 0) {
+                    conversationsGrid.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <h3>No Conversations Found</h3>
+                            <p>Start your first training session to see your analysis here.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                conversationsGrid.innerHTML = this.conversations.map(conversation => {
+                    const date = new Date(conversation.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    
+                    const time = new Date(conversation.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const duration = conversation.duration_seconds ? 
+                        `${Math.floor(conversation.duration_seconds / 60)}m ${conversation.duration_seconds % 60}s` : 
+                        'Unknown';
+                    
+                    const exchanges = conversation.transcript?.length || 0;
+                    const agentType = conversation.title || 'Sales Training Session';
+                    const agentIcon = this.getAgentIcon(agentType);
+                    
+                    const conversationStatus = this.getConversationStatus(conversation);
+                    
+                    // Get first few words of conversation for preview
+                    const preview = this.getConversationPreview(conversation.transcript);
+                    
+                    return `
+                        <div class="conversation-card">
+                            <div class="card-header">
+                                <div class="card-icon" style="background: ${this.getAgentColor(agentType)}">${agentIcon}</div>
+                                <div class="card-date">${date} at ${time}</div>
+                            </div>
+                            
+                            <div class="card-title">${agentType}</div>
+                            
+                            <div class="card-meta">
+                                <div class="meta-item">
+                                    <span><strong>Call Duration:</strong> ${duration}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span><strong>Total Exchanges:</strong> ${exchanges}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span><strong>Conversation Quality:</strong> ${this.getConversationQuality(conversation)}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span><strong>Lead Score:</strong> ${this.getLeadScore(conversation)}/10</span>
+                                </div>
+                            </div>
+                            
+                            <div class="conversation-preview">
+                                <strong>Preview:</strong> "${preview}"
+                            </div>
+                            
+                            <div class="conversation-status">
+                                <span class="status-badge ${conversationStatus.class}">${conversationStatus.text}</span>
+                            </div>
+                            
+                            <button class="view-analysis-btn" onclick="pastConversationsPage.viewFullAnalysis('${conversation.id}')">
+                                <span class="material-icons">visibility</span>
+                                View Full Analysis
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            getAgentIcon(agentType) {
+                const iconMap = {
+                    'Payment Follow-up': '$',
+                    'Competitor Objection': '💬',
+                    'Lead to Demo': '👥',
+                    'Closing Skills': '🤝',
+                    'Cold Calling': '📞',
+                    'Discovery Call': '🔍',
+                    'Sales Training Session': '🎯'
+                };
+                
+                return iconMap[agentType] || '🎯';
+            }
+
+            getAgentColor(agentType) {
+                const colorMap = {
+                    'Payment Follow-up': 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    'Competitor Objection': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    'Lead to Demo': 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    'Closing Skills': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                    'Cold Calling': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    'Discovery Call': 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                    'Sales Training Session': 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
+                };
+                
+                return colorMap[agentType] || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+            }
+
+            getConversationStatus(conversation) {
+                const duration = conversation.duration_seconds || 0;
+                const exchanges = conversation.transcript?.length || 0;
+                
+                if (duration < 30) {
+                    return { text: 'Short Call', class: 'status-short' };
+                } else if (duration < 120) {
+                    return { text: 'Standard Call', class: 'status-standard' };
+                } else if (exchanges > 10) {
+                    return { text: 'Detailed Discussion', class: 'status-detailed' };
+                } else {
+                    return { text: 'Completed', class: 'status-completed' };
+                }
+            }
+
+            getConversationPreview(transcript) {
+                if (!transcript || transcript.length === 0) {
+                    return 'No conversation data available';
+                }
+                
+                // Get the first user message for preview
+                const firstMessage = transcript.find(msg => msg.role === 'user');
+                if (firstMessage && firstMessage.content) {
+                    const words = firstMessage.content.split(' ');
+                    return words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
+                }
+                
+                return 'Conversation started';
+            }
+
+            getConversationQuality(conversation) {
+                const duration = conversation.duration_seconds || 0;
+                const exchanges = conversation.transcript?.length || 0;
+                
+                if (exchanges >= 10 && duration > 120) {
+                    return 'Excellent';
+                } else if (exchanges >= 6 && duration > 60) {
+                    return 'Good';
+                } else if (exchanges >= 3 && duration > 30) {
+                    return 'Average';
+                } else {
+                    return 'Poor';
+                }
+            }
+
+            getLeadScore(conversation) {
+                const duration = conversation.duration_seconds || 0;
+                const exchanges = conversation.transcript?.length || 0;
+                
+                let score = 0;
+                
+                // Duration scoring (0-4 points)
+                if (duration > 180) score += 4;
+                else if (duration > 120) score += 3;
+                else if (duration > 60) score += 2;
+                else if (duration > 30) score += 1;
+                
+                // Engagement scoring (0-4 points)
+                if (exchanges > 15) score += 4;
+                else if (exchanges > 10) score += 3;
+                else if (exchanges > 6) score += 2;
+                else if (exchanges > 3) score += 1;
+                
+                // Conversation completion bonus (0-2 points)
+                if (duration > 60 && exchanges > 5) score += 2;
+                else if (duration > 30 && exchanges > 3) score += 1;
+                
+                return Math.min(score, 10);
+            }
+
+
+
+            showError(message) {
+                const conversationsGrid = document.getElementById('conversationsGrid');
+                conversationsGrid.innerHTML = `
+                    <div class="error-state">
+                        <div class="error-icon">⚠️</div>
+                        <h3>Error Loading Conversations</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            async viewFullAnalysis(conversationId) {
+                try {
+                    console.log('Loading full analysis for conversation:', conversationId);
+                    
+                    // Fetch the analysis data
+                    const accessToken = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/db/get_conversation_analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ conversation_id: conversationId })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Store the data in sessionStorage for the analysis page
+                        sessionStorage.setItem('chatTranscript', JSON.stringify(data.conversation.transcript));
+                        sessionStorage.setItem('conversationId', conversationId);
+                        sessionStorage.setItem('analysisId', data.analysis.id);
+                        sessionStorage.setItem('currentAnalysisData', JSON.stringify(data.analysis));
+                        
+                        // Navigate to analysis page
+                        window.location.href = '/analysis.html';
+                    } else {
+                        throw new Error(data.error || 'Failed to load analysis');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading full analysis:', error);
+                    alert('Error loading analysis: ' + error.message);
+                }
+            }
+        }
+
+        let pastConversationsPage;
+        
+        document.addEventListener('DOMContentLoaded', function () {
+            pastConversationsPage = new PastConversationsPage();
+        });
+    </script>
+</body>
+</html> 

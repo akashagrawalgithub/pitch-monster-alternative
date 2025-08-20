@@ -10,6 +10,7 @@ from cartesia import Cartesia
 import base64
 import numpy as np
 import json
+from backend_api import db_api
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
@@ -26,7 +27,10 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 # Initialize Cartesia client
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
 
+# Global conversation tracking
 conversation_history = []
+current_session_id = None
+current_user_id = None
 
 def process_raw_audio(audio_bytes, sample_rate=44100):
     """Process raw PCM f32le audio data efficiently"""
@@ -43,6 +47,20 @@ def process_raw_audio(audio_bytes, sample_rate=44100):
     except Exception as e:
         print(f"Error processing raw audio: {e}")
         return audio_bytes
+
+def get_current_user_id():
+    """Get current user ID from request headers"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return None
+        
+        token = auth_header.split(' ')[1]
+        # We'll use a simple approach for now - you can integrate with your auth system
+        return "user_" + str(hash(token) % 10000)  # Simple user ID generation
+    except Exception as e:
+        print(f"Error getting user ID: {e}")
+        return None
 
 import os
 
@@ -224,6 +242,7 @@ def text_to_speech_stream():
 @app.route('/chat', methods=['POST'])
 def chat():
     global conversation_history
+    
     user_input = request.json.get('message', '').strip()
     
     if not user_input:
@@ -290,6 +309,7 @@ def chat():
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
     global conversation_history
+    
     user_input = request.json.get('message', '').strip()
     
     if not user_input:
@@ -333,6 +353,7 @@ def chat_stream():
             })
             if len(conversation_history) > 40:
                 conversation_history[:] = conversation_history[-40:]
+                
         except Exception as e:
             error_message = str(e).lower()
             if "rate limit" in error_message:
@@ -434,7 +455,7 @@ def best_pitch():
         if not transcript:
             return jsonify({"error": "No transcript provided"}), 400
         
-        perfect_pitch_prompt = bestPitchPrompt
+        # Convert transcript to a readable format
         conversation_text = ""
         for i, exchange in enumerate(transcript, 1):
             sender = exchange.get('sender', 'Unknown')
@@ -469,7 +490,7 @@ INSTRUCTIONS:
         messages = [
             {
                 "role": "system", 
-                "content": perfect_pitch_prompt
+                "content": bestPitchPrompt
             },
             {
                 "role": "user",
@@ -493,6 +514,7 @@ INSTRUCTIONS:
             for field in required_fields:
                 if field not in perfect_pitch_data:
                     return jsonify({"error": f"Missing required field: {field}"}), 500
+            
             return jsonify(perfect_pitch_data)
             
         except json.JSONDecodeError as e:
@@ -516,6 +538,9 @@ INSTRUCTIONS:
                  "error_type": type(e).__name__,
                  "debug_info": "Check server logs for more details"
              }), 500
+
+# Register the database API blueprint
+app.register_blueprint(db_api, url_prefix='/api/db')
 
 # Supabase integration for authentication
 from supabase import create_client, Client
@@ -563,19 +588,19 @@ def check_auth():
     """Check if user is authenticated"""
     try:
         auth_header = request.headers.get('Authorization')
-        print(f"Auth check - auth_header: {auth_header[:50] if auth_header else 'None'}...")
+        # print(f"Auth check - auth_header: {auth_header[:50] if auth_header else 'None'}...")
         
         if not auth_header or not auth_header.startswith('Bearer '):
-            print("Auth check - No valid auth header")
+            # print("Auth check - No valid auth header")
             return jsonify({'authenticated': False}), 401
         
         token = auth_header.split(' ')[1]
-        print(f"Auth check - token: {token[:50]}...")
+        # print(f"Auth check - token: {token[:50]}...")
         
         # Verify token with Supabase
         response = supabase.auth.get_user(token)
-        print(f"Auth check - response: {response}")
-        print(f"Auth check - response.user: {response.user if response else 'None'}")
+        # print(f"Auth check - response: {response}")
+        # print(f"Auth check - response.user: {response.user if response else 'None'}")
         
         if response.user:
             user_data = {
@@ -583,13 +608,13 @@ def check_auth():
                 'email': response.user.email,
                 'name': response.user.user_metadata.get('name', response.user.email.split('@')[0])
             }
-            print(f"Auth check - user_data: {user_data}")
+            # print(f"Auth check - user_data: {user_data}")
             return jsonify({
                 'authenticated': True,
                 'user': user_data
             })
         else:
-            print("Auth check - No user in response")
+            # print("Auth check - No user in response")
             return jsonify({'authenticated': False}), 401
             
     except Exception as e:

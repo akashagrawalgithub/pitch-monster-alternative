@@ -406,6 +406,7 @@ function formatTime(secs: number): string {
 
 function startTimer() {
     secondsElapsed = 0;
+    sessionStorage.setItem('callStartTime', new Date().toISOString());
     timerEl.textContent = formatTime(secondsElapsed);
     timerInterval = window.setInterval(() => {
         secondsElapsed++;
@@ -1325,13 +1326,125 @@ function stopAudioRecording() {
     }
 }
 
-// Navigate to success page with transcript data
-function navigateToAnalysis() {
-    // Store transcript in sessionStorage
-    sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
-    
-    // Navigate to success page first, which will redirect to analysis after 3 seconds
-    window.location.href = '/success.html';
+// Save conversation and navigate to success page
+async function navigateToAnalysis() {
+    try {
+        console.log('=== Step 1: Saving conversation to database ===');
+        
+        // Store transcript in sessionStorage
+        sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
+        
+        // Save conversation to database immediately
+        const conversationData = {
+            title: "Sales Call - " + new Date().toLocaleString(),
+            duration_seconds: getCallDuration(),
+            total_exchanges: transcriptHistory.length,
+            full_conversation: getConversationHistory(),
+            transcript: transcriptHistory,
+            audio_data: getBase64Audio(),
+            audio_format: "pcm_f32le",
+            sample_rate: 44100,
+            audio_duration_seconds: getAudioDuration(),
+            user_agent: navigator.userAgent,
+            ip_address: await getClientIP(),
+            status: "completed",
+            tags: ["sales_call", "training"],
+            notes: "Sales training conversation"
+        };
+
+        console.log('Sending conversation data to database...');
+        const conversationResponse = await fetch('/api/db/save_conversation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAccessToken()}`
+            },
+            body: JSON.stringify(conversationData)
+        });
+
+        console.log('Conversation save response status:', conversationResponse.status);
+
+        if (!conversationResponse.ok) {
+            const errorText = await conversationResponse.text();
+            console.error('Conversation save error:', errorText);
+            throw new Error(`Failed to save conversation: ${conversationResponse.status} - ${errorText}`);
+        }
+
+        const conversationResult = await conversationResponse.json();
+        console.log('Conversation save result:', conversationResult);
+        
+        if (!conversationResult.success) {
+            throw new Error(`Failed to save conversation: ${conversationResult.error}`);
+        }
+
+        const conversationId = conversationResult.conversation_id;
+        sessionStorage.setItem('conversationId', conversationId);
+        console.log('✅ Step 1 Complete: Conversation saved successfully:', conversationId);
+        
+        // Add delay to ensure database write is complete
+        console.log('Waiting 2 seconds for database write to complete...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('=== Step 2: Navigating to success page for analysis ===');
+        // Navigate to success page
+        window.location.href = '/success.html';
+        
+    } catch (error) {
+        console.error('Error saving conversation:', error);
+        alert('Failed to save conversation. Please try again.');
+        // Don't navigate if save fails - let user try again
+    }
+}
+
+// Helper functions for conversation data
+function getCallDuration(): number {
+    const startTime = sessionStorage.getItem('callStartTime');
+    if (!startTime) return 0;
+    const start = new Date(startTime).getTime();
+    const end = new Date().getTime();
+    return Math.floor((end - start) / 1000);
+}
+
+function getConversationHistory(): any[] {
+    return transcriptHistory.map((item, index) => ({
+        user: item.sender === 'You' ? item.text : '',
+        assistant: item.sender === 'AI' ? item.text : '',
+        timestamp: new Date().toISOString()
+    }));
+}
+
+function getBase64Audio(): string {
+    // For now, return a placeholder. In a real implementation, this would be the actual audio data
+    return btoa('audio_data_placeholder');
+}
+
+function getAudioDuration(): number {
+    return getCallDuration();
+}
+
+async function getClientIP(): Promise<string> {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error('Error getting client IP:', error);
+        return '127.0.0.1';
+    }
+}
+
+function getAccessToken(): string {
+    // Check both possible key names for the access token
+    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    if (!token) {
+        console.error('No access token found! User must be logged in.');
+        console.log('Available localStorage keys:', Object.keys(localStorage));
+        // Redirect to login if no token
+        window.location.href = '/login.html';
+        return '';
+    }
+    console.log('Found access token:', token.substring(0, 20) + '...');
+    return token;
 }
 
 // Calculate confidence score based on conversation quality
@@ -1405,12 +1518,21 @@ micBtn.onclick = () => {
         micBtn.style.background = 'rgba(37,99,235,0.95)';
         isChatActive = false;
         
-        // Navigate to analysis page after a short delay
-        setTimeout(() => {
-            if (transcriptHistory.length > 0) {
-                navigateToAnalysis();
-            }
-        }, 500);
+        // Save conversation first, then navigate after successful save
+        if (transcriptHistory.length > 0) {
+            console.log('User ended call, saving conversation...');
+            
+            // Show loading state
+            micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">hourglass_empty</span>';
+            micBtn.style.background = 'rgba(107,114,128,0.95)';
+            micBtn.disabled = true;
+            
+            // Save conversation and navigate
+            navigateToAnalysis();
+        } else {
+            console.log('No transcript history, navigating directly');
+            window.location.href = '/success.html';
+        }
     }
 };
 

@@ -287,6 +287,8 @@
                 padding: 16px;
             }
         }
+
+
     </style>
 </head>
 
@@ -303,6 +305,10 @@
 
 
             <div class="user-menu">
+                <a href="#" class="menu-item" id="pastAnalysisBtn">
+                    <span class="material-icons">history</span>
+                    Past Analysis
+                </a>
                 <a href="#" class="menu-item" id="logoutBtn">
                     <span class="material-icons">logout</span>
                     Logout
@@ -421,6 +427,8 @@
         </div>
     </div>
 
+
+
     <script>
         class AgentsPage {
             constructor() {
@@ -477,6 +485,13 @@
                     e.preventDefault();
                     this.handleLogout();
                 });
+                
+                document.getElementById('pastAnalysisBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.href = '/past-conversations.html';
+                });
+                
+
             }
             
             loadUserData(user) {
@@ -503,6 +518,8 @@
                     window.location.href = '/login.html';
                 }
             }
+
+
         }
 
         function startTraining(agentType) {
@@ -510,8 +527,10 @@
             window.location.href = '/';
         }
 
+        let agentsPage;
+        
         document.addEventListener('DOMContentLoaded', function () {
-            new AgentsPage();
+            agentsPage = new AgentsPage();
         });
     </script>
 </body>

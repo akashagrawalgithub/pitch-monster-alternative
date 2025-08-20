@@ -9,14 +9,22 @@ import json
 import base64
 from typing import Dict, List, Optional, Any
 import uuid
+import os
 
-# Supabase configuration (from your app.py)
-SUPABASE_URL = "https://hblifaxxsqkgwzcwxzxo.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0"
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 class DatabaseManager:
     def __init__(self):
         self.supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        self.current_token = None
+    
+    def set_auth_token(self, access_token: str):
+        """Set the authentication token for database operations"""
+        self.current_token = access_token
+        # For now, we'll use the anon key and handle RLS differently
+        pass
     
     def get_current_user_id(self, access_token: str) -> Optional[str]:
         """Get current user ID from access token"""
@@ -28,28 +36,20 @@ class DatabaseManager:
             return None
     
     # CONVERSATION OPERATIONS
-    def save_conversation(self, user_id: str, conversation_data: Dict, audio_data: str = None) -> Dict:
-        """Save a new conversation to the database"""
+    def save_conversation(self, user_id: str, conversation_data: Dict) -> Dict:
+        """Save a new conversation to the database with complete schema data"""
         try:
-            # Prepare conversation data
-            conversation_record = {
-                "user_id": user_id,
-                "session_id": str(uuid.uuid4()),
-                "title": conversation_data.get("title", "Sales Conversation"),
-                "duration_seconds": conversation_data.get("duration_seconds", 0),
-                "total_exchanges": len(conversation_data.get("conversation_history", [])),
-                "full_conversation": conversation_data.get("conversation_history", []),
-                "transcript": conversation_data.get("transcript", []),
-                "audio_data": audio_data,  # Base64 encoded audio
-                "audio_format": "pcm_f32le",
-                "sample_rate": 44100,
-                "audio_duration_seconds": conversation_data.get("audio_duration", 0),
-                "user_agent": conversation_data.get("user_agent"),
-                "ip_address": conversation_data.get("ip_address"),
-                "status": "active",
-                "tags": conversation_data.get("tags", []),
-                "notes": conversation_data.get("notes")
-            }
+            # Use the complete conversation data as provided
+            conversation_record = conversation_data.copy()
+            conversation_record["user_id"] = user_id
+            
+            # Ensure required fields are present
+            if "session_id" not in conversation_record:
+                conversation_record["session_id"] = str(uuid.uuid4())
+            if "created_at" not in conversation_record:
+                conversation_record["created_at"] = datetime.now().isoformat()
+            if "updated_at" not in conversation_record:
+                conversation_record["updated_at"] = datetime.now().isoformat()
             
             # Insert into database
             result = self.supabase.table("conversations").insert(conversation_record).execute()
@@ -105,25 +105,16 @@ class DatabaseManager:
     
     # ANALYSIS OPERATIONS
     def save_analysis(self, user_id: str, conversation_id: str, analysis_data: Dict) -> Dict:
-        """Save analysis results to the database"""
+        """Save analysis results to the database with complete schema data"""
         try:
-            analysis_record = {
-                "conversation_id": conversation_id,
-                "user_id": user_id,
-                "analysis_version": "1.0",
-                "model_used": "gpt-4o-mini",
-                "session_info": analysis_data.get("session_info", {}),
-                "overall_score": analysis_data.get("overall_score", {}),
-                "key_metrics": analysis_data.get("key_metrics", {}),
-                "voice_delivery_analysis": analysis_data.get("voice_delivery_analysis", {}),
-                "sales_skills_assessment": analysis_data.get("sales_skills_assessment", {}),
-                "sales_process_flow": analysis_data.get("sales_process_flow", {}),
-                "strengths": analysis_data.get("strengths", []),
-                "improvements": analysis_data.get("improvements", []),
-                "detailed_feedback": analysis_data.get("detailed_feedback", {}),
-                "recommendations": analysis_data.get("recommendations", {}),
-                "status": "completed"
-            }
+            # Use the complete analysis data as provided
+            analysis_record = analysis_data.copy()
+            analysis_record["conversation_id"] = conversation_id
+            analysis_record["user_id"] = user_id
+            
+            # Ensure required fields are present
+            if "created_at" not in analysis_record:
+                analysis_record["created_at"] = datetime.now().isoformat()
             
             result = self.supabase.table("analysis").insert(analysis_record).execute()
             
@@ -159,23 +150,17 @@ class DatabaseManager:
     
     # BEST PITCH OPERATIONS
     def save_best_pitch(self, user_id: str, conversation_id: str, analysis_id: str, best_pitch_data: Dict) -> Dict:
-        """Save best pitch results to the database"""
+        """Save best pitch results to the database with complete schema data"""
         try:
-            best_pitch_record = {
-                "conversation_id": conversation_id,
-                "analysis_id": analysis_id,
-                "user_id": user_id,
-                "perfect_conversation": best_pitch_data.get("perfect_conversation", []),
-                "original_conversation": best_pitch_data.get("original_conversation", []),
-                "score_improvement": best_pitch_data.get("score_improvement", {}),
-                "overall_improvements": best_pitch_data.get("overall_improvements", {}),
-                "model_used": "gpt-4o-mini",
-                "generation_version": "1.0",
-                "key_changes": best_pitch_data.get("key_changes", []),
-                "improvement_areas": best_pitch_data.get("improvement_areas", []),
-                "best_practices_applied": best_pitch_data.get("best_practices_applied", []),
-                "status": "completed"
-            }
+            # Use the complete best pitch data as provided
+            best_pitch_record = best_pitch_data.copy()
+            best_pitch_record["conversation_id"] = conversation_id
+            best_pitch_record["analysis_id"] = analysis_id
+            best_pitch_record["user_id"] = user_id
+            
+            # Ensure required fields are present
+            if "created_at" not in best_pitch_record:
+                best_pitch_record["created_at"] = datetime.now().isoformat()
             
             result = self.supabase.table("best_pitch").insert(best_pitch_record).execute()
             
@@ -240,6 +225,54 @@ class DatabaseManager:
             }
         except Exception as e:
             print(f"Error getting complete conversation data: {e}")
+            return None
+
+    def get_all_conversations(self, user_id: str) -> List[Dict]:
+        """Get all conversations for a user"""
+        try:
+            response = self.supabase.table('conversations').select('*').eq('user_id', user_id).order('created_at', desc=True).execute()
+            
+            if response.data:
+                print(f"✅ Retrieved {len(response.data)} conversations for user {user_id}")
+                return response.data
+            else:
+                print(f"✅ No conversations found for user {user_id}")
+                return []
+                
+        except Exception as e:
+            print(f"Error getting all conversations: {e}")
+            return []
+
+    def get_conversation_by_id(self, conversation_id: str, user_id: str) -> Optional[Dict]:
+        """Get a specific conversation by ID"""
+        try:
+            response = self.supabase.table('conversations').select('*').eq('id', conversation_id).eq('user_id', user_id).execute()
+            
+            if response.data:
+                print(f"✅ Retrieved conversation {conversation_id}")
+                return response.data[0]
+            else:
+                print(f"❌ Conversation {conversation_id} not found")
+                return None
+                
+        except Exception as e:
+            print(f"Error getting conversation by ID: {e}")
+            return None
+
+    def get_analysis_by_conversation_id(self, conversation_id: str, user_id: str) -> Optional[Dict]:
+        """Get analysis data for a specific conversation"""
+        try:
+            response = self.supabase.table('analysis').select('*').eq('conversation_id', conversation_id).eq('user_id', user_id).execute()
+            
+            if response.data:
+                print(f"✅ Retrieved analysis for conversation {conversation_id}")
+                return response.data[0]
+            else:
+                print(f"❌ No analysis found for conversation {conversation_id}")
+                return None
+                
+        except Exception as e:
+            print(f"Error getting analysis by conversation ID: {e}")
             return None
 
 # Utility functions for audio handling
