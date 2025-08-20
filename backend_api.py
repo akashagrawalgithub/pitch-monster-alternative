@@ -416,4 +416,30 @@ def get_conversation_analysis():
         
     except Exception as e:
         print(f"Error getting conversation analysis: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_client_ip', methods=['GET'])
+def get_client_ip():
+    """Get the client's IP address"""
+    try:
+        # Get IP from various headers (for proxy/load balancer scenarios)
+        ip_address = request.headers.get('X-Forwarded-For', 
+                       request.headers.get('X-Real-IP', 
+                       request.remote_addr))
+        
+        # If X-Forwarded-For contains multiple IPs, take the first one
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+        
+        return jsonify({
+            "success": True,
+            "ip_address": ip_address or "unknown"
+        })
+        
+    except Exception as e:
+        print(f"Error getting client IP: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "ip_address": "unknown"
+        }), 500

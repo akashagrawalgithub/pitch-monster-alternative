@@ -11,7 +11,8 @@ export default defineConfig({
         analysis: 'static/analysis.html',
         success: 'static/success.html',
         login: 'static/login.html',
-        agents: 'static/agents.html'
+        agents: 'static/agents.html',
+        'past-conversations': 'static/past-conversations.html'
       }
     }
   },

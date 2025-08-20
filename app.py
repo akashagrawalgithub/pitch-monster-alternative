@@ -130,6 +130,15 @@ def agents_page():
         # In production, serve from dist folder
         return send_from_directory('dist', 'agents.html')
 
+@app.route('/past-conversations.html')
+def past_conversations_page():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'past-conversations.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'past-conversations.html')
+
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
     """Generate speech from text using Cartesia"""
