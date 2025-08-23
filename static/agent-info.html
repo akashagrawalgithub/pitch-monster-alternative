@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Information</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="agent-deatils.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);            
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Left Sidebar - User Details */
+        .user-sidebar {
+            width: 250px;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .user-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+       
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 8px;
+            color: #64748b;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+            color: #3b82f6;
+        }
+
+        .menu-item.active {
+            background: #eff6ff;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 25px;
+        }
+
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .breadcrumb a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .breadcrumb .material-icons {
+            font-size: 16px;
+        }
+
+        /* Header Section */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .start-recording-btn {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .start-recording-btn:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: #8b5cf6;
+            border-bottom-color: #8b5cf6;
+        }
+
+        .tab:hover {
+            color: #8b5cf6;
+        }
+
+        /* Content Cards */
+        .content-section {
+            max-width: 800px;
+        }
+
+        .info-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        .info-content h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .info-content p {
+            font-size: 16px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .guidelines-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #475569;
+        }
+
+        /* Agent-specific icons */
+        .icon-payment { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .icon-competitor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .icon-lead { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .icon-closing { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+        .icon-cold-calling { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .icon-discovery { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Left Sidebar - User Details -->
+        <div class="user-sidebar">
+            <div class="user-header">
+                <div class="user-avatar" id="userAvatar"></div>
+                <div class="user-info">
+                    <h4 id="userName"></h4>
+                </div>
+            </div>
+
+            <div class="user-menu">
+                <a href="#" class="menu-item active" id="dashboardBtn">
+                    <span class="material-icons">dashboard</span>
+                    Dashboard
+                </a>
+                <a href="#" class="menu-item" id="pastAnalysisBtn">
+                    <span class="material-icons">history</span>
+                    Past Analysis
+                </a>
+                <a href="#" class="menu-item" id="logoutBtn">
+                    <span class="material-icons">logout</span>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="/index.html">Role-plays</a>
+                <span class="material-icons">chevron_right</span>
+                <span id="breadcrumbTitle">Agent Information</span>
+            </div>
+
+            <!-- Header -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" id="agentTitle">Agent Information</h1>
+                </div>
+                <button class="start-recording-btn" id="startRecordingBtn">
+                    <span class="material-icons">mic</span>
+                    Start Recording
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" data-tab="overview">Overview</button>
+            </div>
+
+            <!-- Content -->
+            <div class="content-section">
+                <!-- Role-play Details -->
+                <div class="info-card">
+                    <h3 class="card-title">Role-play Details</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-icon" id="roleplayIcon">
+                                <span class="material-icons">work</span>
+                            </div>
+                            <div class="info-content">
+                                <h4>Role-play type</h4>
+                                <p id="roleplayType">Face-to-face</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <span class="material-icons">timer</span>
+                            </div>
+                            <div class="info-content">
+                                <h4>Recording time limit</h4>
+                                <p>No limit</p>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-icon">
+                                <span class="material-icons">language</span>
+                            </div>
+                            <div class="info-content">
+                                <h4>Role-play language</h4>
+                                <p>English 🇬🇧</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Guidelines -->
+                <div class="info-card">
+                    <h3 class="card-title">User Guidelines</h3>
+                    <p class="guidelines-text" id="guidelinesText">
+                        This role-play scenario is designed to help you practice and improve your sales conversation skills. 
+                        You'll be interacting with an AI that simulates a realistic prospect with specific characteristics and objections. 
+                        Focus on building rapport, understanding needs, and effectively communicating your value proposition.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AgentInfoPage {
+            constructor() {
+                this.agentData = agentData;
+                this.initializeAuth();
+                this.initializeEventListeners();
+                this.loadAgentInfo();
+            }
+            
+            async initializeAuth() {
+                try {
+                    const isAuthenticated = localStorage.getItem('authenticated');
+                    const accessToken = localStorage.getItem('accessToken');
+                    
+                    if (!isAuthenticated || !accessToken) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    const response = await fetch('/auth/check', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        localStorage.clear();
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    this.loadUserData(data.user);
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                }
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('dashboardBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.href = '/index.html';
+                });
+                
+                document.getElementById('logoutBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.handleLogout();
+                });
+                
+                document.getElementById('pastAnalysisBtn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.href = '/past-conversations.html';
+                });
+
+                document.getElementById('startRecordingBtn').addEventListener('click', () => {
+                    this.startRecording();
+                });
+
+
+            }
+            
+            loadUserData(user) {
+                const email = user.email || 'User';
+                const name = user.name || email.split('@')[0];
+                const avatar = name.substring(0, 2).toUpperCase();
+                
+                document.getElementById('userName').textContent = name;
+                document.getElementById('userAvatar').textContent = avatar;
+            }
+
+            loadAgentInfo() {
+                const agentType = localStorage.getItem('selectedAgentType');
+                                    if (!agentType || !this.agentData[agentType]) {
+                        window.location.href = '/index.html';
+                        return;
+                    }
+
+                const agent = this.agentData[agentType];
+                
+                // Update page content
+                document.title = agent.title;
+                document.getElementById('agentTitle').textContent = agent.title;
+                document.getElementById('breadcrumbTitle').textContent = agent.title;
+                document.getElementById('roleplayType').textContent = agent.type;
+                document.getElementById('guidelinesText').textContent = agent.guidelines;
+                
+                // Update icon
+                const iconElement = document.getElementById('roleplayIcon');
+                iconElement.innerHTML = agent.icon;
+                iconElement.className = `info-icon ${agent.iconClass}`;
+            }
+
+
+
+            startRecording() {
+                // Store the selected agent type and redirect to main conversation page
+                const agentType = localStorage.getItem('selectedAgentType');
+                if (agentType) {
+                    window.location.href = '/conversation.html';
+                } else {
+                    window.location.href = '/index.html';
+                }
+            }
+
+            async handleLogout() {
+                try {
+                    localStorage.removeItem('authenticated');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('accessToken');
+                    
+                    window.location.href = '/login.html';
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                    window.location.href = '/login.html';
+                }
+            }
+        }
+
+        let agentInfoPage;
+        
+        document.addEventListener('DOMContentLoaded', function () {
+            agentInfoPage = new AgentInfoPage();
+        });
+    </script>
+</body>
+
+</html> 

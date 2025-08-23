@@ -10,6 +10,143 @@ function checkAuth() {
     return true;
 }
 
+// --- Rules Popup ---
+function createRulesPopup() {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'rulesOverlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '10000';
+    overlay.style.pointerEvents = 'auto';
+
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.style.background = '#ffffff';
+    popup.style.borderRadius = '16px';
+    popup.style.padding = '32px';
+    popup.style.maxWidth = '500px';
+    popup.style.width = '90%';
+    popup.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+    popup.style.border = '1px solid #e2e8f0';
+    popup.style.position = 'relative';
+
+    // Create title
+    const title = document.createElement('h2');
+    title.innerHTML = 'Hey 👋 Please take a look at the rules for role-play done right.';
+    title.style.fontSize = '20px';
+    title.style.fontWeight = '700';
+    title.style.color = '#1e293b';
+    title.style.marginBottom = '24px';
+    title.style.lineHeight = '1.4';
+
+    // Create rules list
+    const rulesList = document.createElement('ul');
+    rulesList.style.listStyle = 'none';
+    rulesList.style.padding = '0';
+    rulesList.style.margin = '0 0 24px 0';
+
+    const rules = [
+        'Wear headphones and speak clearly. Don\'t forget to smile 😊',
+        'First response can be bit delayed, please wait for AI to respond.',
+        'As soon as you finish recording, it will be sent for analysis and feedback. Take this attempt seriously!',
+        'Find a quiet place and ensure that your microphone works properly.',
+        'Speak confidently and avoid rushing. When you finish talking, click the "Stop" icon to end the role-play',
+    ];
+
+    rules.forEach(rule => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.alignItems = 'flex-start';
+        li.style.gap = '12px';
+        li.style.marginBottom = '16px';
+        li.style.fontSize = '15px';
+        li.style.lineHeight = '1.6';
+        li.style.color = '#475569';
+
+        const bullet = document.createElement('span');
+        bullet.innerHTML = '•';
+        bullet.style.color = '#8b5cf6';
+        bullet.style.fontWeight = 'bold';
+        bullet.style.fontSize = '18px';
+        bullet.style.lineHeight = '1.2';
+
+        const text = document.createElement('span');
+        text.textContent = rule;
+
+        li.appendChild(bullet);
+        li.appendChild(text);
+        rulesList.appendChild(li);
+    });
+
+    // Create conclusion
+    const conclusion = document.createElement('p');
+    conclusion.innerHTML = 'Let\'s go 🚀';
+    conclusion.style.fontSize = '16px';
+    conclusion.style.fontWeight = '700';
+    conclusion.style.color = '#1e293b';
+    conclusion.style.marginBottom = '24px';
+    conclusion.style.marginTop = '0';
+
+    // Create agree button (initially disabled)
+    const agreeButton = document.createElement('button');
+    agreeButton.textContent = 'I agree';
+    agreeButton.id = 'agreeButton';
+    agreeButton.style.background = '#e2e8f0';
+    agreeButton.style.color = '#64748b';
+    agreeButton.style.border = 'none';
+    agreeButton.style.borderRadius = '12px';
+    agreeButton.style.padding = '14px 24px';
+    agreeButton.style.fontSize = '16px';
+    agreeButton.style.fontWeight = '600';
+    agreeButton.style.cursor = 'not-allowed';
+    agreeButton.style.width = '100%';
+    agreeButton.style.transition = 'all 0.2s';
+    agreeButton.disabled = true;
+
+    // Add elements to popup
+    popup.appendChild(title);
+    popup.appendChild(rulesList);
+    popup.appendChild(conclusion);
+    popup.appendChild(agreeButton);
+
+    // Add popup to overlay
+    overlay.appendChild(popup);
+
+    // Add overlay to body
+    document.body.appendChild(overlay);
+
+    // Enable button after 5 seconds
+    setTimeout(() => {
+        agreeButton.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+        agreeButton.style.color = 'white';
+        agreeButton.style.cursor = 'pointer';
+        agreeButton.disabled = false;
+        agreeButton.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
+    }, 10000);
+
+    // Handle agree button click
+    agreeButton.addEventListener('click', () => {
+        if (!agreeButton.disabled) {
+            overlay.remove();
+        }
+    });
+
+    // Prevent closing on overlay click
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            // Do nothing - prevent closing
+        }
+    });
+}
+
 // --- UI Creation ---
 function createUI() {
     // Set up full-screen, immersive background with white and light blue gradient
@@ -20,6 +157,9 @@ function createUI() {
     document.body.style.minHeight = '100vh';
     document.body.style.overflow = 'hidden';
 
+    // Create and show rules popup
+    createRulesPopup();
+
     // Top bar (minimal)
     const topBar = document.createElement('div');
     topBar.className = 'top-bar';
@@ -27,7 +167,7 @@ function createUI() {
     topBar.style.top = '0';
     topBar.style.left = '0';
     topBar.style.width = '100vw';
-    topBar.style.height = '60px';
+    topBar.style.height = '50px';
     topBar.style.display = 'flex';
     topBar.style.alignItems = 'center';
     topBar.style.justifyContent = 'center';
@@ -41,25 +181,28 @@ function createUI() {
 
     // Back button
     const backButton = document.createElement('button');
-    backButton.innerHTML = '← Back to Agents';
-    backButton.style.position = 'absolute';
+    backButton.innerHTML = '← Back to details';
+    backButton.style.position = 'fixed';
+    backButton.style.top = '8px';
     backButton.style.left = '18px';
-    backButton.style.background = 'rgba(255,255,255,0.8)';
+    backButton.style.background = 'rgba(255,255,255,0.9)';
     backButton.style.border = '1px solid rgba(0,0,0,0.1)';
     backButton.style.borderRadius = '8px';
-    backButton.style.padding = '8px 16px';
-    backButton.style.fontSize = '14px';
+    backButton.style.padding = '6px 12px';
+    backButton.style.fontSize = '13px';
     backButton.style.fontWeight = '500';
     backButton.style.color = '#374151';
     backButton.style.cursor = 'pointer';
     backButton.style.transition = 'all 0.2s';
-    backButton.onclick = () => window.location.href = '/agents.html';
+    backButton.style.zIndex = '200';
+    backButton.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    backButton.onclick = () => window.location.href = '/agent-info.html';
     backButton.onmouseover = () => {
         backButton.style.background = 'rgba(255,255,255,0.95)';
         backButton.style.transform = 'translateY(-1px)';
     };
     backButton.onmouseout = () => {
-        backButton.style.background = 'rgba(255,255,255,0.8)';
+        backButton.style.background = 'rgba(255,255,255,0.9)';
         backButton.style.transform = 'translateY(0)';
     };
 
@@ -116,10 +259,10 @@ function createUI() {
     voiceWaveArea.className = 'voice-wave-area';
     voiceWaveArea.id = 'voiceWaveArea';
     voiceWaveArea.style.position = 'fixed';
-    voiceWaveArea.style.top = '60px';
+    voiceWaveArea.style.top = '50px';
     voiceWaveArea.style.left = '0';
     voiceWaveArea.style.width = '100vw';
-    voiceWaveArea.style.height = 'calc(100vh - 60px)';
+    voiceWaveArea.style.height = 'calc(100vh - 50px)';
     voiceWaveArea.style.display = 'flex';
     voiceWaveArea.style.flexDirection = 'column';
     voiceWaveArea.style.justifyContent = 'center';

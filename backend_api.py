@@ -8,6 +8,7 @@ from database_operations import DatabaseManager
 from datetime import datetime
 import json
 import uuid
+import time
 
 # Create Blueprint for database API routes
 db_api = Blueprint('db_api', __name__)
@@ -242,24 +243,28 @@ def get_user_conversations():
 
 @db_api.route('/conversation/<conversation_id>', methods=['GET'])
 def get_conversation_details(conversation_id):
-    """Get complete conversation data including analysis and best pitch"""
+    """Get complete conversation data including analysis and best pitch - OPTIMIZED"""
     try:
+        start_time = time.time()
+        
         # Get user from auth token
         user_id = get_current_user_id()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
         
-        # Get complete conversation data
-        data = db.get_complete_conversation_data(conversation_id, user_id)
+        # Get complete conversation data using optimized method
+        data = db.get_complete_conversation_data_optimized(conversation_id, user_id)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: Complete conversation data retrieved in {execution_time:.2f}ms")
         
         if data:
-            print(f"✅ Retrieved complete data for conversation {conversation_id}")
             return jsonify({
                 "success": True,
-                "data": data
+                "data": data,
+                "execution_time_ms": round(execution_time, 2)
             })
         else:
-            print(f"❌ Conversation not found: {conversation_id}")
             return jsonify({
                 "success": False,
                 "error": "Conversation not found"
@@ -367,19 +372,25 @@ def get_conversation_summary():
 
 @db_api.route('/get_all_conversations', methods=['GET'])
 def get_all_conversations():
-    """Get all conversations for the current user"""
+    """Get all conversations for the current user - OPTIMIZED"""
     try:
+        start_time = time.time()
+        
         # Get current user ID
         user_id = get_current_user_id()
         if not user_id:
             return jsonify({'success': False, 'error': 'Unauthorized'}), 401
         
-        # Get all conversations for this user
-        conversations = db.get_all_conversations(user_id)
+        # Get all conversations for this user using optimized method
+        conversations = db.get_all_conversations_optimized(user_id)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: All conversations retrieved in {execution_time:.2f}ms")
         
         return jsonify({
             'success': True,
-            'conversations': conversations
+            'conversations': conversations,
+            'execution_time_ms': round(execution_time, 2)
         })
         
     except Exception as e:
@@ -388,8 +399,10 @@ def get_all_conversations():
 
 @db_api.route('/get_conversation_analysis', methods=['POST'])
 def get_conversation_analysis():
-    """Get conversation and its analysis data"""
+    """Get conversation and its analysis data - OPTIMIZED"""
     try:
+        start_time = time.time()
+        
         # Get current user ID
         user_id = get_current_user_id()
         if not user_id:
@@ -401,17 +414,21 @@ def get_conversation_analysis():
         if not conversation_id:
             return jsonify({'success': False, 'error': 'Conversation ID required'}), 400
         
-        # Get conversation and analysis data
-        conversation = db.get_conversation_by_id(conversation_id, user_id)
+        # Get conversation and analysis data using optimized methods
+        conversation = db.get_conversation_by_id_optimized(conversation_id, user_id)
         if not conversation:
             return jsonify({'success': False, 'error': 'Conversation not found'}), 404
         
-        analysis = db.get_analysis_by_conversation_id(conversation_id, user_id)
+        analysis = db.get_analysis_by_conversation_id_optimized(conversation_id, user_id)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: Conversation analysis retrieved in {execution_time:.2f}ms")
         
         return jsonify({
             'success': True,
             'conversation': conversation,
-            'analysis': analysis
+            'analysis': analysis,
+            'execution_time_ms': round(execution_time, 2)
         })
         
     except Exception as e:
