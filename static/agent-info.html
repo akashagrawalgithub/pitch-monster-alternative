@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <script type="module" src="agent-deatils.js"></script>
     <style>
         * {
             margin: 0;
@@ -72,8 +71,6 @@
             margin-bottom: 4px;
             color: #1e293b;
         }
-
-       
 
         .menu-item {
             display: flex;
@@ -369,7 +366,9 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { agentData } from './agent-deatils.js';
+        
         class AgentInfoPage {
             constructor() {
                 console.log('AgentInfoPage constructor called');
@@ -429,10 +428,9 @@
                 });
 
                 document.getElementById('startRecordingBtn').addEventListener('click', () => {
+                    console.log('Start Recording button clicked');
                     this.startRecording();
                 });
-
-
             }
             
             loadUserData(user) {
@@ -472,14 +470,15 @@
                 }
             }
 
-
-
             startRecording() {
+                console.log('Starting recording...');
                 // Store the selected agent type and redirect to main conversation page
                 const agentType = localStorage.getItem('selectedAgentType');
                 if (agentType) {
+                    console.log('Redirecting to conversation page with agent type:', agentType);
                     window.location.href = '/conversation.html';
                 } else {
+                    console.log('No agent type found, redirecting to index');
                     window.location.href = '/index.html';
                 }
             }
@@ -502,6 +501,7 @@
         let agentInfoPage;
         
         document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, initializing AgentInfoPage');
             agentInfoPage = new AgentInfoPage();
         });
     </script>

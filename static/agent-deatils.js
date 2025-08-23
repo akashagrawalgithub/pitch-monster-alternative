@@ -1,4 +1,4 @@
-const agentData = {
+export const agentData = {
     'payment-followup': {
         title: 'Payment Follow-up - Challenging Client',
         icon: '💰',
