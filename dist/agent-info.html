@@ -372,6 +372,8 @@
     <script>
         class AgentInfoPage {
             constructor() {
+                console.log('AgentInfoPage constructor called');
+                console.log('Available agentData:', agentData);
                 this.agentData = agentData;
                 this.initializeAuth();
                 this.initializeEventListeners();
@@ -444,12 +446,16 @@
 
             loadAgentInfo() {
                 const agentType = localStorage.getItem('selectedAgentType');
-                                    if (!agentType || !this.agentData[agentType]) {
-                        window.location.href = '/index.html';
-                        return;
-                    }
+                console.log('Loading agent info for type:', agentType);
+                
+                if (!agentType || !this.agentData[agentType]) {
+                    console.log('No agent type found or invalid agent type, redirecting to index');
+                    window.location.href = '/index.html';
+                    return;
+                }
 
                 const agent = this.agentData[agentType];
+                console.log('Agent data:', agent);
                 
                 // Update page content
                 document.title = agent.title;
@@ -460,8 +466,10 @@
                 
                 // Update icon
                 const iconElement = document.getElementById('roleplayIcon');
-                iconElement.innerHTML = agent.icon;
-                iconElement.className = `info-icon ${agent.iconClass}`;
+                if (iconElement) {
+                    iconElement.innerHTML = agent.icon;
+                    iconElement.className = `info-icon ${agent.iconClass}`;
+                }
             }
 
 
