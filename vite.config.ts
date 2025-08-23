@@ -12,6 +12,8 @@ export default defineConfig({
         success: 'static/success.html',
         login: 'static/login.html',
         agents: 'static/index.html',
+        'agent-info': 'static/agent-info.html',
+        conversation: 'static/conversation.html',
         'past-conversations': 'static/past-conversations.html'
       }
     }
