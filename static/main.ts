@@ -1557,11 +1557,38 @@ function getConversationHistory(): any[] {
 }
 
 function getBase64Audio(): string {
-    // For now, return a placeholder. In a real implementation, this would be the actual audio data
+    // Get actual recorded audio from sessionStorage
+    const recordedAudio = sessionStorage.getItem('conversationRecording');
+    const hasRecording = sessionStorage.getItem('hasRecording');
+    
+    console.log('getBase64Audio - hasRecording:', hasRecording);
+    console.log('getBase64Audio - recordedAudio exists:', !!recordedAudio);
+    
+    if (recordedAudio && hasRecording === 'true') {
+        console.log('✅ Returning actual recorded audio data');
+        return recordedAudio;
+    }
+    
+    // Fallback to placeholder if no recording exists
+    console.log('❌ No recorded audio found, using placeholder');
     return btoa('audio_data_placeholder');
 }
 
 function getAudioDuration(): number {
+    // Get actual recording duration from sessionStorage
+    const recordedDuration = sessionStorage.getItem('recordingDuration');
+    const hasRecording = sessionStorage.getItem('hasRecording');
+    
+    console.log('getAudioDuration - hasRecording:', hasRecording);
+    console.log('getAudioDuration - recordedDuration:', recordedDuration);
+    
+    if (recordedDuration && hasRecording === 'true') {
+        console.log('✅ Using actual recording duration:', recordedDuration);
+        return parseFloat(recordedDuration);
+    }
+    
+    // Fallback to call duration if no recording duration exists
+    console.log('❌ No recording duration found, using call duration');
     return getCallDuration();
 }
 

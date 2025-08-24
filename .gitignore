@@ -9,7 +9,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+.cursorrules
 # Node.js
 node_modules/
 npm-debug.log*

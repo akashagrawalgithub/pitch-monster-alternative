@@ -247,6 +247,12 @@ BEGIN
                 'key_metrics', a.key_metrics,
                 'strengths', a.strengths,
                 'improvements', a.improvements,
+                'session_info', a.session_info,
+                'voice_delivery_analysis', a.voice_delivery_analysis,
+                'sales_skills_assessment', a.sales_skills_assessment,
+                'sales_process_flow', a.sales_process_flow,
+                'detailed_feedback', a.detailed_feedback,
+                'recommendations', a.recommendations,
                 'created_at', a.created_at
             )
             ELSE NULL

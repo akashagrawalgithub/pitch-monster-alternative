@@ -721,13 +721,35 @@
                     }
                     
                     const data = await response.json();
+                    console.log('API Response data:', data);
                     
                     if (data.success) {
+                        // Debug the data structure
+                        console.log('Conversation data:', data.conversation);
+                        console.log('Analysis data:', data.analysis);
+                        
+                        // Check if we have the required data
+                        if (!data.conversation) {
+                            throw new Error('No conversation data received');
+                        }
+                        
+                        if (!data.analysis) {
+                            throw new Error('No analysis data received');
+                        }
+                        
+                        if (!data.conversation.transcript) {
+                            console.warn('No transcript data in conversation');
+                        }
+                        
                         // Store the data in sessionStorage for the analysis page
-                        sessionStorage.setItem('chatTranscript', JSON.stringify(data.conversation.transcript));
+                        sessionStorage.setItem('chatTranscript', JSON.stringify(data.conversation.transcript || []));
                         sessionStorage.setItem('conversationId', conversationId);
                         sessionStorage.setItem('analysisId', data.analysis.id);
                         sessionStorage.setItem('currentAnalysisData', JSON.stringify(data.analysis));
+                        
+                        console.log('Data stored in sessionStorage successfully');
+                        console.log('chatTranscript:', sessionStorage.getItem('chatTranscript'));
+                        console.log('currentAnalysisData:', sessionStorage.getItem('currentAnalysisData'));
                         
                         // Navigate to analysis page
                         window.location.href = '/analysis.html';

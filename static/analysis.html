@@ -1609,14 +1609,87 @@
             }
 
             // If we have recording data, set up the player
-            if (recordingData && recordingData.startsWith('data:audio/')) {
-                console.log('Found valid recording data (base64)');
+            if (recordingData) {
+                console.log('Found recording data');
                 console.log('Data length:', recordingData.length);
+                console.log('Data type:', typeof recordingData);
+                console.log('Data preview:', recordingData.substring(0, 100));
                 console.log('Stored duration:', storedDuration);
+                
+                // Check if this is placeholder data
+                if (recordingData === 'YXVkaW9fZGF0YV9wbGFjZWhvbGRlcg==' || recordingData === 'audio_data_placeholder') {
+                    console.log('Recording data is placeholder - no actual recording available');
+                    recordingPlayer.style.display = 'none';
+                    return;
+                }
+                
+                let audioDataUrl = recordingData;
+                
+                // Check if it's already a data URL
+                if (!recordingData.startsWith('data:audio/')) {
+                    // Try to detect the audio format and create proper data URL
+                    const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(recordingData);
+                    console.log('Is base64 encoded:', isBase64);
+                    
+                    if (isBase64) {
+                        // Try different audio formats
+                        const audioFormats = [
+                            'audio/wav',
+                            'audio/mp3', 
+                            'audio/mpeg',
+                            'audio/ogg',
+                            'audio/webm',
+                            'audio/m4a'
+                        ];
+                        
+                        let audioCreated = false;
+                        
+                        for (const format of audioFormats) {
+                            try {
+                                const testUrl = `data:${format};base64,${recordingData}`;
+                                const testAudio = new Audio(testUrl);
+                                
+                                testAudio.addEventListener('canplaythrough', () => {
+                                    console.log(`✅ Audio format ${format} works!`);
+                                    audioDataUrl = testUrl;
+                                    audioCreated = true;
+                                }, { once: true });
+                                
+                                testAudio.addEventListener('error', () => {
+                                    console.log(`❌ Audio format ${format} failed`);
+                                }, { once: true });
+                                
+                                // Try to load the audio
+                                testAudio.load();
+                                
+                                // Wait a bit to see if it loads
+                                setTimeout(() => {
+                                    if (!audioCreated) {
+                                        console.log(`Timeout for format ${format}`);
+                                    }
+                                }, 1000);
+                                
+                            } catch (error) {
+                                console.log(`Error testing format ${format}:`, error);
+                            }
+                        }
+                        
+                        // If no format worked, default to WAV
+                        if (!audioCreated) {
+                            audioDataUrl = `data:audio/wav;base64,${recordingData}`;
+                            console.log('Defaulting to WAV format');
+                        }
+                    } else {
+                        // Not base64, might be raw audio data
+                        console.log('Recording data is not base64, treating as raw data');
+                        audioDataUrl = `data:audio/wav;base64,${btoa(recordingData)}`;
+                    }
+                }
+                
                 recordingPlayer.style.display = 'block';
                 
-                // Create audio element from base64 data
-                audioPlayer = new Audio(recordingData);
+                // Create audio element from data URL
+                audioPlayer = new Audio(audioDataUrl);
                 
                 // Set duration from stored value if available
                 if (storedDuration) {
@@ -1624,7 +1697,7 @@
                     console.log('Set audio duration from stored value:', audioPlayer.duration);
                 }
                 
-                // Add error handling
+                // Add comprehensive error handling
                 audioPlayer.addEventListener('error', (e) => {
                     console.error('Audio playback error:', e);
                     console.error('Audio error details:', audioPlayer.error);
@@ -1641,8 +1714,37 @@
                         audioTime.textContent = `00:00 / ${formatTime(duration)}`;
                         console.log('Showing duration from stored value due to playback error');
                     }
+                    
+                    // Try alternative audio format if WAV failed
+                    if (audioDataUrl.includes('audio/wav') && recordingData && recordingData.length > 0) {
+                        console.log('Trying alternative audio format...');
+                        const alternativeUrl = `data:audio/mp3;base64,${recordingData}`;
+                        const alternativeAudio = new Audio(alternativeUrl);
+                        
+                        alternativeAudio.addEventListener('canplaythrough', () => {
+                            console.log('✅ Alternative format works!');
+                            audioPlayer = alternativeAudio;
+                            setupAudioEventListeners();
+                        }, { once: true });
+                        
+                        alternativeAudio.addEventListener('error', () => {
+                            console.log('❌ Alternative format also failed');
+                        }, { once: true });
+                        
+                        alternativeAudio.load();
+                    }
                 });
                 
+                // Setup audio event listeners
+                setupAudioEventListeners();
+                
+                console.log('Recording player setup complete');
+            } else {
+                console.log('No valid recording data found');
+            }
+            
+            // Helper function to setup audio event listeners
+            function setupAudioEventListeners() {
                 // Add load event
                 audioPlayer.addEventListener('loadeddata', () => {
                     console.log('Audio loaded successfully, duration:', audioPlayer.duration);
@@ -1736,10 +1838,6 @@
                         audioPlayer.currentTime = progress * duration;
                     }
                 });
-                
-                console.log('Recording player setup complete');
-            } else {
-                console.log('No valid recording data found');
             }
         }
 
@@ -1755,14 +1853,87 @@
             console.log('Setting up recording player for past conversation...');
             console.log('Audio data length:', audioData ? audioData.length : 0);
             console.log('Audio duration:', audioDuration);
+            console.log('Audio data type:', typeof audioData);
+            console.log('Audio data preview:', audioData ? audioData.substring(0, 100) : 'null');
 
             if (audioData && audioData.length > 0) {
-                // Convert base64 to audio data URL
-                const audioDataUrl = `data:audio/wav;base64,${audioData}`;
+                // Check if this is placeholder data
+                if (audioData === 'YXVkaW9fZGF0YV9wbGFjZWhvbGRlcg==' || audioData === 'audio_data_placeholder') {
+                    console.log('Audio data is placeholder - no actual recording available');
+                    recordingPlayer.style.display = 'none';
+                    return;
+                }
+                
+                // Check if audio data is already a data URL
+                let audioDataUrl;
+                if (audioData.startsWith('data:audio/')) {
+                    // Already a data URL
+                    audioDataUrl = audioData;
+                    console.log('Audio data is already a data URL');
+                } else {
+                    // Try to detect the audio format and create proper data URL
+                    // First, try to determine if it's base64 encoded
+                    const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(audioData);
+                    console.log('Is base64 encoded:', isBase64);
+                    
+                    if (isBase64) {
+                        // Try different audio formats
+                        const audioFormats = [
+                            'audio/wav',
+                            'audio/mp3', 
+                            'audio/mpeg',
+                            'audio/ogg',
+                            'audio/webm',
+                            'audio/m4a'
+                        ];
+                        
+                        let audioCreated = false;
+                        
+                        for (const format of audioFormats) {
+                            try {
+                                const testUrl = `data:${format};base64,${audioData}`;
+                                const testAudio = new Audio(testUrl);
+                                
+                                testAudio.addEventListener('canplaythrough', () => {
+                                    console.log(`✅ Audio format ${format} works!`);
+                                    audioDataUrl = testUrl;
+                                    audioCreated = true;
+                                }, { once: true });
+                                
+                                testAudio.addEventListener('error', () => {
+                                    console.log(`❌ Audio format ${format} failed`);
+                                }, { once: true });
+                                
+                                // Try to load the audio
+                                testAudio.load();
+                                
+                                // Wait a bit to see if it loads
+                                setTimeout(() => {
+                                    if (!audioCreated) {
+                                        console.log(`Timeout for format ${format}`);
+                                    }
+                                }, 1000);
+                                
+                            } catch (error) {
+                                console.log(`Error testing format ${format}:`, error);
+                            }
+                        }
+                        
+                        // If no format worked, default to WAV
+                        if (!audioCreated) {
+                            audioDataUrl = `data:audio/wav;base64,${audioData}`;
+                            console.log('Defaulting to WAV format');
+                        }
+                    } else {
+                        // Not base64, might be raw audio data
+                        console.log('Audio data is not base64, treating as raw data');
+                        audioDataUrl = `data:audio/wav;base64,${btoa(audioData)}`;
+                    }
+                }
                 
                 recordingPlayer.style.display = 'block';
                 
-                // Create audio element from base64 data
+                // Create audio element from data URL
                 audioPlayer = new Audio(audioDataUrl);
                 
                 // Set duration from database value if available
@@ -1771,10 +1942,16 @@
                     console.log('Set audio duration from database:', audioPlayer.duration);
                 }
                 
-                // Add error handling
+                // Add comprehensive error handling
                 audioPlayer.addEventListener('error', (e) => {
                     console.error('Audio playback error:', e);
                     console.error('Audio error details:', audioPlayer.error);
+                    console.error('Audio error code:', audioPlayer.error?.code);
+                    console.error('Audio error message:', audioPlayer.error?.message);
+                    
+                    // Show user-friendly error message
+                    const errorMessage = audioPlayer.error?.message || 'Audio format not supported';
+                    console.log('Audio playback failed:', errorMessage);
                     
                     // Update the time display to show duration from database value
                     if (audioDuration) {
@@ -1782,8 +1959,37 @@
                         audioTime.textContent = `00:00 / ${formatTime(duration)}`;
                         console.log('Showing duration from database due to playback error');
                     }
+                    
+                    // Try alternative audio format if WAV failed
+                    if (audioDataUrl.includes('audio/wav') && audioData && audioData.length > 0) {
+                        console.log('Trying alternative audio format...');
+                        const alternativeUrl = `data:audio/mp3;base64,${audioData}`;
+                        const alternativeAudio = new Audio(alternativeUrl);
+                        
+                        alternativeAudio.addEventListener('canplaythrough', () => {
+                            console.log('✅ Alternative format works!');
+                            audioPlayer = alternativeAudio;
+                            setupAudioEventListeners();
+                        }, { once: true });
+                        
+                        alternativeAudio.addEventListener('error', () => {
+                            console.log('❌ Alternative format also failed');
+                        }, { once: true });
+                        
+                        alternativeAudio.load();
+                    }
                 });
                 
+                // Setup audio event listeners
+                setupAudioEventListeners();
+                
+                console.log('Past conversation recording player setup complete');
+            } else {
+                console.log('No audio data found for past conversation');
+            }
+            
+            // Helper function to setup audio event listeners
+            function setupAudioEventListeners() {
                 // Add load event
                 audioPlayer.addEventListener('loadeddata', () => {
                     console.log('Audio loaded successfully, duration:', audioPlayer.duration);
@@ -1875,10 +2081,6 @@
                         audioPlayer.currentTime = progress * duration;
                     }
                 });
-                
-                console.log('Past conversation recording player setup complete');
-            } else {
-                console.log('No audio data found for past conversation');
             }
         }
 
@@ -1922,11 +2124,22 @@
                 
                 if (currentAnalysisData) {
                     console.log('✅ Using existing analysis data from database - no need to call OpenAI');
-                    const analysisData = JSON.parse(currentAnalysisData);
-                    console.log('Parsed existing analysis data:', analysisData);
+                    console.log('Raw currentAnalysisData:', currentAnalysisData);
                     
-                    // Update UI directly - no need to save to database again
-                    updateAnalysisUI(analysisData);
+                    try {
+                        const analysisData = JSON.parse(currentAnalysisData);
+                        console.log('Parsed existing analysis data:', analysisData);
+                        console.log('Analysis data keys:', Object.keys(analysisData || {}));
+                        
+                        // Update UI directly - no need to save to database again
+                        updateAnalysisUI(analysisData);
+                    } catch (parseError) {
+                        console.error('Error parsing currentAnalysisData:', parseError);
+                        console.error('Raw data that failed to parse:', currentAnalysisData);
+                        // Fall back to basic metrics
+                        calculateBasicMetrics();
+                        return;
+                    }
                     
                     // Set up recording player for past conversation
                     const conversationId = sessionStorage.getItem('conversationId');
@@ -1954,6 +2167,35 @@
                     }
                     
                     return;
+                }
+                
+                // Check if analysis is already saved to database (from success.html)
+                const savedAnalysisId = sessionStorage.getItem('analysisId');
+                console.log('Analysis ID from sessionStorage:', savedAnalysisId ? 'Found' : 'Not found');
+                
+                if (savedAnalysisId) {
+                    console.log('✅ Analysis already saved to database, loading from database');
+                    
+                    // Get analysis from database
+                    const analysisResponse = await fetch('/api/db/get_conversation_analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getAccessToken()}`
+                        },
+                        body: JSON.stringify({ conversation_id: conversationId })
+                    });
+                    
+                    if (analysisResponse.ok) {
+                        const analysisData = await analysisResponse.json();
+                        if (analysisData.success && analysisData.analysis) {
+                            console.log('✅ Loaded analysis from database');
+                            updateAnalysisUI(analysisData.analysis);
+                            return;
+                        }
+                    }
+                    
+                    console.log('❌ Could not load analysis from database, falling back to pre-computed data');
                 }
                 
                 // Check if we have pre-computed analysis data (from success.html)
@@ -2281,6 +2523,13 @@
             // Remove loading indicators
             document.querySelectorAll('.loading-indicator').forEach(el => el.remove());
 
+            // Check if data is valid
+            if (!data || typeof data !== 'object') {
+                console.error('Invalid analysis data received:', data);
+                calculateBasicMetrics();
+                return;
+            }
+
             // Debug each section
             console.log('=== Session Info Debug ===');
             console.log('session_info:', data.session_info);
@@ -2328,17 +2577,29 @@
                 sessionConfidenceEl: !!sessionConfidenceEl
             });
 
-            if (sessionTitleEl && sessionInfo && sessionInfo.scenario_type) {
+            // Check if sessionInfo is valid
+            if (!sessionInfo || typeof sessionInfo !== 'object') {
+                console.warn('Invalid sessionInfo data:', sessionInfo);
+                return;
+            }
+
+            if (sessionTitleEl && sessionInfo.scenario_type) {
                 console.log('Updating session title with:', sessionInfo.scenario_type);
                 sessionTitleEl.textContent = `${sessionInfo.scenario_type} Training Session`;
+            } else if (sessionTitleEl) {
+                console.log('Setting default session title');
+                sessionTitleEl.textContent = 'Sales Training Session';
             }
 
-            if (sessionTypeEl && sessionInfo && sessionInfo.prospect_role) {
+            if (sessionTypeEl && sessionInfo.prospect_role) {
                 console.log('Updating session type with:', sessionInfo.prospect_role);
                 sessionTypeEl.textContent = `${sessionInfo.prospect_role} Conversation`;
+            } else if (sessionTypeEl) {
+                console.log('Setting default session type');
+                sessionTypeEl.textContent = 'Sales Conversation';
             }
 
-            if (sessionConfidenceEl && sessionInfo && sessionInfo.confidence_level !== undefined) {
+            if (sessionConfidenceEl && sessionInfo.confidence_level !== undefined) {
                 console.log('Updating confidence with:', sessionInfo.confidence_level);
                 sessionConfidenceEl.textContent = `Confidence: ${sessionInfo.confidence_level}%`;
                 sessionConfidenceEl.style.color = sessionInfo.confidence_level >= 80 ? '#10b981' : 
@@ -2347,6 +2608,9 @@
                 console.log('Confidence not updated - missing data or element');
                 console.log('sessionInfo:', sessionInfo);
                 console.log('confidence_level:', sessionInfo?.confidence_level);
+                if (sessionConfidenceEl) {
+                    sessionConfidenceEl.textContent = 'Confidence: --';
+                }
             }
         }
 
@@ -2357,13 +2621,25 @@
             const scoreValue = document.getElementById('overallScore');
             console.log('Found overallScore element:', !!scoreValue);
             
-            if (scoreValue && overallScore && overallScore.percentage !== undefined) {
+            // Check if overallScore is valid
+            if (!overallScore || typeof overallScore !== 'object') {
+                console.warn('Invalid overallScore data:', overallScore);
+                if (scoreValue) {
+                    scoreValue.textContent = 'Overall Score: --';
+                }
+                return;
+            }
+            
+            if (scoreValue && overallScore.percentage !== undefined) {
                 console.log('Updating overall score with:', overallScore.percentage);
                 scoreValue.textContent = `Overall Score: ${overallScore.percentage}%`;
             } else {
                 console.log('Overall score not updated - missing data or element');
                 console.log('overallScore:', overallScore);
                 console.log('percentage:', overallScore?.percentage);
+                if (scoreValue) {
+                    scoreValue.textContent = 'Overall Score: --';
+                }
             }
         }
 

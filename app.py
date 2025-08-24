@@ -15,11 +15,11 @@ from backend_api import db_api
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
+OPENAI_API_KEY = "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"
+CARTESIA_API_KEY = "sk_car_BgBEnCJcSZQ8UKRjHsjQxy"
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+SUPABASE_URL = "https://hblifaxxsqkgwzcwxzxo.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0"
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=OPENAI_API_KEY)

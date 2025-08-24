@@ -274,18 +274,100 @@
         let analysisStarted = false;
         let analysisCompleted = false;
         
+        // Helper function to get access token
+        function getAccessToken() {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+            if (!token) {
+                console.error('No access token found! User must be logged in.');
+                return '';
+            }
+            return token;
+        }
+        
         // Check if analysis data is already available
         const preComputedAnalysis = sessionStorage.getItem('analysisData');
+        const conversationId = sessionStorage.getItem('conversationId');
         console.log('Session storage check:', {
             analysisData: !!preComputedAnalysis,
             transcriptData: !!sessionStorage.getItem('chatTranscript'),
+            conversationId: !!conversationId,
+            conversationIdValue: conversationId,
             analysisDataLength: preComputedAnalysis ? preComputedAnalysis.length : 0
         });
         
         if (preComputedAnalysis) {
-            console.log('Analysis data already available, redirecting immediately');
-            // Update UI to show completion
+            console.log('Analysis data already available, saving to database and redirecting');
+            
+            // Update progress step to show we're saving
+            const analysisStep = document.getElementById('analysisStep');
+            if (analysisStep) {
+                analysisStep.className = 'step active';
+                analysisStep.innerHTML = '<span>Saving analysis...</span>';
+            }
+            
+            // Update UI to show we're saving
             const countdownEl = document.getElementById('countdownContainer');
+            if (countdownEl) {
+                countdownEl.innerHTML = `
+                    <div class="loading-spinner" style="width: 20px; height: 20px; border: 2px solid #e2e8f0; border-top: 2px solid #7c3aed; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+                    <p>Saving analysis to database...</p>
+                `;
+            }
+            
+            // Save the pre-computed analysis to database
+            (async () => {
+                try {
+                    const analysisData = JSON.parse(preComputedAnalysis);
+                    const conversationId = sessionStorage.getItem('conversationId');
+                    
+                    if (conversationId) {
+                        console.log('=== PRE-COMPUTED ANALYSIS SAVE DEBUG ===');
+                        console.log('Saving pre-computed analysis to database...');
+                        const accessToken = getAccessToken();
+                        
+                        console.log('Pre-computed debug info:', {
+                            conversationId: conversationId,
+                            hasAccessToken: !!accessToken,
+                            accessTokenLength: accessToken ? accessToken.length : 0,
+                            analysisDataKeys: Object.keys(analysisData || {}),
+                            analysisDataLength: JSON.stringify(analysisData).length
+                        });
+                        
+                        const saveAnalysisResponse = await fetch('/api/db/save_analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getAccessToken()}`
+                            },
+                            body: JSON.stringify({
+                                conversation_id: conversationId,
+                                analysis_data: analysisData,
+                                analysis_version: "1.0",
+                                model_used: "gpt-4o-mini",
+                                status: "completed"
+                            })
+                        });
+                        
+                        if (saveAnalysisResponse.ok) {
+                            const saveResult = await saveAnalysisResponse.json();
+                            if (saveResult.success) {
+                                console.log('✅ Pre-computed analysis saved to database:', saveResult.analysis_id);
+                                sessionStorage.setItem('analysisId', saveResult.analysis_id);
+                            } else {
+                                console.error('❌ Failed to save pre-computed analysis:', saveResult.error);
+                            }
+                        } else {
+                            console.error('❌ Pre-computed analysis save failed:', saveAnalysisResponse.status);
+                        }
+                    } else {
+                        console.error('❌ No conversation ID found for pre-computed analysis save');
+                    }
+                } catch (saveError) {
+                    console.error('❌ Error saving pre-computed analysis to database:', saveError);
+                }
+            })();
+            
+            // Update UI to show completion
             if (countdownEl) {
                 countdownEl.innerHTML = `
                     <div style="color: #10b981; font-weight: 500; margin-bottom: 10px;">
@@ -296,9 +378,7 @@
             }
             
             // Update progress step
-            const analysisStep = document.getElementById('analysisStep');
             if (analysisStep) {
-                analysisStep.className = 'step active';
                 analysisStep.innerHTML = '<span>Analysis complete!</span>';
             }
             
@@ -377,6 +457,55 @@
                 // Store analysis data for the analysis page
                 sessionStorage.setItem('analysisData', JSON.stringify(analysisData));
                 analysisCompleted = true;
+                
+                // Save analysis to database immediately
+                try {
+                    console.log('=== ANALYSIS SAVE DEBUG ===');
+                    console.log('Saving analysis to database...');
+                    const conversationId = sessionStorage.getItem('conversationId');
+                    const accessToken = getAccessToken();
+                    
+                    console.log('Debug info:', {
+                        conversationId: conversationId,
+                        hasAccessToken: !!accessToken,
+                        accessTokenLength: accessToken ? accessToken.length : 0,
+                        analysisDataKeys: Object.keys(analysisData || {}),
+                        analysisDataLength: JSON.stringify(analysisData).length
+                    });
+                    
+                    if (conversationId) {
+                        const saveAnalysisResponse = await fetch('/api/db/save_analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getAccessToken()}`
+                            },
+                            body: JSON.stringify({
+                                conversation_id: conversationId,
+                                analysis_data: analysisData,
+                                analysis_version: "1.0",
+                                model_used: "gpt-4o-mini",
+                                status: "completed"
+                            })
+                        });
+                        
+                        if (saveAnalysisResponse.ok) {
+                            const saveResult = await saveAnalysisResponse.json();
+                            if (saveResult.success) {
+                                console.log('✅ Analysis saved to database:', saveResult.analysis_id);
+                                sessionStorage.setItem('analysisId', saveResult.analysis_id);
+                            } else {
+                                console.error('❌ Failed to save analysis:', saveResult.error);
+                            }
+                        } else {
+                            console.error('❌ Analysis save failed:', saveAnalysisResponse.status);
+                        }
+                    } else {
+                        console.error('❌ No conversation ID found for analysis save');
+                    }
+                } catch (saveError) {
+                    console.error('❌ Error saving analysis to database:', saveError);
+                }
                 
                 // Update progress step to show completion
                 if (analysisStep) {

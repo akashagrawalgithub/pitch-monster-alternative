@@ -14,9 +14,10 @@ import os
 import time
 from functools import lru_cache
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+SUPABASE_URL = "https://hblifaxxsqkgwzcwxzxo.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTM3MDI3MSwiZXhwIjoyMDcwOTQ2MjcxfQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8"
 
 class DatabaseManager:
     def __init__(self):
@@ -384,9 +385,9 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Select only necessary columns
+            # Select necessary columns including transcript for analysis page
             response = self.supabase.table('conversations').select(
-                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status'
+                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,transcript,audio_data,audio_duration_seconds'
             ).eq('id', conversation_id).eq('user_id', user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
@@ -406,9 +407,9 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Select only necessary columns
+            # Select all necessary columns for complete analysis data
             response = self.supabase.table('analysis').select(
-                'id,conversation_id,overall_score,key_metrics,strengths,improvements,created_at'
+                'id,conversation_id,overall_score,key_metrics,strengths,improvements,created_at,session_info,voice_delivery_analysis,sales_skills_assessment,sales_process_flow,detailed_feedback,recommendations'
             ).eq('conversation_id', conversation_id).eq('user_id', user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
