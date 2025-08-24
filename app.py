@@ -18,6 +18,7 @@ CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pi
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
 
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
