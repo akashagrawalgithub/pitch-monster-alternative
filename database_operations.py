@@ -15,9 +15,9 @@ import time
 from functools import lru_cache
 
 
-SUPABASE_URL = "https://hblifaxxsqkgwzcwxzxo.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzNzAyNzEsImV4cCI6MjA3MDk0NjI3MX0.nbLnB8IIWjLvHA7De1LZLveY5UnS_bP8UcfNLd_rPq0"
-SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhibGlmYXh4c3FrZ3d6Y3d4enhvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTM3MDI3MSwiZXhwIjoyMDcwOTQ2MjcxfQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8"
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 class DatabaseManager:
     def __init__(self):
