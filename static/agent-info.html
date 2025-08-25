@@ -367,13 +367,10 @@
     </div>
 
     <script type="module">
-        import { agentData } from './agent-deatils.js';
-        
         class AgentInfoPage {
             constructor() {
                 console.log('AgentInfoPage constructor called');
-                console.log('Available agentData:', agentData);
-                this.agentData = agentData;
+                this.agentData = null;
                 this.initializeAuth();
                 this.initializeEventListeners();
                 this.loadAgentInfo();
@@ -442,32 +439,87 @@
                 document.getElementById('userAvatar').textContent = avatar;
             }
 
-            loadAgentInfo() {
+            async loadAgentInfo() {
                 const agentType = localStorage.getItem('selectedAgentType');
                 console.log('Loading agent info for type:', agentType);
                 
-                if (!agentType || !this.agentData[agentType]) {
-                    console.log('No agent type found or invalid agent type, redirecting to index');
+                if (!agentType) {
+                    console.log('No agent type found, redirecting to index');
                     window.location.href = '/index.html';
                     return;
                 }
 
-                const agent = this.agentData[agentType];
-                console.log('Agent data:', agent);
-                
-                // Update page content
-                document.title = agent.title;
-                document.getElementById('agentTitle').textContent = agent.title;
-                document.getElementById('breadcrumbTitle').textContent = agent.title;
-                document.getElementById('roleplayType').textContent = agent.type;
-                document.getElementById('guidelinesText').textContent = agent.guidelines;
-                
-                // Update icon
-                const iconElement = document.getElementById('roleplayIcon');
-                if (iconElement) {
-                    iconElement.innerHTML = agent.icon;
-                    iconElement.className = `info-icon ${agent.iconClass}`;
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    if (!accessToken) {
+                        console.error('No access token found');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+
+                    const response = await fetch('/api/db/get_agent_by_key', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ agent_key: agentType })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (!data.success || !data.agent) {
+                        console.error('Failed to load agent:', data.error);
+                        window.location.href = '/index.html';
+                        return;
+                    }
+
+                    const agent = data.agent;
+                    console.log('Agent data:', agent);
+                    
+                    // Update page content
+                    document.title = agent.title;
+                    document.getElementById('agentTitle').textContent = agent.title;
+                    document.getElementById('breadcrumbTitle').textContent = agent.title;
+                    document.getElementById('roleplayType').textContent = agent.type;
+                    document.getElementById('guidelinesText').textContent = agent.guidelines;
+                    
+                    // Update icon
+                    const iconElement = document.getElementById('roleplayIcon');
+                    if (iconElement) {
+                        iconElement.innerHTML = agent.icon;
+                        iconElement.className = `info-icon ${agent.iconClass}`;
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading agent from API:', error);
+                    // Show error message instead of fallback
+                    this.showError('Failed to load agent information. Please try again later.');
                 }
+            }
+
+            showError(message) {
+                const mainContent = document.querySelector('.main-content');
+                if (!mainContent) return;
+
+                mainContent.innerHTML = `
+                    <div class="error-container" style="text-align: center; padding: 60px 20px; color: #ef4444;">
+                        <div class="material-icons" style="font-size: 64px; margin-bottom: 24px;">error_outline</div>
+                        <h1 style="font-size: 24px; margin-bottom: 16px; color: #1e293b;">Error Loading Agent</h1>
+                        <p style="font-size: 16px; margin-bottom: 24px; color: #64748b;">${message}</p>
+                        <div style="display: flex; gap: 12px; justify-content: center;">
+                            <button onclick="location.reload()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                Try Again
+                            </button>
+                            <button onclick="window.location.href='/index.html'" style="padding: 12px 24px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                Back to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
 
             startRecording() {

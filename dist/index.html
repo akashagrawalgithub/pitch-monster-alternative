@@ -149,6 +149,9 @@
             flex: 1;
             min-width: 300px;
             max-width: calc(33.333% - 16px);
+            height: 280px;
+            display: flex;
+            flex-direction: column;
         }
 
         .agent-card {
@@ -222,6 +225,14 @@
             color: #64748b;
             line-height: 1.6;
             margin-bottom: 16px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            max-height: 3.2em;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            word-wrap: break-word;
         }
 
         .start-button {
@@ -239,6 +250,7 @@
             gap: 8px;
             width: 100%;
             justify-content: center;
+            margin-top: auto;
         }
 
         .start-button:hover {
@@ -248,6 +260,37 @@
 
         .start-button:active {
             transform: translateY(0);
+        }
+
+        /* Loading Animation */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            min-height: 300px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        .loading-text {
+            color: #64748b;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Responsive Design */
@@ -329,100 +372,10 @@
             </div>
 
             <div class="agents-grid">
-                <!-- Row 1 -->
-                <div class="agents-row">
-                    <!-- Payment Follow-up -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">💰</div>
-                            <div class="difficulty-badge difficulty-medium">Medium</div>
-                        </div>
-                        <h3 class="agent-title">Payment Follow-up</h3>
-                        <p class="agent-description">Practice handling overdue payment conversations with challenging
-                            clients who have various excuses and objections.</p>
-                        <button class="start-button" onclick="startTraining('payment-followup')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
-
-                    <!-- Competitor Objection -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">💬</div>
-                            <div class="difficulty-badge difficulty-hard">Hard</div>
-                        </div>
-                        <h3 class="agent-title">Competitor Objection</h3>
-                        <p class="agent-description">Handle objections when prospects mention competitors, learn to
-                            differentiate and highlight unique value propositions.</p>
-                        <button class="start-button" onclick="startTraining('competitor-objection')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
-
-                    <!-- Lead to Demo -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">👥</div>
-                            <div class="difficulty-badge difficulty-easy">Easy</div>
-                        </div>
-                        <h3 class="agent-title">Lead to Demo</h3>
-                        <p class="agent-description">Convert interested leads into demo bookings through effective
-                            questioning and value proposition delivery.</p>
-                        <button class="start-button" onclick="startTraining('lead-to-demo')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Row 2 -->
-                <div class="agents-row">
-                    <!-- Closing Skills -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">🤝</div>
-                            <div class="difficulty-badge difficulty-hard">Hard</div>
-                        </div>
-                        <h3 class="agent-title">Closing Skills</h3>
-                        <p class="agent-description">Master the art of closing deals with various closing techniques and
-                            handling last-minute objections.</p>
-                        <button class="start-button" onclick="startTraining('closing-skills')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
-
-                    <!-- Cold Calling -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">📞</div>
-                            <div class="difficulty-badge difficulty-medium">Medium</div>
-                        </div>
-                        <h3 class="agent-title">Cold Calling</h3>
-                        <p class="agent-description">Perfect your cold calling techniques, break through gatekeepers, and
-                            capture prospect attention quickly.</p>
-                        <button class="start-button" onclick="startTraining('cold-calling')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
-
-                    <!-- Discovery Call -->
-                    <div class="agent-card">
-                        <div class="card-header">
-                            <div class="agent-icon">🔍</div>
-                            <div class="difficulty-badge difficulty-medium">Medium</div>
-                        </div>
-                        <h3 class="agent-title">Discovery Call</h3>
-                        <p class="agent-description">Learn effective questioning techniques to uncover pain points, budget,
-                            and decision-making processes.</p>
-                        <button class="start-button" onclick="startTraining('discovery-call')">
-                            <span class="material-icons">play_arrow</span>
-                            Start Practice
-                        </button>
-                    </div>
+                <!-- Agents will be loaded dynamically from the database -->
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text">Loading training personas...</p>
                 </div>
             </div>
         </div>
@@ -435,6 +388,7 @@
             constructor() {
                 this.initializeAuth();
                 this.initializeEventListeners();
+                this.loadAgents();
             }
             
             async initializeAuth() {
@@ -523,6 +477,112 @@
                     // Still redirect even if logout fails
                     window.location.href = '/login.html';
                 }
+            }
+
+            async loadAgents() {
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    if (!accessToken) {
+                        console.error('No access token found');
+                        return;
+                    }
+
+                    const response = await fetch('/api/db/get_all_agents', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.renderAgents(data.agents);
+                    } else {
+                        console.error('Failed to load agents:', data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading agents:', error);
+                    // Show error message instead of fallback
+                    this.showError('Failed to load agents. Please try again later.');
+                }
+            }
+
+            renderAgents(agents) {
+                const agentsGrid = document.querySelector('.agents-grid');
+                if (!agentsGrid) return;
+
+                // Clear existing content
+                agentsGrid.innerHTML = '';
+
+                // Group agents into rows of 3
+                const rows = [];
+                for (let i = 0; i < agents.length; i += 3) {
+                    rows.push(agents.slice(i, i + 3));
+                }
+
+                rows.forEach(row => {
+                    const agentsRow = document.createElement('div');
+                    agentsRow.className = 'agents-row';
+
+                    row.forEach(agent => {
+                        const agentCard = this.createAgentCard(agent);
+                        agentsRow.appendChild(agentCard);
+                    });
+
+                    agentsGrid.appendChild(agentsRow);
+                });
+            }
+
+            createAgentCard(agent) {
+                const card = document.createElement('div');
+                card.className = 'agent-card';
+
+                const difficultyClass = `difficulty-${agent.difficulty}`;
+                
+                // Truncate description to approximately 2 lines
+                const truncatedDescription = this.truncateText(agent.guidelines, 120);
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="agent-icon">${agent.icon}</div>
+                        <div class="difficulty-badge ${difficultyClass}">${agent.difficulty.charAt(0).toUpperCase() + agent.difficulty.slice(1)}</div>
+                    </div>
+                    <h3 class="agent-title">${agent.title}</h3>
+                    <p class="agent-description">${truncatedDescription}</p>
+                    <button class="start-button" onclick="startTraining('${agent.agent_key}')">
+                        <span class="material-icons">play_arrow</span>
+                        Start Practice
+                    </button>
+                `;
+
+                return card;
+            }
+
+            truncateText(text, maxLength) {
+                if (text.length <= maxLength) {
+                    return text;
+                }
+                return text.substring(0, maxLength).trim() + '...';
+            }
+
+            showError(message) {
+                const agentsGrid = document.querySelector('.agents-grid');
+                if (!agentsGrid) return;
+
+                agentsGrid.innerHTML = `
+                    <div class="error-message" style="text-align: center; padding: 40px; color: #ef4444;">
+                        <div class="material-icons" style="font-size: 48px; margin-bottom: 16px;">error_outline</div>
+                        <p style="font-size: 16px; margin-bottom: 8px;">Error Loading Agents</p>
+                        <p style="font-size: 14px; color: #64748b;">${message}</p>
+                        <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Try Again
+                        </button>
+                    </div>
+                `;
             }
 
 

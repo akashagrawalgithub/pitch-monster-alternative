@@ -441,6 +441,75 @@ class DatabaseManager:
         """Get analysis data for a specific conversation - LEGACY"""
         return self.get_analysis_by_conversation_id_optimized(conversation_id, user_id)
 
+    # AGENT OPERATIONS
+    def get_all_agents(self) -> List[Dict]:
+        """Get all active agents from the database"""
+        try:
+            start_time = time.time()
+            
+            result = self.supabase.table("agents").select(
+                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+            ).eq("is_active", True).order("title").execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ {len(result.data)} agents retrieved in {execution_time:.2f}ms")
+            
+            return result.data
+        except Exception as e:
+            print(f"Error getting agents: {e}")
+            return []
+    
+    def get_agent_by_key(self, agent_key: str) -> Optional[Dict]:
+        """Get a specific agent by its key"""
+        try:
+            start_time = time.time()
+            
+            result = self.supabase.table("agents").select(
+                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+            ).eq("agent_key", agent_key).eq("is_active", True).execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Agent {agent_key} retrieved in {execution_time:.2f}ms")
+            
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"Error getting agent by key: {e}")
+            return None
+    
+    def get_agents_by_type(self, agent_type: str) -> List[Dict]:
+        """Get all agents of a specific type"""
+        try:
+            start_time = time.time()
+            
+            result = self.supabase.table("agents").select(
+                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+            ).eq("type", agent_type).eq("is_active", True).order("title").execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ {len(result.data)} agents of type {agent_type} retrieved in {execution_time:.2f}ms")
+            
+            return result.data
+        except Exception as e:
+            print(f"Error getting agents by type: {e}")
+            return []
+    
+    def get_agents_by_difficulty(self, difficulty: str) -> List[Dict]:
+        """Get all agents of a specific difficulty level"""
+        try:
+            start_time = time.time()
+            
+            result = self.supabase.table("agents").select(
+                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+            ).eq("difficulty", difficulty).eq("is_active", True).order("title").execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ {len(result.data)} agents of difficulty {difficulty} retrieved in {execution_time:.2f}ms")
+            
+            return result.data
+        except Exception as e:
+            print(f"Error getting agents by difficulty: {e}")
+            return []
+
 # Utility functions for audio handling
 def encode_audio_to_base64(audio_bytes: bytes) -> str:
     """Convert audio bytes to base64 string"""

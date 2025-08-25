@@ -460,3 +460,113 @@ def get_client_ip():
             "error": str(e),
             "ip_address": "unknown"
         }), 500
+
+# AGENT API ENDPOINTS
+@db_api.route('/get_all_agents', methods=['GET'])
+def get_all_agents():
+    """Get all active agents from the database"""
+    try:
+        start_time = time.time()
+        
+        # Get all agents using database method
+        agents = db.get_all_agents()
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: {len(agents)} agents retrieved in {execution_time:.2f}ms")
+        
+        return jsonify({
+            'success': True,
+            'agents': agents,
+            'execution_time_ms': round(execution_time, 2)
+        })
+        
+    except Exception as e:
+        print(f"Error getting agents: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_agent_by_key', methods=['POST'])
+def get_agent_by_key():
+    """Get a specific agent by its key"""
+    try:
+        start_time = time.time()
+        
+        data = request.get_json()
+        agent_key = data.get('agent_key')
+        
+        if not agent_key:
+            return jsonify({'success': False, 'error': 'Agent key required'}), 400
+        
+        # Get agent by key using database method
+        agent = db.get_agent_by_key(agent_key)
+        
+        if not agent:
+            return jsonify({'success': False, 'error': 'Agent not found'}), 404
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: Agent {agent_key} retrieved in {execution_time:.2f}ms")
+        
+        return jsonify({
+            'success': True,
+            'agent': agent,
+            'execution_time_ms': round(execution_time, 2)
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent by key: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_agents_by_type', methods=['POST'])
+def get_agents_by_type():
+    """Get all agents of a specific type"""
+    try:
+        start_time = time.time()
+        
+        data = request.get_json()
+        agent_type = data.get('agent_type')
+        
+        if not agent_type:
+            return jsonify({'success': False, 'error': 'Agent type required'}), 400
+        
+        # Get agents by type using database method
+        agents = db.get_agents_by_type(agent_type)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: {len(agents)} agents of type {agent_type} retrieved in {execution_time:.2f}ms")
+        
+        return jsonify({
+            'success': True,
+            'agents': agents,
+            'execution_time_ms': round(execution_time, 2)
+        })
+        
+    except Exception as e:
+        print(f"Error getting agents by type: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_agents_by_difficulty', methods=['POST'])
+def get_agents_by_difficulty():
+    """Get all agents of a specific difficulty level"""
+    try:
+        start_time = time.time()
+        
+        data = request.get_json()
+        difficulty = data.get('difficulty')
+        
+        if not difficulty:
+            return jsonify({'success': False, 'error': 'Difficulty level required'}), 400
+        
+        # Get agents by difficulty using database method
+        agents = db.get_agents_by_difficulty(difficulty)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: {len(agents)} agents of difficulty {difficulty} retrieved in {execution_time:.2f}ms")
+        
+        return jsonify({
+            'success': True,
+            'agents': agents,
+            'execution_time_ms': round(execution_time, 2)
+        })
+        
+    except Exception as e:
+        print(f"Error getting agents by difficulty: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
