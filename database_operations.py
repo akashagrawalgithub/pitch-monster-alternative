@@ -447,7 +447,10 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            result = self.supabase.table("agents").select(
+            # Use service role client for agent operations to bypass RLS
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            result = service_client.table("agents").select(
                 "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
             ).eq("is_active", True).order("title").execute()
             
@@ -464,7 +467,10 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            result = self.supabase.table("agents").select(
+            # Use service role client for agent operations to bypass RLS
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            result = service_client.table("agents").select(
                 "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
             ).eq("agent_key", agent_key).eq("is_active", True).execute()
             
