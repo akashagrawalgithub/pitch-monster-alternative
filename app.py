@@ -11,6 +11,7 @@ import base64
 import numpy as np
 import json
 from backend_api import db_api
+from supabase import create_client, Client
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
@@ -570,10 +571,6 @@ INSTRUCTIONS:
 # Register the database API blueprint
 app.register_blueprint(db_api, url_prefix='/api/db')
 
-# Supabase integration for authentication
-from supabase import create_client, Client
-
-# Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 @app.route('/login', methods=['POST'])
@@ -602,7 +599,9 @@ def login():
                     'email': response.user.email,
                     'name': response.user.user_metadata.get('name', email.split('@')[0])
                 },
-                'access_token': response.session.access_token
+                'access_token': response.session.access_token,
+                'refresh_token': response.session.refresh_token,
+                'expires_at': response.session.expires_at
             })
         else:
             return jsonify({'error': 'Invalid email or password'}), 401
@@ -650,6 +649,33 @@ def check_auth():
         import traceback
         traceback.print_exc()
         return jsonify({'authenticated': False}), 401
+
+@app.route('/auth/refresh', methods=['POST'])
+def refresh_token():
+    """Refresh the access token using refresh token"""
+    try:
+        data = request.json
+        refresh_token = data.get('refresh_token')
+        
+        if not refresh_token:
+            return jsonify({'error': 'Refresh token is required'}), 400
+        
+        # Refresh the token with Supabase
+        response = supabase.auth.refresh_session(refresh_token)
+        
+        if response.session:
+            return jsonify({
+                'success': True,
+                'access_token': response.session.access_token,
+                'refresh_token': response.session.refresh_token,
+                'expires_at': response.session.expires_at
+            })
+        else:
+            return jsonify({'error': 'Failed to refresh token'}), 401
+        
+    except Exception as e:
+        print(f"Token refresh error: {str(e)}")
+        return jsonify({'error': 'Failed to refresh token'}), 401
 
 # Serve static assets from dist folder in production
 @app.route('/<path:filename>')

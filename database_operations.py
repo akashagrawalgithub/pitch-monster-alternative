@@ -23,6 +23,7 @@ class DatabaseManager:
     def __init__(self):
         self.supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
         self.current_token = None
+        self.user_supabase = None
         # Enable connection pooling and optimize settings
         self._setup_optimizations()
     
@@ -35,8 +36,36 @@ class DatabaseManager:
     def set_auth_token(self, access_token: str):
         """Set the authentication token for database operations"""
         self.current_token = access_token
-        # For now, we'll use the anon key and handle RLS differently
-        pass
+        # Create a new client with the user's access token
+        if access_token:
+            try:
+                self.user_supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+                # Set the auth token for this client
+                self.user_supabase.auth.set_session(access_token, None)
+            except Exception as e:
+                print(f"Error setting auth token: {e}")
+                # Fallback to anon client
+                self.user_supabase = self.supabase
+    
+    def _get_client(self):
+        """Get the appropriate Supabase client (user or anon)"""
+        return self.user_supabase if self.user_supabase else self.supabase
+    
+    def _refresh_token_if_needed(self):
+        """Refresh the token if it's expired"""
+        if not self.current_token:
+            return False
+        
+        try:
+            # Try to get user info to check if token is valid
+            user = self.user_supabase.auth.get_user(self.current_token)
+            return True
+        except Exception as e:
+            print(f"Token validation failed: {e}")
+            # Token is expired or invalid, clear it
+            self.current_token = None
+            self.user_supabase = None
+            return False
     
     def get_current_user_id(self, access_token: str) -> Optional[str]:
         """Get current user ID from access token"""
@@ -53,6 +82,14 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return {"success": False, "error": "Authentication token expired"}
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
             # Use the complete conversation data as provided
             conversation_record = conversation_data.copy()
             conversation_record["user_id"] = user_id
@@ -66,7 +103,7 @@ class DatabaseManager:
                 conversation_record["updated_at"] = datetime.now().isoformat()
             
             # Insert into database
-            result = self.supabase.table("conversations").insert(conversation_record).execute()
+            result = client.table("conversations").insert(conversation_record).execute()
             
             execution_time = (time.time() - start_time) * 1000
             print(f"✅ Conversation saved in {execution_time:.2f}ms")
@@ -363,8 +400,16 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return []
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
             # Select only essential columns for better performance
-            response = self.supabase.table('conversations').select(
+            response = client.table('conversations').select(
                 'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status'
             ).eq('user_id', user_id).order('created_at', desc=True).execute()
             
@@ -385,8 +430,16 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return None
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
             # Select necessary columns including transcript for analysis page
-            response = self.supabase.table('conversations').select(
+            response = client.table('conversations').select(
                 'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,transcript,audio_data,audio_duration_seconds'
             ).eq('id', conversation_id).eq('user_id', user_id).execute()
             
@@ -394,7 +447,19 @@ class DatabaseManager:
             print(f"✅ Conversation {conversation_id} retrieved in {execution_time:.2f}ms")
             
             if response.data:
-                return response.data[0]
+                conversation_data = response.data[0]
+                
+                # Parse transcript if it's stored as a JSON string
+                if 'transcript' in conversation_data and conversation_data['transcript']:
+                    if isinstance(conversation_data['transcript'], str):
+                        try:
+                            conversation_data['transcript'] = json.loads(conversation_data['transcript'])
+                            print(f"✅ Parsed transcript JSON")
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ Failed to parse transcript JSON: {e}")
+                            # Keep as string if parsing fails
+                
+                return conversation_data
             else:
                 return None
                 
@@ -407,17 +472,51 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return None
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
+            print(f"🔍 DEBUG: Fetching analysis for conversation_id: {conversation_id}, user_id: {user_id}")
+            
             # Select all necessary columns for complete analysis data
-            response = self.supabase.table('analysis').select(
+            response = client.table('analysis').select(
                 'id,conversation_id,overall_score,key_metrics,strengths,improvements,created_at,session_info,voice_delivery_analysis,sales_skills_assessment,sales_process_flow,detailed_feedback,recommendations'
             ).eq('conversation_id', conversation_id).eq('user_id', user_id).execute()
+            
+            print(f"🔍 DEBUG: Raw response data: {response.data}")
+            print(f"🔍 DEBUG: Response count: {len(response.data) if response.data else 0}")
             
             execution_time = (time.time() - start_time) * 1000
             print(f"✅ Analysis for conversation {conversation_id} retrieved in {execution_time:.2f}ms")
             
             if response.data:
-                return response.data[0]
+                analysis_data = response.data[0]
+                print(f"🔍 DEBUG: Analysis data keys: {list(analysis_data.keys())}")
+                
+                # Parse JSON fields if they are stored as strings
+                json_fields = ['overall_score', 'key_metrics', 'strengths', 'improvements', 
+                              'session_info', 'voice_delivery_analysis', 'sales_skills_assessment', 
+                              'sales_process_flow', 'detailed_feedback', 'recommendations']
+                
+                for field in json_fields:
+                    if field in analysis_data and analysis_data[field]:
+                        print(f"🔍 DEBUG: Field {field} type: {type(analysis_data[field])}")
+                        print(f"🔍 DEBUG: Field {field} value: {analysis_data[field]}")
+                        if isinstance(analysis_data[field], str):
+                            try:
+                                analysis_data[field] = json.loads(analysis_data[field])
+                                print(f"✅ Parsed JSON field: {field}")
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ Failed to parse JSON field {field}: {e}")
+                                # Keep as string if parsing fails
+                
+                return analysis_data
             else:
+                print(f"🔍 DEBUG: No analysis data found for conversation_id: {conversation_id}")
                 return None
                 
         except Exception as e:

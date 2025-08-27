@@ -30,16 +30,20 @@ def get_current_user_id():
         # Set the auth token for database operations
         db.set_auth_token(token)
         
-        # Use Supabase to get the real user ID
-        user = db.supabase.auth.get_user(token)
-        # print(f"Supabase auth response: {user}")
-        
-        if user and user.user:
-            print(f"User ID: {user.user.id}")
-            return user.user.id
-        else:
-            print("No user found in response")
+        # Use the authenticated client to get user info
+        try:
+            user = db.user_supabase.auth.get_user(token) if db.user_supabase else db.supabase.auth.get_user(token)
+            if user and user.user:
+                print(f"User ID: {user.user.id}")
+                return user.user.id
+            else:
+                print("No user found in response")
+                return None
+        except Exception as auth_error:
+            print(f"Token validation failed: {auth_error}")
+            # Token is expired or invalid
             return None
+            
     except Exception as e:
         print(f"Error getting user ID: {e}")
         return None
@@ -419,7 +423,18 @@ def get_conversation_analysis():
         if not conversation:
             return jsonify({'success': False, 'error': 'Conversation not found'}), 404
         
+        print(f"🔍 DEBUG: Conversation found: {conversation.get('id')}")
+        print(f"🔍 DEBUG: Conversation keys: {list(conversation.keys())}")
+        
         analysis = db.get_analysis_by_conversation_id_optimized(conversation_id, user_id)
+        
+        print(f"🔍 DEBUG: Analysis found: {analysis is not None}")
+        if analysis:
+            print(f"🔍 DEBUG: Analysis keys: {list(analysis.keys())}")
+            print(f"🔍 DEBUG: Analysis ID: {analysis.get('id')}")
+            print(f"🔍 DEBUG: Analysis conversation_id: {analysis.get('conversation_id')}")
+        else:
+            print(f"🔍 DEBUG: No analysis found for conversation_id: {conversation_id}")
         
         execution_time = (time.time() - start_time) * 1000
         print(f"✅ API: Conversation analysis retrieved in {execution_time:.2f}ms")

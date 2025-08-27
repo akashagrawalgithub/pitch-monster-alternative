@@ -363,6 +363,8 @@
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('userName', data.user.name);
                         localStorage.setItem('accessToken', data.access_token);
+                        localStorage.setItem('refreshToken', data.refresh_token);
+                        localStorage.setItem('tokenExpiresAt', data.expires_at);
                         
                         this.showMessage('loginSuccess', 'Login successful! Redirecting...');
                         setTimeout(() => {

@@ -1496,12 +1496,8 @@ async function navigateToAnalysis() {
         };
 
         console.log('Sending conversation data to database...');
-        const conversationResponse = await fetch('/api/db/save_conversation', {
+        const conversationResponse = await authenticatedFetch('/api/db/save_conversation', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getAccessToken()}`
-            },
             body: JSON.stringify(conversationData)
         });
 
@@ -1537,6 +1533,33 @@ async function navigateToAnalysis() {
         alert('Failed to save conversation. Please try again.');
         // Don't navigate if save fails - let user try again
     }
+}
+
+// Function to clear previous analysis data when starting a new conversation
+function clearPreviousAnalysisData() {
+    console.log('🧹 Clearing previous analysis data for fresh conversation...');
+    
+    // Clear analysis-related data from sessionStorage
+    const keysToClear = [
+        'analysisData',
+        'currentAnalysisData', 
+        'analysisId',
+        'conversationId',
+        'chatTranscript',
+        'conversationRecording',
+        'recordingDuration',
+        'hasRecording',
+        'callStartTime'
+    ];
+    
+    keysToClear.forEach(key => {
+        if (sessionStorage.getItem(key)) {
+            sessionStorage.removeItem(key);
+            console.log(`Cleared: ${key}`);
+        }
+    });
+    
+    console.log('✅ Previous analysis data cleared successfully');
 }
 
 // Helper functions for conversation data
@@ -1603,7 +1626,66 @@ async function getClientIP(): Promise<string> {
     }
 }
 
-function getAccessToken(): string {
+async function refreshAccessToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+        console.error('No refresh token found');
+        return null;
+    }
+    
+    try {
+        const response = await fetch('/auth/refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                refresh_token: refreshToken
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            localStorage.setItem('accessToken', data.access_token);
+            localStorage.setItem('refreshToken', data.refresh_token);
+            localStorage.setItem('tokenExpiresAt', data.expires_at);
+            console.log('Token refreshed successfully');
+            return data.access_token;
+        } else {
+            console.error('Failed to refresh token');
+            return null;
+        }
+    } catch (error) {
+        console.error('Error refreshing token:', error);
+        return null;
+    }
+}
+
+function isTokenExpired(): boolean {
+    const expiresAt = localStorage.getItem('tokenExpiresAt');
+    if (!expiresAt) return true;
+    
+    const expirationTime = new Date(expiresAt).getTime();
+    const currentTime = new Date().getTime();
+    
+    // Consider token expired if it expires within the next 5 minutes
+    return currentTime >= (expirationTime - 5 * 60 * 1000);
+}
+
+async function getAccessToken(): Promise<string> {
+    // Check if token is expired
+    if (isTokenExpired()) {
+        console.log('Token is expired, attempting to refresh...');
+        const newToken = await refreshAccessToken();
+        if (!newToken) {
+            console.error('Failed to refresh token, redirecting to login');
+            localStorage.clear();
+            window.location.href = '/login.html';
+            return '';
+        }
+        return newToken;
+    }
+    
     // Check both possible key names for the access token
     const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
     if (!token) {
@@ -1615,6 +1697,44 @@ function getAccessToken(): string {
     }
     console.log('Found access token:', token.substring(0, 20) + '...');
     return token;
+}
+
+// Utility function for making authenticated API calls with automatic token refresh
+async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    const accessToken = await getAccessToken();
+    
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+        }
+    });
+    
+    // If we get a 401, try to refresh the token and retry once
+    if (response.status === 401) {
+        console.log('Received 401, attempting token refresh...');
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+            console.log('Token refreshed, retrying request...');
+            return fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Authorization': `Bearer ${newToken}`,
+                    'Content-Type': 'application/json',
+                }
+            });
+        } else {
+            // Refresh failed, redirect to login
+            localStorage.clear();
+            window.location.href = '/login.html';
+            throw new Error('Authentication failed');
+        }
+    }
+    
+    return response;
 }
 
 // Calculate confidence score based on conversation quality
@@ -1656,6 +1776,9 @@ const micOffIcon = '<span class="material-icons" style="font-size:1.3em;color:#f
 
 micBtn.onclick = () => {
     if (!isChatActive) {
+        // Clear any previous analysis data to ensure fresh analysis for new conversation
+        clearPreviousAnalysisData();
+        
         // Start chat
         resetTranscript();
         startTimer();
