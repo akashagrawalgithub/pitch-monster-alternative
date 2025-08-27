@@ -259,6 +259,14 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return {"success": False, "error": "Authentication token expired"}
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
             # Use the complete best pitch data as provided
             best_pitch_record = best_pitch_data.copy()
             best_pitch_record["conversation_id"] = conversation_id
@@ -269,7 +277,9 @@ class DatabaseManager:
             if "created_at" not in best_pitch_record:
                 best_pitch_record["created_at"] = datetime.now().isoformat()
             
-            result = self.supabase.table("best_pitch").insert(best_pitch_record).execute()
+            print(f"🔍 DEBUG: Saving best pitch for conversation_id: {conversation_id}, analysis_id: {analysis_id}")
+            
+            result = client.table("best_pitch").insert(best_pitch_record).execute()
             
             execution_time = (time.time() - start_time) * 1000
             print(f"✅ Best pitch saved in {execution_time:.2f}ms")
@@ -291,7 +301,15 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            result = self.supabase.table("best_pitch").select(
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return None
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
+            result = client.table("best_pitch").select(
                 "id,conversation_id,analysis_id,perfect_conversation,score_improvement,created_at"
             ).eq("id", best_pitch_id).eq("user_id", user_id).execute()
             
@@ -308,14 +326,46 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            result = self.supabase.table("best_pitch").select(
-                "id,conversation_id,analysis_id,perfect_conversation,score_improvement,created_at"
+            # Check if token is valid
+            if not self._refresh_token_if_needed():
+                print("Token is expired or invalid")
+                return None
+            
+            # Get the appropriate client
+            client = self._get_client()
+            
+            print(f"🔍 DEBUG: Fetching best pitch for conversation_id: {conversation_id}, user_id: {user_id}")
+            
+            result = client.table("best_pitch").select(
+                "id,conversation_id,analysis_id,perfect_conversation,score_improvement,created_at,overall_improvements"
             ).eq("conversation_id", conversation_id).eq("user_id", user_id).execute()
+            
+            print(f"🔍 DEBUG: Best pitch response data: {result.data}")
+            print(f"🔍 DEBUG: Best pitch response count: {len(result.data) if result.data else 0}")
             
             execution_time = (time.time() - start_time) * 1000
             print(f"✅ Conversation best pitch retrieved in {execution_time:.2f}ms")
             
-            return result.data[0] if result.data else None
+            if result.data:
+                best_pitch_data = result.data[0]
+                print(f"🔍 DEBUG: Best pitch data keys: {list(best_pitch_data.keys())}")
+                
+                # Parse JSON fields if they are stored as strings
+                json_fields = ['perfect_conversation', 'score_improvement', 'overall_improvements']
+                for field in json_fields:
+                    if field in best_pitch_data and best_pitch_data[field]:
+                        if isinstance(best_pitch_data[field], str):
+                            try:
+                                best_pitch_data[field] = json.loads(best_pitch_data[field])
+                                print(f"✅ Parsed JSON field: {field}")
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ Failed to parse JSON field {field}: {e}")
+                
+                return best_pitch_data
+            else:
+                print(f"🔍 DEBUG: No best pitch found for conversation_id: {conversation_id}")
+                return None
+                
         except Exception as e:
             print(f"Error getting conversation best pitch: {e}")
             return None

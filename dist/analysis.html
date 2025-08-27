@@ -2828,6 +2828,9 @@
                 }
 
                 console.log('Checking if best pitch exists...');
+                console.log('Conversation ID:', conversationId);
+                console.log('Analysis ID:', analysisId);
+                
                 const checkResponse = await fetch('/api/db/check_best_pitch_exists', {
                     method: 'POST',
                     headers: {
@@ -2837,7 +2840,18 @@
                     body: JSON.stringify({ conversation_id: conversationId })
                 });
 
+                console.log('Check response status:', checkResponse.status);
+                console.log('Check response ok:', checkResponse.ok);
+                
+                if (!checkResponse.ok) {
+                    console.error('Check response error:', checkResponse.status, checkResponse.statusText);
+                    const errorText = await checkResponse.text();
+                    console.error('Error response body:', errorText);
+                    throw new Error(`Best pitch check failed: ${checkResponse.status} - ${errorText}`);
+                }
+
                 const checkResult = await checkResponse.json();
+                console.log('Check result:', checkResult);
                 
                 let perfectPitchData;
                 

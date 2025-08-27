@@ -282,6 +282,8 @@ def get_conversation_details(conversation_id):
 def check_best_pitch_exists():
     """Check if best pitch already exists for a conversation"""
     try:
+        start_time = time.time()
+        
         # Get user from auth token
         user_id = get_current_user_id()
         if not user_id:
@@ -293,8 +295,13 @@ def check_best_pitch_exists():
         if not conversation_id:
             return jsonify({"error": "Missing conversation_id"}), 400
         
+        print(f"🔍 DEBUG: Checking best pitch for conversation_id: {conversation_id}, user_id: {user_id}")
+        
         # Check if best pitch exists
         existing_best_pitch = db.get_conversation_best_pitch(conversation_id, user_id)
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ Best pitch check completed in {execution_time:.2f}ms")
         
         if existing_best_pitch:
             print(f"✅ Best pitch found in database for conversation {conversation_id}")
@@ -303,21 +310,29 @@ def check_best_pitch_exists():
                 "exists": True,
                 "best_pitch_id": existing_best_pitch["id"],
                 "data": {
-                    "perfect_conversation": existing_best_pitch["perfect_conversation"],
-                    "overall_improvements": existing_best_pitch["overall_improvements"],
-                    "score_improvement": existing_best_pitch["score_improvement"]
-                }
+                    "perfect_conversation": existing_best_pitch.get("perfect_conversation", []),
+                    "overall_improvements": existing_best_pitch.get("overall_improvements", {}),
+                    "score_improvement": existing_best_pitch.get("score_improvement", {})
+                },
+                "execution_time_ms": round(execution_time, 2)
             })
         else:
             print(f"❌ No best pitch found for conversation {conversation_id}")
             return jsonify({
                 "success": True,
-                "exists": False
+                "exists": False,
+                "execution_time_ms": round(execution_time, 2)
             })
         
     except Exception as e:
         print(f"Error checking best pitch: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__
+        }), 500
 
 @db_api.route('/delete_conversation/<conversation_id>', methods=['DELETE'])
 def delete_conversation(conversation_id):
