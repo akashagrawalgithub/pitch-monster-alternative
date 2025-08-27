@@ -1374,6 +1374,9 @@ async function startAudioRecording() {
             } 
         });
         
+        // Store the stream for cleanup
+        recordingStream = userStream;
+        
         // Create audio context for mixing user and AI audio
         if (!audioContext) {
             audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -1460,24 +1463,134 @@ async function startAudioRecording() {
     }
 }
 
-// Stop audio recording
-function stopAudioRecording() {
-    if (mediaRecorder && isRecording) {
+// Stop audio recording and wait for processing to complete
+async function stopAudioRecording(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (!mediaRecorder || !isRecording) {
+            resolve();
+            return;
+        }
+        
         isRecording = false;
-        mediaRecorder.stop();
-        console.log('Audio recording stopped');
+        
+        // Set up a timeout in case the onstop callback never fires
+        const timeout = setTimeout(() => {
+            console.error('Audio recording stop timeout - forcing cleanup');
+            cleanupAudioRecording();
+            reject(new Error('Audio recording stop timeout'));
+        }, 10000); // 10 second timeout
+        
+        // Override the onstop callback to ensure proper sequencing
+        mediaRecorder.onstop = () => {
+            clearTimeout(timeout);
+            
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+                
+                // Store recording duration
+                const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
+                sessionStorage.setItem('recordingDuration', recordingDuration.toString());
+                
+                // Convert blob to base64 for storage
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result as string;
+                    const timestamp = Date.now().toString();
+                    sessionStorage.setItem('hasRecording', 'true');
+                    sessionStorage.setItem('conversationRecording', base64Data);
+                    sessionStorage.setItem('recordingTimestamp', timestamp);
+                    console.log('✅ Audio recording processed and saved to sessionStorage, duration:', recordingDuration, 'timestamp:', timestamp);
+                    
+                    // Clean up and resolve
+                    cleanupAudioRecording();
+                    resolve();
+                };
+                reader.onerror = () => {
+                    console.error('Error reading audio blob');
+                    cleanupAudioRecording();
+                    reject(new Error('Failed to process audio recording'));
+                };
+                reader.readAsDataURL(audioBlob);
+            } else {
+                console.warn('No audio chunks available');
+                cleanupAudioRecording();
+                resolve();
+            }
+        };
+        
+        // Stop the recording
+        try {
+            mediaRecorder.stop();
+            console.log('Audio recording stop initiated');
+        } catch (error) {
+            clearTimeout(timeout);
+            console.error('Error stopping media recorder:', error);
+            cleanupAudioRecording();
+            reject(error);
+        }
+    });
+}
+
+// Helper function to clean up audio recording resources
+function cleanupAudioRecording() {
+    if (audioSource) {
+        audioSource.disconnect();
+        audioSource = null;
     }
+    if (audioDestination) {
+        audioDestination.disconnect();
+        audioDestination = null;
+    }
+    if (recordingStream) {
+        recordingStream.getTracks().forEach(track => track.stop());
+        recordingStream = null;
+    }
+    mediaRecorder = null;
+    audioChunks = [];
 }
 
 // Save conversation and navigate to success page
 async function navigateToAnalysis() {
     try {
-        console.log('=== Step 1: Saving conversation to database ===');
+        console.log('=== Step 1: Verifying audio recording is complete ===');
+        
+        // Wait a moment to ensure audio processing is complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Verify that we have fresh audio recording
+        const hasRecording = sessionStorage.getItem('hasRecording');
+        const recordedAudio = sessionStorage.getItem('conversationRecording');
+        const recordingDuration = sessionStorage.getItem('recordingDuration');
+        const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
+        
+        console.log('Audio verification - hasRecording:', hasRecording);
+        console.log('Audio verification - recordedAudio exists:', !!recordedAudio);
+        console.log('Audio verification - recordingDuration:', recordingDuration);
+        console.log('Audio verification - recordingTimestamp:', recordingTimestamp);
+        
+        if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
+            console.warn('⚠️ No fresh audio recording found, waiting for processing...');
+            // Wait a bit more and check again
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const retryHasRecording = sessionStorage.getItem('hasRecording');
+            const retryRecordedAudio = sessionStorage.getItem('conversationRecording');
+            
+            if (!retryHasRecording || retryHasRecording !== 'true' || !retryRecordedAudio) {
+                console.error('❌ Still no audio recording after retry - proceeding with placeholder');
+            } else {
+                console.log('✅ Audio recording found after retry');
+            }
+        } else {
+            console.log('✅ Fresh audio recording verified');
+        }
+        
+        console.log('=== Step 2: Saving conversation to database ===');
         
         // Store transcript in sessionStorage
         sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
         
-        // Save conversation to database immediately
+        // Save conversation to database with verified audio data
         const conversationData = {
             title: "Sales Call - " + new Date().toLocaleString(),
             duration_seconds: getCallDuration(),
@@ -1518,13 +1631,13 @@ async function navigateToAnalysis() {
 
         const conversationId = conversationResult.conversation_id;
         sessionStorage.setItem('conversationId', conversationId);
-        console.log('✅ Step 1 Complete: Conversation saved successfully:', conversationId);
+        console.log('✅ Step 2 Complete: Conversation saved successfully:', conversationId);
         
         // Add delay to ensure database write is complete
         console.log('Waiting 2 seconds for database write to complete...');
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        console.log('=== Step 2: Navigating to success page for analysis ===');
+        console.log('=== Step 3: Navigating to success page for analysis ===');
         // Navigate to success page
         window.location.href = '/success.html';
         
@@ -1549,6 +1662,7 @@ function clearPreviousAnalysisData() {
         'conversationRecording',
         'recordingDuration',
         'hasRecording',
+        'recordingTimestamp',
         'callStartTime'
     ];
     
@@ -1558,6 +1672,12 @@ function clearPreviousAnalysisData() {
             console.log(`Cleared: ${key}`);
         }
     });
+    
+    // Also clear any in-memory recording state
+    if (audioChunks.length > 0) {
+        audioChunks = [];
+        console.log('Cleared: audioChunks array');
+    }
     
     console.log('✅ Previous analysis data cleared successfully');
 }
@@ -1583,17 +1703,35 @@ function getBase64Audio(): string {
     // Get actual recorded audio from sessionStorage
     const recordedAudio = sessionStorage.getItem('conversationRecording');
     const hasRecording = sessionStorage.getItem('hasRecording');
+    const recordingDuration = sessionStorage.getItem('recordingDuration');
+    const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
     
     console.log('getBase64Audio - hasRecording:', hasRecording);
     console.log('getBase64Audio - recordedAudio exists:', !!recordedAudio);
+    console.log('getBase64Audio - recordingDuration:', recordingDuration);
+    console.log('getBase64Audio - recordingTimestamp:', recordingTimestamp);
     
-    if (recordedAudio && hasRecording === 'true') {
-        console.log('✅ Returning actual recorded audio data');
-        return recordedAudio;
+    if (recordedAudio && hasRecording === 'true' && recordingDuration && recordingTimestamp) {
+        // Verify the audio data is substantial (not just a placeholder)
+        if (recordedAudio.length > 1000 && !recordedAudio.includes('audio_data_placeholder')) {
+            // Check if the recording is recent (within last 5 minutes)
+            const timestamp = parseInt(recordingTimestamp);
+            const now = Date.now();
+            const isRecent = (now - timestamp) < 5 * 60 * 1000; // 5 minutes
+            
+            if (isRecent) {
+                console.log('✅ Returning actual recorded audio data (length:', recordedAudio.length, ', recent:', isRecent, ')');
+                return recordedAudio;
+            } else {
+                console.warn('⚠️ Audio recording is too old (timestamp:', timestamp, 'now:', now, ')');
+            }
+        } else {
+            console.warn('⚠️ Audio data appears to be placeholder or too small');
+        }
     }
     
     // Fallback to placeholder if no recording exists
-    console.log('❌ No recorded audio found, using placeholder');
+    console.log('❌ No valid recorded audio found, using placeholder');
     return btoa('audio_data_placeholder');
 }
 
@@ -1601,18 +1739,27 @@ function getAudioDuration(): number {
     // Get actual recording duration from sessionStorage
     const recordedDuration = sessionStorage.getItem('recordingDuration');
     const hasRecording = sessionStorage.getItem('hasRecording');
+    const recordedAudio = sessionStorage.getItem('conversationRecording');
     
     console.log('getAudioDuration - hasRecording:', hasRecording);
     console.log('getAudioDuration - recordedDuration:', recordedDuration);
+    console.log('getAudioDuration - recordedAudio exists:', !!recordedAudio);
     
-    if (recordedDuration && hasRecording === 'true') {
-        console.log('✅ Using actual recording duration:', recordedDuration);
-        return parseFloat(recordedDuration);
+    if (recordedDuration && hasRecording === 'true' && recordedAudio) {
+        const duration = parseFloat(recordedDuration);
+        // Verify the duration is reasonable (between 1 second and 2 hours)
+        if (duration > 0 && duration < 7200) {
+            console.log('✅ Using actual recording duration:', duration);
+            return duration;
+        } else {
+            console.warn('⚠️ Recording duration seems invalid:', duration);
+        }
     }
     
     // Fallback to call duration if no recording duration exists
-    console.log('❌ No recording duration found, using call duration');
-    return getCallDuration();
+    const callDuration = getCallDuration();
+    console.log('❌ No valid recording duration found, using call duration:', callDuration);
+    return callDuration;
 }
 
 async function getClientIP(): Promise<string> {
@@ -1774,7 +1921,7 @@ let isChatActive = false;
 const micIcon = '<span class="material-icons" style="font-size:1.3em;color:#fff;">mic</span>';
 const micOffIcon = '<span class="material-icons" style="font-size:1.3em;color:#fff;">mic_off</span>';
 
-micBtn.onclick = () => {
+micBtn.onclick = async () => {
     if (!isChatActive) {
         // Clear any previous analysis data to ensure fresh analysis for new conversation
         clearPreviousAnalysisData();
@@ -1804,7 +1951,13 @@ micBtn.onclick = () => {
         // Stop audio recording only when user clicks mic_off
         if (isRecording) {
             console.log('User stopped conversation, stopping audio recording');
-            stopAudioRecording();
+            try {
+                await stopAudioRecording();
+                console.log('✅ Audio recording stopped and processed successfully');
+            } catch (error) {
+                console.error('❌ Error stopping audio recording:', error);
+                // Continue anyway, but log the error
+            }
         }
         
         micBtn.innerHTML = micIcon;
