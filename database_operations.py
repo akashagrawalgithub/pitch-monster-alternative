@@ -581,6 +581,43 @@ class DatabaseManager:
             print(f"Error getting conversation by ID: {e}")
             return None
 
+    def get_conversation_by_id_admin(self, conversation_id: str) -> Optional[Dict]:
+        """Get a specific conversation by ID - ADMIN VERSION (no user_id filter)"""
+        try:
+            start_time = time.time()
+            
+            # Use the service role client for database operations
+            client = self.supabase
+            
+            # Select necessary columns including transcript for analysis page
+            response = client.table('conversations').select(
+                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,transcript,audio_data,audio_duration_seconds,user_id'
+            ).eq('id', conversation_id).execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Admin: Conversation {conversation_id} retrieved in {execution_time:.2f}ms")
+            
+            if response.data:
+                conversation_data = response.data[0]
+                
+                # Parse transcript if it's stored as a JSON string
+                if 'transcript' in conversation_data and conversation_data['transcript']:
+                    if isinstance(conversation_data['transcript'], str):
+                        try:
+                            conversation_data['transcript'] = json.loads(conversation_data['transcript'])
+                            print(f"✅ Admin: Parsed transcript JSON")
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ Admin: Failed to parse transcript JSON: {e}")
+                            # Keep as string if parsing fails
+                
+                return conversation_data
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error getting conversation by ID (admin): {e}")
+            return None
+
     def get_analysis_by_conversation_id_optimized(self, conversation_id: str, user_id: str) -> Optional[Dict]:
         """Get analysis data for a specific conversation - OPTIMIZED VERSION"""
         try:
@@ -630,6 +667,57 @@ class DatabaseManager:
                 
         except Exception as e:
             print(f"Error getting analysis by conversation ID: {e}")
+            return None
+
+    def get_analysis_by_conversation_id_admin(self, conversation_id: str) -> Optional[Dict]:
+        """Get analysis data for a specific conversation - ADMIN VERSION (no user_id filter)"""
+        try:
+            start_time = time.time()
+            
+            # Use the service role client for database operations
+            client = self.supabase
+            
+            print(f"🔍 DEBUG: Admin: Fetching analysis for conversation_id: {conversation_id}")
+            
+            # Select all necessary columns for complete analysis data
+            response = client.table('analysis').select(
+                'id,conversation_id,overall_score,key_metrics,strengths,improvements,created_at,session_info,voice_delivery_analysis,sales_skills_assessment,sales_process_flow,detailed_feedback,recommendations,user_id'
+            ).eq('conversation_id', conversation_id).execute()
+            
+            print(f"🔍 DEBUG: Admin: Raw response data: {response.data}")
+            print(f"🔍 DEBUG: Admin: Response count: {len(response.data) if response.data else 0}")
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Admin: Analysis for conversation {conversation_id} retrieved in {execution_time:.2f}ms")
+            
+            if response.data:
+                analysis_data = response.data[0]
+                print(f"🔍 DEBUG: Admin: Analysis data keys: {list(analysis_data.keys())}")
+                
+                # Parse JSON fields if they are stored as strings
+                json_fields = ['overall_score', 'key_metrics', 'strengths', 'improvements', 
+                              'session_info', 'voice_delivery_analysis', 'sales_skills_assessment', 
+                              'sales_process_flow', 'detailed_feedback', 'recommendations']
+                
+                for field in json_fields:
+                    if field in analysis_data and analysis_data[field]:
+                        print(f"🔍 DEBUG: Admin: Field {field} type: {type(analysis_data[field])}")
+                        print(f"🔍 DEBUG: Admin: Field {field} value: {analysis_data[field]}")
+                        if isinstance(analysis_data[field], str):
+                            try:
+                                analysis_data[field] = json.loads(analysis_data[field])
+                                print(f"✅ Admin: Parsed JSON field: {field}")
+                            except json.JSONDecodeError as e:
+                                print(f"⚠️ Admin: Failed to parse JSON field {field}: {e}")
+                                # Keep as string if parsing fails
+                
+                return analysis_data
+            else:
+                print(f"🔍 DEBUG: Admin: No analysis data found for conversation_id: {conversation_id}")
+                return None
+                
+        except Exception as e:
+            print(f"Error getting analysis by conversation ID (admin): {e}")
             return None
 
     # LEGACY METHODS (keeping for backward compatibility)

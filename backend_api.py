@@ -488,8 +488,18 @@ def get_conversation_analysis():
         
         print(f"🔍 DEBUG: Looking for conversation_id: {conversation_id}, user_id: {user_id}")
         
-        # Get conversation and analysis data using optimized methods
-        conversation = db.get_conversation_by_id_optimized(conversation_id, user_id)
+        # Check if user is admin - if so, bypass user_id filter
+        user_role = get_user_role()
+        is_admin = user_role == 'admin'
+        
+        if is_admin:
+            print(f"🔍 DEBUG: Admin user detected, bypassing user_id filter")
+            # For admin users, get conversation without user_id filter
+            conversation = db.get_conversation_by_id_admin(conversation_id)
+        else:
+            # For regular users, get conversation with user_id filter
+            conversation = db.get_conversation_by_id_optimized(conversation_id, user_id)
+        
         if not conversation:
             print(f"❌ DEBUG: Conversation not found for conversation_id: {conversation_id}, user_id: {user_id}")
             # Let's check if the conversation exists at all (without user filter)
@@ -502,7 +512,11 @@ def get_conversation_analysis():
         print(f"🔍 DEBUG: Conversation found: {conversation.get('id')}")
         print(f"🔍 DEBUG: Conversation keys: {list(conversation.keys())}")
         
-        analysis = db.get_analysis_by_conversation_id_optimized(conversation_id, user_id)
+        # For admin users, get analysis without user_id filter
+        if is_admin:
+            analysis = db.get_analysis_by_conversation_id_admin(conversation_id)
+        else:
+            analysis = db.get_analysis_by_conversation_id_optimized(conversation_id, user_id)
         
         print(f"🔍 DEBUG: Analysis found: {analysis is not None}")
         if analysis:
