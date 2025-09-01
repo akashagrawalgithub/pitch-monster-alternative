@@ -115,6 +115,15 @@ def user_management():
         # In production, serve from dist folder
         return send_from_directory('dist', 'user-management.html')
 
+@app.route('/users.html')
+def users():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'users.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'users.html')
+
 
 
 @app.route('/test_analysis.html')
