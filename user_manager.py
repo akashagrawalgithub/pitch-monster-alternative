@@ -15,6 +15,8 @@ class UserManager:
         
         # JWT secret (in production, use environment variable)
         self.jwt_secret = os.environ.get("JWT_SECRET")
+    
+    def hash_password(self, password: str) -> str:
         """Hash a password using bcrypt"""
         salt = bcrypt.gensalt()
         return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
