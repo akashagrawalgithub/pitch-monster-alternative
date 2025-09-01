@@ -48,24 +48,15 @@ class DatabaseManager:
                 self.user_supabase = self.supabase
     
     def _get_client(self):
-        """Get the appropriate Supabase client (user or anon)"""
-        return self.user_supabase if self.user_supabase else self.supabase
+        """Get the appropriate Supabase client - Updated for custom JWT auth"""
+        # Since we're using custom JWT authentication, always use the service role client
+        return self.supabase
     
     def _refresh_token_if_needed(self):
-        """Refresh the token if it's expired"""
-        if not self.current_token:
-            return False
-        
-        try:
-            # Try to get user info to check if token is valid
-            user = self.user_supabase.auth.get_user(self.current_token)
-            return True
-        except Exception as e:
-            print(f"Token validation failed: {e}")
-            # Token is expired or invalid, clear it
-            self.current_token = None
-            self.user_supabase = None
-            return False
+        """Refresh the token if it's expired - Updated for custom JWT auth"""
+        # Since we're using custom JWT authentication, we don't need to refresh Supabase tokens
+        # The token validation is handled by the user_manager in the API endpoints
+        return True
     
     def get_current_user_id(self, access_token: str) -> Optional[str]:
         """Get current user ID from access token"""
@@ -81,11 +72,6 @@ class DatabaseManager:
         """Save a new conversation to the database with complete schema data"""
         try:
             start_time = time.time()
-            
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return {"success": False, "error": "Authentication token expired"}
             
             # Get the appropriate client
             client = self._get_client()
@@ -259,11 +245,6 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return {"success": False, "error": "Authentication token expired"}
-            
             # Get the appropriate client
             client = self._get_client()
             
@@ -278,6 +259,8 @@ class DatabaseManager:
                 best_pitch_record["created_at"] = datetime.now().isoformat()
             
             print(f"🔍 DEBUG: Saving best pitch for conversation_id: {conversation_id}, analysis_id: {analysis_id}")
+            print(f"🔍 DEBUG: Best pitch record keys: {list(best_pitch_record.keys())}")
+            print(f"🔍 DEBUG: User ID: {user_id}")
             
             result = client.table("best_pitch").insert(best_pitch_record).execute()
             
@@ -301,11 +284,6 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return None
-            
             # Get the appropriate client
             client = self._get_client()
             
@@ -325,11 +303,6 @@ class DatabaseManager:
         """Get best pitch for a specific conversation - Optimized"""
         try:
             start_time = time.time()
-            
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return None
             
             # Get the appropriate client
             client = self._get_client()

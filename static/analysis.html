@@ -2145,12 +2145,12 @@
                     const conversationId = sessionStorage.getItem('conversationId');
                     if (conversationId) {
                         // Get conversation data to access audio
-                        const conversationResponse = await fetch('/api/db/get_conversation_analysis', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${getAccessToken()}`
-                            },
+                                            const conversationResponse = await fetch('/api/db/get_conversation_analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${await getAccessToken()}`
+                        },
                             body: JSON.stringify({ conversation_id: conversationId })
                         });
                         
@@ -2181,7 +2181,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getAccessToken()}`
+                            'Authorization': `Bearer ${await getAccessToken()}`
                         },
                         body: JSON.stringify({ conversation_id: conversationId })
                     });
@@ -2275,7 +2275,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAccessToken()}`
+                        'Authorization': `Bearer ${await getAccessToken()}`
                     },
                     body: JSON.stringify({
                         conversation_id: conversationId,
@@ -2346,7 +2346,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAccessToken()}`
+                        'Authorization': `Bearer ${await getAccessToken()}`
                     },
                     body: JSON.stringify({
                         conversation_id: conversationId,
@@ -2835,7 +2835,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAccessToken()}`
+                        'Authorization': `Bearer ${await getAccessToken()}`
                     },
                     body: JSON.stringify({ conversation_id: conversationId })
                 });
@@ -2882,11 +2882,11 @@
                     console.log('Using analysis ID for best pitch:', analysisId);
                     
                     const saveResponse = await fetch('/api/db/save_best_pitch', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getAccessToken()}`
-                        },
+                                            method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${await getAccessToken()}`
+                    },
                         body: JSON.stringify({
                             conversation_id: conversationId,
                             analysis_id: analysisId,
@@ -2979,9 +2979,66 @@
         });
 
         // Helper functions for database operations
-        function getAccessToken() {
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (!refreshToken) {
+                console.error('No refresh token found');
+                return null;
+            }
+            
+            try {
+                const response = await fetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        refresh_token: refreshToken
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('accessToken', data.access_token);
+                    localStorage.setItem('refreshToken', data.refresh_token);
+                    return data.access_token;
+                } else {
+                    console.error('Failed to refresh token');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error refreshing token:', error);
+                return null;
+            }
+        }
+
+        async function getAccessToken() {
             // Get access token from sessionStorage or localStorage
-            return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            let token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            
+            if (!token) {
+                console.error('No access token found, redirecting to login');
+                window.location.href = '/login.html';
+                return '';
+            }
+            
+            // Try to refresh the token if it's expired
+            try {
+                const newToken = await refreshAccessToken();
+                if (newToken) {
+                    token = newToken;
+                } else {
+                    console.error('Failed to refresh token, redirecting to login');
+                    window.location.href = '/login.html';
+                    return '';
+                }
+            } catch (error) {
+                console.error('Error refreshing token:', error);
+                window.location.href = '/login.html';
+                return '';
+            }
+            
+            return token;
         }
 
         function getCallDuration() {
