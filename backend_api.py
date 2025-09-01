@@ -486,9 +486,17 @@ def get_conversation_analysis():
         if not conversation_id:
             return jsonify({'success': False, 'error': 'Conversation ID required'}), 400
         
+        print(f"🔍 DEBUG: Looking for conversation_id: {conversation_id}, user_id: {user_id}")
+        
         # Get conversation and analysis data using optimized methods
         conversation = db.get_conversation_by_id_optimized(conversation_id, user_id)
         if not conversation:
+            print(f"❌ DEBUG: Conversation not found for conversation_id: {conversation_id}, user_id: {user_id}")
+            # Let's check if the conversation exists at all (without user filter)
+            all_conversations = db.supabase.table('conversations').select('id,user_id,title').execute()
+            if all_conversations.data:
+                print(f"🔍 DEBUG: Available conversations: {[c.get('id') for c in all_conversations.data]}")
+                print(f"🔍 DEBUG: Conversation user IDs: {[c.get('user_id') for c in all_conversations.data]}")
             return jsonify({'success': False, 'error': 'Conversation not found'}), 404
         
         print(f"🔍 DEBUG: Conversation found: {conversation.get('id')}")
@@ -533,6 +541,33 @@ def debug_conversations():
         
     except Exception as e:
         print(f"Error in debug endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@db_api.route('/my-conversations', methods=['GET'])
+def get_my_conversations():
+    """Get conversations for the current authenticated user"""
+    try:
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Get conversations for the current user
+        response = db.supabase.table('conversations').select(
+            'id,title,session_id,created_at,status,total_exchanges,duration_seconds'
+        ).eq('user_id', user_id).order('created_at', desc=True).execute()
+        
+        return jsonify({
+            "success": True,
+            "user_id": user_id,
+            "total_conversations": len(response.data) if response.data else 0,
+            "conversations": response.data if response.data else []
+        })
+        
+    except Exception as e:
+        print(f"Error getting user conversations: {e}")
         return jsonify({
             "success": False,
             "error": str(e)

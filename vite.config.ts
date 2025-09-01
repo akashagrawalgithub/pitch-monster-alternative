@@ -14,7 +14,8 @@ export default defineConfig({
         agents: 'static/index.html',
         'agent-info': 'static/agent-info.html',
         conversation: 'static/conversation.html',
-        'past-conversations': 'static/past-conversations.html'
+        'past-conversations': 'static/past-conversations.html',
+        users: 'static/users.html'
       }
     }
   },
