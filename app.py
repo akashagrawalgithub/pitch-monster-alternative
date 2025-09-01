@@ -4,7 +4,8 @@ from openai import OpenAI
 import os
 from datetime import datetime
 import time
-from prompts import agentPrompt, analysisPrompt, bestPitchPrompt
+from prompts import analysisPrompt, bestPitchPrompt
+from prompt_manager import prompt_manager
 import asyncio
 from cartesia import Cartesia
 import base64
@@ -96,6 +97,26 @@ def success():
         # In production, serve from dist folder
         return send_from_directory('dist', 'success.html')
 
+@app.route('/admin.html')
+def admin():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'admin.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'admin.html')
+
+@app.route('/user-management.html')
+def user_management():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'user-management.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'user-management.html')
+
+
+
 @app.route('/test_analysis.html')
 def test_analysis_page():
     if IS_DEVELOPMENT:
@@ -158,6 +179,12 @@ def conversation_page():
     else:
         # In production, serve from dist folder
         return send_from_directory('dist', 'conversation.html')
+
+
+
+
+
+
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
@@ -273,6 +300,7 @@ def chat():
     global conversation_history
     
     user_input = request.json.get('message', '').strip()
+    agent_type = request.json.get('agent_type', 'discovery-call')
     
     if not user_input:
         return jsonify({"reply": "I didn't catch that. Could you repeat?"})
@@ -281,9 +309,12 @@ def chat():
     max_history = 30
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
+    # Get the dynamic prompt for this agent
+    dynamic_prompt = prompt_manager.get_prompt(agent_type)
+    
     messages = [{
         "role": "system",
-        "content": agentPrompt
+        "content": dynamic_prompt
     }]
 
     # Add recent conversation history
@@ -340,6 +371,7 @@ def chat_stream():
     global conversation_history
     
     user_input = request.json.get('message', '').strip()
+    agent_type = request.json.get('agent_type', 'discovery-call')
     
     if not user_input:
         return Response('data: {"reply": "I didn\'t catch that. Could you repeat?"}\n\n', mimetype='text/event-stream')
@@ -347,9 +379,12 @@ def chat_stream():
     max_history = 30
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
+    # Get the dynamic prompt for this agent
+    dynamic_prompt = prompt_manager.get_prompt(agent_type)
+    
     messages = [{
         "role": "system",
-        "content": agentPrompt
+        "content": dynamic_prompt
     }]
     for msg in recent_history:
         messages.append({"role": "user", "content": msg["user"]})
@@ -575,7 +610,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Supabase email/password login"""
+    """UserManager email/password login"""
     try:
         data = request.json
         email = data.get('email')
@@ -584,24 +619,15 @@ def login():
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
         
-        # Authenticate with Supabase
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        # Use our custom UserManager for authentication
+        from user_manager import user_manager
+        user_data = user_manager.authenticate_user(email, password)
         
-        if response.user:
+        if user_data:
             return jsonify({
                 'message': 'Login successful',
                 'success': True,
-                'user': {
-                    'id': response.user.id,
-                    'email': response.user.email,
-                    'name': response.user.user_metadata.get('name', email.split('@')[0])
-                },
-                'access_token': response.session.access_token,
-                'refresh_token': response.session.refresh_token,
-                'expires_at': response.session.expires_at
+                'user': user_data
             })
         else:
             return jsonify({'error': 'Invalid email or password'}), 401
@@ -615,34 +641,25 @@ def check_auth():
     """Check if user is authenticated"""
     try:
         auth_header = request.headers.get('Authorization')
-        # print(f"Auth check - auth_header: {auth_header[:50] if auth_header else 'None'}...")
         
         if not auth_header or not auth_header.startswith('Bearer '):
-            # print("Auth check - No valid auth header")
             return jsonify({'authenticated': False}), 401
         
         token = auth_header.split(' ')[1]
-        # print(f"Auth check - token: {token[:50]}...")
         
-        # Verify token with Supabase
-        response = supabase.auth.get_user(token)
-        # print(f"Auth check - response: {response}")
-        # print(f"Auth check - response.user: {response.user if response else 'None'}")
+        # Use our custom UserManager to verify token
+        from user_manager import user_manager
+        payload = user_manager.verify_token(token)
         
-        if response.user:
-            user_data = {
-                'id': response.user.id,
-                'email': response.user.email,
-                'name': response.user.user_metadata.get('name', response.user.email.split('@')[0])
-            }
-            # print(f"Auth check - user_data: {user_data}")
-            return jsonify({
-                'authenticated': True,
-                'user': user_data
-            })
-        else:
-            # print("Auth check - No user in response")
-            return jsonify({'authenticated': False}), 401
+        if payload:
+            user_data = user_manager.get_user_by_id(payload['user_id'])
+            if user_data:
+                return jsonify({
+                    'authenticated': True,
+                    'user': user_data
+                })
+        
+        return jsonify({'authenticated': False}), 401
             
     except Exception as e:
         print(f"Auth check error: {str(e)}")

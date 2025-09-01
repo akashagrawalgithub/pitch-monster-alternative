@@ -201,6 +201,21 @@
             line-height: 1.4;
         }
 
+        .user-info-display {
+            margin-bottom: 12px;
+        }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            
+        }
+
         .card-meta {
             
             margin-bottom: 20px;
@@ -361,7 +376,11 @@
                 </a>
                 <a href="#" class="menu-item active">
                     <span class="material-icons">history</span>
-                    Past Conversations
+                    Past analysis
+                </a>
+                <a href="/users.html" class="menu-item" id="usersBtn" style="display: none;">
+                    <span class="material-icons">people</span>
+                    Users
                 </a>
                 <a href="#" class="menu-item" id="logoutBtn">
                     <span class="material-icons">logout</span>
@@ -373,7 +392,7 @@
         <!-- Main Content -->
         <div class="main-content">
             <div class="page-header">
-                <h1 class="page-title">
+                <h1 class="page-title" id="pageTitle">
                     <span class="material-icons">history</span>
                     Past Conversations
                 </h1>
@@ -399,9 +418,10 @@
         class PastConversationsPage {
             constructor() {
                 this.conversations = [];
+                this.isAdmin = false;
                 this.initializeAuth();
                 this.initializeEventListeners();
-                this.loadConversations();
+                // loadConversations() is now called from loadUserData() after isAdmin is set
             }
             
             async initializeAuth() {
@@ -457,11 +477,40 @@
             
             loadUserData(user) {
                 const email = user.email || 'User';
-                const name = user.name || email.split('@')[0];
+                const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || email.split('@')[0];
                 const avatar = name.substring(0, 2).toUpperCase();
                 
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = avatar;
+                
+                // Check if user is admin and show/hide admin features
+                const userRole = user.role || localStorage.getItem('userRole');
+                const usersBtn = document.getElementById('usersBtn');
+                
+                console.log('🔍 DEBUG: User object =', user);
+                console.log('🔍 DEBUG: userRole =', userRole);
+                console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRole'));
+                
+                if (userRole === 'admin') {
+                    this.isAdmin = true;
+                    usersBtn.style.display = 'flex';
+                    document.getElementById('pageTitle').innerHTML = `
+                        <span class="material-icons">history</span>
+                        All Conversations
+                    `;
+                    console.log('Admin user detected, showing users menu');
+                } else {
+                    this.isAdmin = false;
+                    usersBtn.style.display = 'none';
+                    document.getElementById('pageTitle').innerHTML = `
+                        <span class="material-icons">history</span>
+                        Past Conversations
+                    `;
+                    console.log('Regular user, hiding users menu');
+                }
+                
+                // Load conversations AFTER setting isAdmin flag
+                this.loadConversations();
             }
 
             async handleLogout() {
@@ -482,9 +531,14 @@
 
             async loadConversations() {
                 try {
-                    // Fetch all conversations
+                    // Fetch all conversations (admin sees all, regular users see only their own)
                     const accessToken = localStorage.getItem('accessToken');
-                    const response = await fetch('/api/db/get_all_conversations', {
+                    const endpoint = this.isAdmin ? '/api/db/get_all_conversations_admin' : '/api/db/get_all_conversations';
+                    
+                    console.log('🔍 DEBUG: isAdmin =', this.isAdmin);
+                    console.log('🔍 DEBUG: Using endpoint =', endpoint);
+                    
+                    const response = await fetch(endpoint, {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
@@ -557,6 +611,14 @@
                             </div>
                             
                             <div class="card-title">${agentType}</div>
+                            
+                            ${this.isAdmin && conversation.user_name ? `
+                                <div class="user-info-display">
+                                    <span class="user-badge">
+                                        ${conversation.user_name}
+                                    </span>
+                                </div>
+                            ` : ''}
                             
                             <div class="card-meta">
                                 <div class="meta-item">

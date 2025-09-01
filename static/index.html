@@ -318,6 +318,10 @@
                     <span class="material-icons">history</span>
                     Past Analysis
                 </a>
+                <a href="/users.html" class="menu-item" id="usersBtn" style="display: none;">
+                    <span class="material-icons">people</span>
+                    Users
+                </a>
                 <a href="#" class="menu-item" id="logoutBtn">
                     <span class="material-icons">logout</span>
                     Logout
@@ -418,11 +422,23 @@
             
             loadUserData(user) {
                 const email = user.email || 'User';
-                const name = user.name || email.split('@')[0];
+                const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || email.split('@')[0];
                 const avatar = name.substring(0, 2).toUpperCase();
                 
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = avatar;
+                
+                // Check if user is admin and show/hide admin features
+                const userRole = user.role || localStorage.getItem('userRole');
+                const usersBtn = document.getElementById('usersBtn');
+                
+                if (userRole === 'admin') {
+                    usersBtn.style.display = 'flex';
+                    console.log('Admin user detected, showing users menu');
+                } else {
+                    usersBtn.style.display = 'none';
+                    console.log('Regular user, hiding users menu');
+                }
             }
 
             async handleLogout() {

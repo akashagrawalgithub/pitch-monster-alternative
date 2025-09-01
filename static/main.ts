@@ -1296,10 +1296,17 @@ function addStreamingTranscript(sender: 'AI' | 'You') {
 function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void): Promise<void> {
     return new Promise((resolve, reject) => {
         const controller = new AbortController();
+        
+        // Get the selected agent type from localStorage
+        const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
+        
         fetch('/chat_stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: userText }),
+            body: JSON.stringify({ 
+                message: userText,
+                agent_type: agentType
+            }),
             signal: controller.signal
         }).then(response => {
             if (!response.body) throw new Error('No response body');

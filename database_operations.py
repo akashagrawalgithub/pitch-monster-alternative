@@ -450,13 +450,8 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return []
-            
-            # Get the appropriate client
-            client = self._get_client()
+            # Use the service role client for database operations since we're using custom JWT auth
+            client = self.supabase
             
             # Select only essential columns for better performance
             response = client.table('conversations').select(
@@ -475,18 +470,87 @@ class DatabaseManager:
             print(f"Error getting all conversations: {e}")
             return []
 
+    def get_all_conversations_admin_optimized(self) -> List[Dict]:
+        """Get all conversations for admin users with user information - OPTIMIZED VERSION"""
+        try:
+            start_time = time.time()
+            
+            # Use the service role client for database operations since we're using custom JWT auth
+            client = self.supabase
+            
+            print("🔍 DEBUG: Starting admin conversations query...")
+            
+            # First, let's try a simple query without join to see if we get any conversations
+            print("🔍 DEBUG: Testing simple query first...")
+            simple_response = client.table('conversations').select('id,title,user_id').execute()
+            print(f"🔍 DEBUG: Simple query returned {len(simple_response.data)} conversations")
+            if simple_response.data:
+                print(f"🔍 DEBUG: First conversation user_id: {simple_response.data[0].get('user_id')}")
+            
+            # Since there's no foreign key relationship, let's fetch conversations and users separately
+            print("🔍 DEBUG: Fetching conversations without join...")
+            conversations_response = client.table('conversations').select(
+                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,user_id'
+            ).order('created_at', desc=True).execute()
+            
+            print(f"🔍 DEBUG: Conversations query returned {len(conversations_response.data)} conversations")
+            
+            # Fetch all users to create a lookup map
+            print("🔍 DEBUG: Fetching users for lookup...")
+            users_response = client.table('users').select('id,first_name,last_name,email').execute()
+            print(f"🔍 DEBUG: Users query returned {len(users_response.data)} users")
+            
+            # Create a user lookup map
+            users_map = {}
+            for user in users_response.data:
+                users_map[user['id']] = user
+            
+            print(f"🔍 DEBUG: Users map created with {len(users_map)} users")
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ {len(conversations_response.data)} conversations (admin) retrieved in {execution_time:.2f}ms")
+            
+            if conversations_response.data:
+                # Process the data to include user name
+                conversations = []
+                for conv in conversations_response.data:
+                    conversation = conv.copy()
+                    
+                    # Get user information from the lookup map
+                    user_id = conv.get('user_id')
+                    if user_id and user_id in users_map:
+                        user = users_map[user_id]
+                        first_name = user.get('first_name', '')
+                        last_name = user.get('last_name', '')
+                        email = user.get('email', '')
+                        
+                        # Create user name
+                        if first_name or last_name:
+                            user_name = f"{first_name} {last_name}".strip()
+                        else:
+                            user_name = email.split('@')[0] if email else 'Unknown User'
+                        
+                        conversation['user_name'] = user_name
+                    else:
+                        conversation['user_name'] = 'Unknown User'
+                    
+                    conversations.append(conversation)
+                
+                return conversations
+            else:
+                return []
+                
+        except Exception as e:
+            print(f"Error getting all conversations (admin): {e}")
+            return []
+
     def get_conversation_by_id_optimized(self, conversation_id: str, user_id: str) -> Optional[Dict]:
         """Get a specific conversation by ID - OPTIMIZED VERSION"""
         try:
             start_time = time.time()
             
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return None
-            
-            # Get the appropriate client
-            client = self._get_client()
+            # Use the service role client for database operations since we're using custom JWT auth
+            client = self.supabase
             
             # Select necessary columns including transcript for analysis page
             response = client.table('conversations').select(
@@ -522,13 +586,8 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Check if token is valid
-            if not self._refresh_token_if_needed():
-                print("Token is expired or invalid")
-                return None
-            
-            # Get the appropriate client
-            client = self._get_client()
+            # Use the service role client for database operations since we're using custom JWT auth
+            client = self.supabase
             
             print(f"🔍 DEBUG: Fetching analysis for conversation_id: {conversation_id}, user_id: {user_id}")
             

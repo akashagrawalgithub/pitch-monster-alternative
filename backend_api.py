@@ -5,6 +5,8 @@ Separated from core app.py functionality for better organization
 
 from flask import Blueprint, request, jsonify
 from database_operations import DatabaseManager
+from prompt_manager import prompt_manager
+from user_manager import user_manager
 from datetime import datetime
 import json
 import uuid
@@ -17,7 +19,7 @@ db_api = Blueprint('db_api', __name__)
 db = DatabaseManager()
 
 def get_current_user_id():
-    """Get current user ID from request headers using Supabase auth"""
+    """Get current user ID from request headers using custom JWT auth"""
     try:
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
@@ -27,25 +29,44 @@ def get_current_user_id():
         token = auth_header.split(' ')[1]
         print(f"Token received: {token[:20]}...")
         
-        # Set the auth token for database operations
-        db.set_auth_token(token)
+        # Use our custom user manager to verify the token
+        from user_manager import user_manager
+        payload = user_manager.verify_token(token)
         
-        # Use the authenticated client to get user info
-        try:
-            user = db.user_supabase.auth.get_user(token) if db.user_supabase else db.supabase.auth.get_user(token)
-            if user and user.user:
-                print(f"User ID: {user.user.id}")
-                return user.user.id
-            else:
-                print("No user found in response")
-                return None
-        except Exception as auth_error:
-            print(f"Token validation failed: {auth_error}")
-            # Token is expired or invalid
+        if payload and 'user_id' in payload:
+            print(f"User ID: {payload['user_id']}")
+            return payload['user_id']
+        else:
+            print("No valid user ID in token payload")
             return None
             
     except Exception as e:
         print(f"Error getting user ID: {e}")
+        return None
+
+def get_user_role():
+    """Get current user role from request headers using custom JWT auth"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("No valid Authorization header found")
+            return None
+        
+        token = auth_header.split(' ')[1]
+        
+        # Use our custom user manager to verify the token
+        from user_manager import user_manager
+        payload = user_manager.verify_token(token)
+        
+        if payload and 'role' in payload:
+            print(f"User Role: {payload['role']}")
+            return payload['role']
+        else:
+            print("No valid role in token payload")
+            return None
+            
+    except Exception as e:
+        print(f"Error getting user role: {e}")
         return None
 
 @db_api.route('/save_conversation', methods=['POST'])
@@ -416,6 +437,38 @@ def get_all_conversations():
         print(f"Error getting conversations: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@db_api.route('/get_all_conversations_admin', methods=['GET'])
+def get_all_conversations_admin():
+    """Get all conversations for admin users - includes user information"""
+    try:
+        start_time = time.time()
+        
+        # Get current user ID and check if admin
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        # Check if user is admin
+        user_role = get_user_role()
+        if user_role != 'admin':
+            return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        
+        # Get all conversations with user information using admin method
+        conversations = db.get_all_conversations_admin_optimized()
+        
+        execution_time = (time.time() - start_time) * 1000
+        print(f"✅ API: All conversations (admin) retrieved in {execution_time:.2f}ms")
+        
+        return jsonify({
+            'success': True,
+            'conversations': conversations,
+            'execution_time_ms': round(execution_time, 2)
+        })
+        
+    except Exception as e:
+        print(f"Error getting conversations (admin): {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @db_api.route('/get_conversation_analysis', methods=['POST'])
 def get_conversation_analysis():
     """Get conversation and its analysis data - OPTIMIZED"""
@@ -464,6 +517,72 @@ def get_conversation_analysis():
     except Exception as e:
         print(f"Error getting conversation analysis: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/debug/conversations', methods=['GET'])
+def debug_conversations():
+    """Debug endpoint to check all conversations in database"""
+    try:
+        # Get all conversations without user filter
+        response = db.supabase.table('conversations').select('*').execute()
+        
+        return jsonify({
+            "success": True,
+            "total_conversations": len(response.data) if response.data else 0,
+            "conversations": response.data if response.data else []
+        })
+        
+    except Exception as e:
+        print(f"Error in debug endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@db_api.route('/debug/users', methods=['GET'])
+def debug_users():
+    """Debug endpoint to check all users in database"""
+    try:
+        # Get all users
+        response = db.supabase.table('users').select('id,email,first_name,last_name,role,created_at').execute()
+        
+        return jsonify({
+            "success": True,
+            "total_users": len(response.data) if response.data else 0,
+            "users": response.data if response.data else []
+        })
+        
+    except Exception as e:
+        print(f"Error in debug users endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@db_api.route('/fix-user-ids', methods=['POST'])
+def fix_user_ids():
+    """Fix user IDs to match Supabase Auth UIDs"""
+    try:
+        # Update admin user ID
+        db.supabase.table('users').update({
+            'id': '80c86068-67ea-4e01-a4e2-d199c5ef48d5'
+        }).eq('email', 'admin@example.com').execute()
+        
+        # Update akash242018 user ID
+        db.supabase.table('users').update({
+            'id': '84fdf21e-9990-4c37-aba7-014a815e15a3'
+        }).eq('email', 'akash242018@gmail.com').execute()
+        
+        return jsonify({
+            "success": True,
+            "message": "User IDs updated to match Supabase Auth UIDs"
+        })
+        
+    except Exception as e:
+        print(f"Error fixing user IDs: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @db_api.route('/get_client_ip', methods=['GET'])
 def get_client_ip():
@@ -599,4 +718,365 @@ def get_agents_by_difficulty():
         
     except Exception as e:
         print(f"Error getting agents by difficulty: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# PROMPT MANAGEMENT API ENDPOINTS
+@db_api.route('/get_agent_prompt', methods=['POST'])
+def get_agent_prompt():
+    """Get the current prompt for a specific agent"""
+    try:
+        data = request.get_json()
+        agent_key = data.get('agent_key')
+        
+        if not agent_key:
+            return jsonify({'success': False, 'error': 'Agent key required'}), 400
+        
+        # Get prompt from memory (no DB call)
+        prompt = prompt_manager.get_prompt(agent_key)
+        
+        return jsonify({
+            'success': True,
+            'agent_key': agent_key,
+            'prompt': prompt
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent prompt: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_all_prompts', methods=['GET'])
+def get_all_prompts():
+    """Get all agent prompts (from memory)"""
+    try:
+        # Get all prompts from memory (no DB call)
+        prompts = prompt_manager.get_all_prompts()
+        
+        return jsonify({
+            'success': True,
+            'prompts': prompts
+        })
+        
+    except Exception as e:
+        print(f"Error getting all prompts: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/update_agent_prompt', methods=['POST'])
+def update_agent_prompt():
+    """Update the prompt for a specific agent"""
+    try:
+        data = request.get_json()
+        agent_key = data.get('agent_key')
+        new_prompt = data.get('prompt')
+        
+        if not agent_key:
+            return jsonify({'success': False, 'error': 'Agent key required'}), 400
+        
+        if not new_prompt:
+            return jsonify({'success': False, 'error': 'Prompt content required'}), 400
+        
+        # Update prompt in both DB and memory
+        success = prompt_manager.update_prompt(agent_key, new_prompt)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Prompt updated successfully for agent: {agent_key}'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update prompt'}), 500
+        
+    except Exception as e:
+        print(f"Error updating agent prompt: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/reload_prompts', methods=['POST'])
+def reload_prompts():
+    """Reload all prompts from database"""
+    try:
+        # Reload prompts from database
+        success = prompt_manager.reload_prompts()
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Prompts reloaded successfully from database'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to reload prompts'}), 500
+        
+    except Exception as e:
+        print(f"Error reloading prompts: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/get_agent_with_prompt', methods=['POST'])
+def get_agent_with_prompt():
+    """Get full agent information including prompt"""
+    try:
+        data = request.get_json()
+        agent_key = data.get('agent_key')
+        
+        if not agent_key:
+            return jsonify({'success': False, 'error': 'Agent key required'}), 400
+        
+        # Get agent info including prompt
+        agent_info = prompt_manager.get_agent_info(agent_key)
+        
+        if not agent_info:
+            return jsonify({'success': False, 'error': 'Agent not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'agent': agent_info
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent with prompt: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# USER MANAGEMENT API ENDPOINTS
+@db_api.route('/auth/login', methods=['POST'])
+def login():
+    """User login endpoint"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not email or not password:
+            return jsonify({'success': False, 'error': 'Email and password required'}), 400
+        
+        # Authenticate user
+        user_data = user_manager.authenticate_user(email, password)
+        
+        if user_data:
+            return jsonify({
+                'success': True,
+                'user': user_data,
+                'message': 'Login successful'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+        
+    except Exception as e:
+        print(f"Error in login: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/auth/register', methods=['POST'])
+def register():
+    """User registration endpoint"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        
+        if not email or not password:
+            return jsonify({'success': False, 'error': 'Email and password required'}), 400
+        
+        # Create user
+        user_data = user_manager.create_user(email, password, first_name, last_name)
+        
+        if user_data:
+            return jsonify({
+                'success': True,
+                'user': user_data,
+                'message': 'User created successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'User already exists'}), 409
+        
+    except Exception as e:
+        print(f"Error in registration: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/auth/check', methods=['GET'])
+def check_auth():
+    """Check if user is authenticated"""
+    try:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if payload:
+            user_data = user_manager.get_user_by_id(payload['user_id'])
+            if user_data:
+                return jsonify({
+                    'success': True,
+                    'user': user_data
+                })
+        
+        return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+    except Exception as e:
+        print(f"Error checking auth: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/users/get_all', methods=['GET'])
+def get_all_users():
+    """Get all users (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        # Get all users
+        users = user_manager.get_all_users(payload['user_id'])
+        
+        return jsonify({
+            'success': True,
+            'users': users
+        })
+        
+    except Exception as e:
+        print(f"Error getting all users: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/users/update_role', methods=['POST'])
+def update_user_role():
+    """Update user role (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        new_role = data.get('role')
+        
+        if not target_user_id or not new_role:
+            return jsonify({'success': False, 'error': 'User ID and role required'}), 400
+        
+        # Update user role
+        success = user_manager.update_user_role(target_user_id, new_role, payload['user_id'])
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'User role updated successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update user role'}), 403
+        
+    except Exception as e:
+        print(f"Error updating user role: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/users/deactivate', methods=['POST'])
+def deactivate_user():
+    """Deactivate user (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        
+        if not target_user_id:
+            return jsonify({'success': False, 'error': 'User ID required'}), 400
+        
+        # Deactivate user
+        success = user_manager.deactivate_user(target_user_id, payload['user_id'])
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'User deactivated successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to deactivate user'}), 401
+        
+    except Exception as e:
+        print(f"Error deactivating user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/users/activate', methods=['POST'])
+def activate_user():
+    """Activate user (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        data = request.get_json()
+        target_user_id = data.get('user_id')
+        
+        if not target_user_id:
+            return jsonify({'success': False, 'error': 'User ID required'}), 400
+        
+        # Activate user
+        success = user_manager.activate_user(target_user_id, payload['user_id'])
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'User activated successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to activate user'}), 403
+        
+    except Exception as e:
+        print(f"Error activating user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/users/stats', methods=['GET'])
+def get_user_stats():
+    """Get user statistics (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        # Get user stats
+        stats = user_manager.get_user_stats(payload['user_id'])
+        
+        if stats:
+            return jsonify({
+                'success': True,
+                'stats': stats
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        
+    except Exception as e:
+        print(f"Error getting user stats: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

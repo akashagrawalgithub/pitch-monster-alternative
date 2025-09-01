@@ -254,6 +254,99 @@
             color: #475569;
         }
 
+        /* Prompt tab styles */
+        .prompt-textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+            background: #ffffff;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+
+
         /* Agent-specific icons */
         .icon-payment { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         .icon-competitor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
@@ -285,6 +378,10 @@
                     <span class="material-icons">history</span>
                     Past Analysis
                 </a>
+                <a href="/users.html" class="menu-item" id="usersBtn" style="display: none;">
+                    <span class="material-icons">people</span>
+                    Users
+                </a>
                 <a href="#" class="menu-item" id="logoutBtn">
                     <span class="material-icons">logout</span>
                     Logout
@@ -315,53 +412,85 @@
             <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" data-tab="overview">Overview</button>
+                <button class="tab" data-tab="prompt" id="promptTab" style="display: none;">Prompt</button>
             </div>
 
             <!-- Content -->
             <div class="content-section">
-                <!-- Role-play Details -->
-                <div class="info-card">
-                    <h3 class="card-title">Role-play Details</h3>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-icon" id="roleplayIcon">
-                                <span class="material-icons">work</span>
+                <!-- Overview Tab Content -->
+                <div class="tab-content active" id="overviewContent">
+                    <!-- Role-play Details -->
+                    <div class="info-card">
+                        <h3 class="card-title">Role-play Details</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-icon" id="roleplayIcon">
+                                    <span class="material-icons">work</span>
+                                </div>
+                                <div class="info-content">
+                                    <h4>Role-play type</h4>
+                                    <p id="roleplayType">Face-to-face</p>
+                                </div>
                             </div>
-                            <div class="info-content">
-                                <h4>Role-play type</h4>
-                                <p id="roleplayType">Face-to-face</p>
+                            <div class="info-item">
+                                <div class="info-icon">
+                                    <span class="material-icons">timer</span>
+                                </div>
+                                <div class="info-content">
+                                    <h4>Recording time limit</h4>
+                                    <p>No limit</p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <span class="material-icons">timer</span>
-                            </div>
-                            <div class="info-content">
-                                <h4>Recording time limit</h4>
-                                <p>No limit</p>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-icon">
-                                <span class="material-icons">language</span>
-                            </div>
-                            <div class="info-content">
-                                <h4>Role-play language</h4>
-                                <p>English 🇬🇧</p>
+                            <div class="info-item">
+                                <div class="info-icon">
+                                    <span class="material-icons">language</span>
+                                </div>
+                                <div class="info-content">
+                                    <h4>Role-play language</h4>
+                                    <p>English 🇬🇧</p>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- User Guidelines -->
+                    <div class="info-card">
+                        <h3 class="card-title">User Guidelines</h3>
+                        <p class="guidelines-text" id="guidelinesText">
+                            This role-play scenario is designed to help you practice and improve your sales conversation skills. 
+                            You'll be interacting with an AI that simulates a realistic prospect with specific characteristics and objections. 
+                            Focus on building rapport, understanding needs, and effectively communicating your value proposition.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- User Guidelines -->
-                <div class="info-card">
-                    <h3 class="card-title">User Guidelines</h3>
-                    <p class="guidelines-text" id="guidelinesText">
-                        This role-play scenario is designed to help you practice and improve your sales conversation skills. 
-                        You'll be interacting with an AI that simulates a realistic prospect with specific characteristics and objections. 
-                        Focus on building rapport, understanding needs, and effectively communicating your value proposition.
-                    </p>
+                <!-- Prompt Tab Content -->
+                <div class="tab-content" id="promptContent">
+                    <div class="info-card">
+                        <h3 class="card-title">Agent Prompt</h3>
+                        <p style="color: #64748b; margin-bottom: 20px; font-size: 14px;">
+                            Edit the AI agent's prompt to customize its behavior and responses during role-play sessions.
+                        </p>
+                        <textarea 
+                            id="promptTextarea" 
+                            class="prompt-textarea" 
+                            placeholder="Enter the agent prompt here..."
+                        ></textarea>
+                        <div class="prompt-actions">
+                            <button class="btn btn-primary" id="savePromptBtn">
+                                <span class="material-icons">save</span>
+                                Save Changes
+                            </button>
+                            <button class="btn btn-secondary" id="resetPromptBtn">
+                                <span class="material-icons">refresh</span>
+                                Reset to Original
+                            </button>
+                        </div>
+                        <div id="promptStatus" class="status-message"></div>
+                    </div>
                 </div>
+
+
             </div>
         </div>
     </div>
@@ -371,6 +500,8 @@
             constructor() {
                 console.log('AgentInfoPage constructor called');
                 this.agentData = null;
+                this.isAdmin = false;
+                this.originalPrompt = '';
                 this.initializeAuth();
                 this.initializeEventListeners();
                 this.loadAgentInfo();
@@ -428,15 +559,50 @@
                     console.log('Start Recording button clicked');
                     this.startRecording();
                 });
+
+                // Tab switching functionality
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        this.switchTab(tab.dataset.tab);
+                    });
+                });
+
+                // Prompt editing functionality (for admin users)
+                document.getElementById('savePromptBtn')?.addEventListener('click', () => {
+                    this.savePrompt();
+                });
+
+                document.getElementById('resetPromptBtn')?.addEventListener('click', () => {
+                    this.resetPrompt();
+                });
+
+
             }
             
             loadUserData(user) {
                 const email = user.email || 'User';
-                const name = user.name || email.split('@')[0];
+                const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || email.split('@')[0];
                 const avatar = name.substring(0, 2).toUpperCase();
                 
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = avatar;
+                
+                // Check if user is admin and show/hide admin features
+                const userRole = user.role || localStorage.getItem('userRole');
+                const promptTab = document.getElementById('promptTab');
+                const usersBtn = document.getElementById('usersBtn');
+                
+                if (userRole === 'admin') {
+                    this.isAdmin = true;
+                    promptTab.style.display = 'block';
+                    usersBtn.style.display = 'flex';
+                    console.log('Admin user detected, showing admin features');
+                } else {
+                    this.isAdmin = false;
+                    promptTab.style.display = 'none';
+                    usersBtn.style.display = 'none';
+                    console.log('Regular user, hiding admin features');
+                }
             }
 
             async loadAgentInfo() {
@@ -493,6 +659,11 @@
                         iconElement.innerHTML = agent.icon;
                         iconElement.className = `info-icon ${agent.iconClass}`;
                     }
+
+                    // Load prompt for admin users
+                    if (this.isAdmin) {
+                        this.loadAgentPrompt(agent.agent_key);
+                    }
                     
                 } catch (error) {
                     console.error('Error loading agent from API:', error);
@@ -548,6 +719,117 @@
                     window.location.href = '/login.html';
                 }
             }
+
+            // Tab switching functionality
+            switchTab(tabName) {
+                // Update tab buttons
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(`${tabName}Content`).classList.add('active');
+            }
+
+            // Load agent prompt for admin users
+            async loadAgentPrompt(agentKey) {
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/db/get_agent_with_prompt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ agent_key: agentKey })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success && data.agent) {
+                        const promptTextarea = document.getElementById('promptTextarea');
+                        this.originalPrompt = data.agent.prompt || '';
+                        promptTextarea.value = this.originalPrompt;
+                        console.log('Loaded agent prompt:', this.originalPrompt);
+                    } else {
+                        throw new Error(data.error || 'Failed to load agent prompt');
+                    }
+                } catch (error) {
+                    console.error('Error loading agent prompt:', error);
+                    this.showPromptStatus('Error loading prompt: ' + error.message, 'error');
+                }
+            }
+
+            // Save prompt changes
+            async savePrompt() {
+                const promptTextarea = document.getElementById('promptTextarea');
+                const newPrompt = promptTextarea.value.trim();
+                
+                if (!newPrompt) {
+                    this.showPromptStatus('Prompt cannot be empty', 'error');
+                    return;
+                }
+
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    const agentKey = localStorage.getItem('selectedAgentType');
+                    
+                    const response = await fetch('/api/db/update_agent_prompt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({
+                            agent_key: agentKey,
+                            prompt: newPrompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.originalPrompt = newPrompt;
+                        this.showPromptStatus('Prompt updated successfully', 'success');
+                    } else {
+                        throw new Error(data.error || 'Failed to update prompt');
+                    }
+                } catch (error) {
+                    console.error('Error updating prompt:', error);
+                    this.showPromptStatus('Error updating prompt: ' + error.message, 'error');
+                }
+            }
+
+            // Reset prompt to original
+            resetPrompt() {
+                const promptTextarea = document.getElementById('promptTextarea');
+                promptTextarea.value = this.originalPrompt;
+                this.showPromptStatus('Prompt reset to original', 'success');
+            }
+
+            // Show prompt status message
+            showPromptStatus(message, type = 'success') {
+                const statusDiv = document.getElementById('promptStatus');
+                statusDiv.textContent = message;
+                statusDiv.className = `status-message ${type}`;
+                statusDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+
+
         }
 
         let agentInfoPage;

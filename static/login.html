@@ -339,7 +339,7 @@
                 this.submitBtn.disabled = true;
                 
                 try {
-                    // Use backend API for authentication
+                    // Use new user management API for authentication
                     const response = await fetch('/login', {
                         method: 'POST',
                         headers: {
@@ -361,10 +361,10 @@
                         // Set local storage for authentication
                         localStorage.setItem('authenticated', 'true');
                         localStorage.setItem('userEmail', email);
-                        localStorage.setItem('userName', data.user.name);
-                        localStorage.setItem('accessToken', data.access_token);
-                        localStorage.setItem('refreshToken', data.refresh_token);
-                        localStorage.setItem('tokenExpiresAt', data.expires_at);
+                        localStorage.setItem('userName', `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() || email);
+                        localStorage.setItem('accessToken', data.user.token);
+                        localStorage.setItem('userRole', data.user.role);
+                        localStorage.setItem('userId', data.user.id);
                         
                         this.showMessage('loginSuccess', 'Login successful! Redirecting...');
                         setTimeout(() => {
