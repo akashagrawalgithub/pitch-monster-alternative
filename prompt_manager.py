@@ -279,7 +279,7 @@ Learn about your challenges and potential solutions while gathering information 
                 "prompt": new_prompt
             }).eq("agent_key", agent_key).execute()
             
-            if result.data:
+            if hasattr(result, 'count') and result.count > 0:
                 # Update in memory
                 self._prompts[agent_key] = new_prompt
                 print(f"✅ Prompt updated successfully for agent: {agent_key}")
