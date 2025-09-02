@@ -274,24 +274,48 @@ Learn about your challenges and potential solutions while gathering information 
         try:
             print(f"🔄 Updating prompt for agent: {agent_key}")
             
+            # First, verify the agent exists
+            check_result = self.supabase.table("agents").select("id, prompt").eq("agent_key", agent_key).eq("is_active", True).execute()
+            if not check_result.data:
+                print(f"❌ Agent not found: {agent_key}")
+                return False
+            
+            current_prompt = check_result.data[0].get('prompt', '')
+            print(f"📝 Current prompt length: {len(current_prompt)}")
+            print(f"📝 New prompt length: {len(new_prompt)}")
+            
             # Update in database
             result = self.supabase.table("agents").update({
-                "prompt": new_prompt
-            }).eq("agent_key", agent_key).execute()
+                "prompt": new_prompt,
+                "updated_at": "now()"
+            }).eq("agent_key", agent_key).eq("is_active", True).execute()
             
-            # Check if the update was successful by looking at the result
-            # Supabase update returns result.data which might be empty list on success
+            print(f"🔄 Update result: {result}")
+            if hasattr(result, 'data'):
+                print(f"🔄 Update result.data: {result.data}")
+            
+            # Verify the update was successful by checking the result
             if result and hasattr(result, 'data'):
-                # Update in memory
-                self._prompts[agent_key] = new_prompt
-                print(f"✅ Prompt updated successfully for agent: {agent_key}")
-                return True
+                # Double-check by reading back the updated value
+                verify_result = self.supabase.table("agents").select("prompt").eq("agent_key", agent_key).execute()
+                if verify_result.data and verify_result.data[0].get('prompt') == new_prompt:
+                    # Update in memory
+                    self._prompts[agent_key] = new_prompt
+                    print(f"✅ Prompt updated successfully for agent: {agent_key}")
+                    return True
+                else:
+                    print(f"❌ Update verification failed for agent: {agent_key}")
+                    print(f"❌ Expected: {new_prompt[:100]}...")
+                    print(f"❌ Got: {verify_result.data[0].get('prompt', '')[:100]}...")
+                    return False
             else:
-                print(f"❌ Agent not found: {agent_key}")
+                print(f"❌ Update operation failed for agent: {agent_key}")
                 return False
                 
         except Exception as e:
             print(f"❌ Error updating prompt: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def reload_prompts(self) -> bool:

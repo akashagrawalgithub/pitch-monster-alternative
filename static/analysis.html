@@ -3001,6 +3001,7 @@
                     const data = await response.json();
                     localStorage.setItem('accessToken', data.access_token);
                     localStorage.setItem('refreshToken', data.refresh_token);
+                    localStorage.setItem('tokenExpiresAt', data.expires_at);
                     return data.access_token;
                 } else {
                     console.error('Failed to refresh token');
@@ -3022,20 +3023,25 @@
                 return '';
             }
             
-            // Try to refresh the token if it's expired
-            try {
-                const newToken = await refreshAccessToken();
-                if (newToken) {
-                    token = newToken;
-                } else {
-                    console.error('Failed to refresh token, redirecting to login');
-                    window.location.href = '/login.html';
-                    return '';
+            // Check if token is expired
+            const expiresAt = localStorage.getItem('tokenExpiresAt');
+            if (expiresAt) {
+                const expirationTime = new Date(expiresAt).getTime();
+                const currentTime = new Date().getTime();
+                const isExpired = currentTime >= (expirationTime - 5 * 60 * 1000); // 5 minutes buffer
+                
+                if (isExpired) {
+                    console.log('Token is expired, attempting to refresh...');
+                    const newToken = await refreshAccessToken();
+                    if (newToken) {
+                        token = newToken;
+                    } else {
+                        console.error('Failed to refresh token, redirecting to login');
+                        localStorage.clear();
+                        window.location.href = '/login.html';
+                        return '';
+                    }
                 }
-            } catch (error) {
-                console.error('Error refreshing token:', error);
-                window.location.href = '/login.html';
-                return '';
             }
             
             return token;

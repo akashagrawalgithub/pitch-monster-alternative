@@ -304,14 +304,21 @@ class DatabaseManager:
         try:
             start_time = time.time()
             
-            # Get the appropriate client
-            client = self._get_client()
+            # Use service role client to bypass RLS restrictions since we're using custom JWT auth
+            # The auth.uid() function in RLS policies doesn't work with custom JWT tokens
+            client = self.supabase  # This is the service role client
             
-            print(f"🔍 DEBUG: Fetching best pitch for conversation_id: {conversation_id}, user_id: {user_id}")
+            print(f"🔍 DEBUG: Fetching best pitch for conversation_id: {conversation_id}")
+            print(f"🔍 DEBUG: Using service role client to bypass RLS")
             
+            # First, let's check what's in the best_pitch table for this conversation
+            all_best_pitches = client.table("best_pitch").select("*").eq("conversation_id", conversation_id).execute()
+            print(f"🔍 DEBUG: All best pitches for conversation {conversation_id}: {all_best_pitches.data}")
+            
+            # Only filter by conversation_id, not by user_id, since best pitch is conversation-specific
             result = client.table("best_pitch").select(
                 "id,conversation_id,analysis_id,perfect_conversation,score_improvement,created_at,overall_improvements"
-            ).eq("conversation_id", conversation_id).eq("user_id", user_id).execute()
+            ).eq("conversation_id", conversation_id).execute()
             
             print(f"🔍 DEBUG: Best pitch response data: {result.data}")
             print(f"🔍 DEBUG: Best pitch response count: {len(result.data) if result.data else 0}")
@@ -341,6 +348,8 @@ class DatabaseManager:
                 
         except Exception as e:
             print(f"Error getting conversation best pitch: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     # OPTIMIZED SUMMARY OPERATIONS

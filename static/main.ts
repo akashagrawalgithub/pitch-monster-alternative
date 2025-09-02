@@ -1841,7 +1841,7 @@ async function getAccessToken(): Promise<string> {
     }
     
     // Check both possible key names for the access token
-    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const token = localStorage.getItem('accessToken');
     if (!token) {
         console.error('No access token found! User must be logged in.');
         console.log('Available localStorage keys:', Object.keys(localStorage));

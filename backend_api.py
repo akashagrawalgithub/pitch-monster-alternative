@@ -30,7 +30,6 @@ def get_current_user_id():
         print(f"Token received: {token[:20]}...")
         
         # Use our custom user manager to verify the token
-        from user_manager import user_manager
         payload = user_manager.verify_token(token)
         
         if payload and 'user_id' in payload:
@@ -55,7 +54,6 @@ def get_user_role():
         token = auth_header.split(' ')[1]
         
         # Use our custom user manager to verify the token
-        from user_manager import user_manager
         payload = user_manager.verify_token(token)
         
         if payload and 'role' in payload:

@@ -686,18 +686,33 @@ def refresh_token():
         if not refresh_token:
             return jsonify({'error': 'Refresh token is required'}), 400
         
-        # Refresh the token with Supabase
-        response = supabase.auth.refresh_session(refresh_token)
+        # Use our custom UserManager to verify and refresh the token
+        from user_manager import user_manager
+        payload = user_manager.verify_token(refresh_token)
         
-        if response.session:
-            return jsonify({
-                'success': True,
-                'access_token': response.session.access_token,
-                'refresh_token': response.session.refresh_token,
-                'expires_at': response.session.expires_at
-            })
-        else:
-            return jsonify({'error': 'Failed to refresh token'}), 401
+        if payload and 'user_id' in payload:
+            # Get user data
+            user_data = user_manager.get_user_by_id(payload['user_id'])
+            if user_data:
+                # Generate new token
+                new_token = user_manager.generate_token(
+                    user_data['id'], 
+                    user_data['email'], 
+                    user_data['role']
+                )
+                
+                # Calculate expiration time (7 days from now)
+                from datetime import datetime, timedelta
+                expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()
+                
+                return jsonify({
+                    'success': True,
+                    'access_token': new_token,
+                    'refresh_token': new_token,  # For simplicity, use same token as refresh
+                    'expires_at': expires_at
+                })
+        
+        return jsonify({'error': 'Invalid refresh token'}), 401
         
     except Exception as e:
         print(f"Token refresh error: {str(e)}")

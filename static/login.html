@@ -363,6 +363,8 @@
                         localStorage.setItem('userEmail', email);
                         localStorage.setItem('userName', `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() || email);
                         localStorage.setItem('accessToken', data.user.token);
+                        localStorage.setItem('refreshToken', data.user.token); // Use same token for refresh
+                        localStorage.setItem('tokenExpiresAt', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()); // 7 days from now
                         localStorage.setItem('userRole', data.user.role);
                         localStorage.setItem('userId', data.user.id);
                         

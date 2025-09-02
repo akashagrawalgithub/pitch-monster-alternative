@@ -276,11 +276,25 @@
         
         // Helper function to get access token
         function getAccessToken() {
-            const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+            const token = localStorage.getItem('accessToken');
             if (!token) {
                 console.error('No access token found! User must be logged in.');
                 return '';
             }
+            
+            // Check if token is expired
+            const expiresAt = localStorage.getItem('tokenExpiresAt');
+            if (expiresAt) {
+                const expirationTime = new Date(expiresAt).getTime();
+                const currentTime = new Date().getTime();
+                if (currentTime >= expirationTime) {
+                    console.error('Token has expired, redirecting to login');
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return '';
+                }
+            }
+            
             return token;
         }
         
