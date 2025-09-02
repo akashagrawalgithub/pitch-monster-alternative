@@ -279,7 +279,9 @@ Learn about your challenges and potential solutions while gathering information 
                 "prompt": new_prompt
             }).eq("agent_key", agent_key).execute()
             
-            if hasattr(result, 'count') and result.count > 0:
+            # Check if the update was successful by looking at the result
+            # Supabase update returns result.data which might be empty list on success
+            if result and hasattr(result, 'data'):
                 # Update in memory
                 self._prompts[agent_key] = new_prompt
                 print(f"✅ Prompt updated successfully for agent: {agent_key}")
