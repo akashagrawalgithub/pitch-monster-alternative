@@ -1127,3 +1127,37 @@ def get_user_stats():
     except Exception as e:
         print(f"Error getting user stats: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/conversation/stats', methods=['GET'])
+def get_conversation_stats():
+    """Get conversation statistics (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        # Check if user is admin
+        if not user_manager.is_admin(payload['user_id']):
+            return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        
+        # Get conversation statistics
+        stats = db.get_conversation_stats()
+        
+        if stats:
+            return jsonify({
+                'success': True,
+                'stats': stats
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to fetch statistics'}), 500
+        
+    except Exception as e:
+        print(f"Error getting conversation stats: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500

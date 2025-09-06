@@ -469,10 +469,10 @@ class DatabaseManager:
             if simple_response.data:
                 print(f"🔍 DEBUG: First conversation user_id: {simple_response.data[0].get('user_id')}")
             
-            # Since there's no foreign key relationship, let's fetch conversations and users separately
-            print("🔍 DEBUG: Fetching conversations without join...")
+            # Fetch conversations with agent and user information
+            print("🔍 DEBUG: Fetching conversations with agent and user info...")
             conversations_response = client.table('conversations').select(
-                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,user_id'
+                'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,user_id,agent_id,agents(title,agent_key)'
             ).order('created_at', desc=True).execute()
             
             print(f"🔍 DEBUG: Conversations query returned {len(conversations_response.data)} conversations")
@@ -493,7 +493,7 @@ class DatabaseManager:
             print(f"✅ {len(conversations_response.data)} conversations (admin) retrieved in {execution_time:.2f}ms")
             
             if conversations_response.data:
-                # Process the data to include user name
+                # Process the data to include user name and agent information
                 conversations = []
                 for conv in conversations_response.data:
                     conversation = conv.copy()
@@ -515,6 +515,19 @@ class DatabaseManager:
                         conversation['user_name'] = user_name
                     else:
                         conversation['user_name'] = 'Unknown User'
+                    
+                    # Get agent information
+                    agent_id = conv.get('agent_id')
+                    agent_data = conv.get('agents')
+                    if agent_id and agent_data:
+                        conversation['agent_title'] = agent_data.get('title', 'Unknown Agent')
+                        conversation['agent_key'] = agent_data.get('agent_key', 'unknown')
+                    elif agent_id:
+                        conversation['agent_title'] = f"Agent {agent_id[:8]}"
+                        conversation['agent_key'] = 'unknown'
+                    else:
+                        conversation['agent_title'] = 'No Agent'
+                        conversation['agent_key'] = 'none'
                     
                     conversations.append(conversation)
                 
@@ -793,6 +806,90 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting agents by difficulty: {e}")
             return []
+
+    def get_conversation_stats(self) -> Dict:
+        """Get conversation statistics for admin dashboard"""
+        try:
+            start_time = time.time()
+            
+            # Use service role client for admin operations
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            # Get total recordings count
+            conversations_result = service_client.table("conversations").select("id", count="exact").execute()
+            total_recordings = conversations_result.count if conversations_result.count else 0
+            
+            # Get average role-play score from analysis table
+            analysis_result = service_client.table("analysis").select("overall_score").execute()
+            scores = []
+            if analysis_result.data:
+                for analysis in analysis_result.data:
+                    overall_score = analysis.get('overall_score')
+                    if overall_score:
+                        if isinstance(overall_score, str):
+                            try:
+                                overall_score = json.loads(overall_score)
+                            except json.JSONDecodeError:
+                                continue
+                        if isinstance(overall_score, dict) and 'percentage' in overall_score:
+                            scores.append(overall_score['percentage'])
+            
+            avg_score = sum(scores) / len(scores) if scores else 0
+            
+            # Get total practice minutes
+            duration_result = service_client.table("conversations").select("duration_seconds").execute()
+            total_minutes = 0
+            if duration_result.data:
+                total_minutes = sum(conv.get('duration_seconds', 0) for conv in duration_result.data) // 60
+            
+            # Get recordings with 80%+ score
+            high_score_count = len([score for score in scores if score >= 80])
+            high_score_percentage = (high_score_count / total_recordings * 100) if total_recordings > 0 else 0
+            
+            # Get top 5 role-plays (most used agents) using proper agent relationships
+            conversations_with_agents = service_client.table("conversations").select(
+                "agent_id, agents(title)"
+            ).execute()
+            
+            role_play_counts = {}
+            if conversations_with_agents.data:
+                for conv in conversations_with_agents.data:
+                    agent_id = conv.get('agent_id')
+                    agent_data = conv.get('agents')
+                    
+                    if agent_id and agent_data:
+                        agent_title = agent_data.get('title', 'Unknown Agent')
+                        role_play_counts[agent_title] = role_play_counts.get(agent_title, 0) + 1
+                    elif agent_id:
+                        # Fallback: use agent_id if agent data is not available
+                        role_play_counts[f"Agent {agent_id[:8]}"] = role_play_counts.get(f"Agent {agent_id[:8]}", 0) + 1
+            
+            # Sort and get top 5
+            top_role_plays = sorted(role_play_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Conversation stats retrieved in {execution_time:.2f}ms")
+            
+            return {
+                'total_recordings': total_recordings,
+                'avg_role_play_score': round(avg_score, 1),
+                'total_practice_minutes': total_minutes,
+                'recordings_80_plus_score': high_score_count,
+                'recordings_80_plus_percentage': round(high_score_percentage, 1),
+                'top_role_plays': top_role_plays
+            }
+            
+        except Exception as e:
+            print(f"Error getting conversation stats: {e}")
+            return {
+                'total_recordings': 0,
+                'avg_role_play_score': 0,
+                'total_practice_minutes': 0,
+                'recordings_80_plus_score': 0,
+                'recordings_80_plus_percentage': 0,
+                'top_role_plays': []
+            }
+    
 
 # Utility functions for audio handling
 def encode_audio_to_base64(audio_bytes: bytes) -> str:

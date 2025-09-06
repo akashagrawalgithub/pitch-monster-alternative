@@ -27,6 +27,11 @@
             min-height: 100vh;
         }
 
+        .main-layout {
+            display: flex;
+            flex: 1;
+        }
+
         /* Left Sidebar - User Details */
         .user-sidebar {
             width: 250px;
@@ -109,9 +114,14 @@
 
         /* Main Content */
         .main-content {
-            margin-left: 250px;
             flex: 1;
             padding: 25px;
+            margin-left: 250px;
+            transition: margin-right 0.3s ease;
+        }
+
+        .main-content.admin-layout {
+            margin-right: 350px;
         }
 
         .page-header {
@@ -139,10 +149,20 @@
             margin: 0 auto;
         }
 
+        .agents-grid.admin-layout {
+            max-width: 800px;
+        }
+
         .agents-row {
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
+        }
+
+        .agents-row.admin-layout {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
         }
 
         .agent-card {
@@ -152,6 +172,11 @@
             height: 280px;
             display: flex;
             flex-direction: column;
+        }
+
+        .agent-card.admin-layout {
+            min-width: auto;
+            max-width: none;
         }
 
         .agent-card {
@@ -293,6 +318,175 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Admin Statistics Right Sidebar */
+        .admin-stats-sidebar {
+            display: none;
+            width: 350px;
+            background: #ffffff;
+            border-left: 1px solid #e2e8f0;
+            padding: 24px;
+            overflow-y: auto;
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-stats-sidebar.show {
+            display: block;
+        }
+
+        .admin-stats-sidebar h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .stat-percentage {
+            font-size: 11px;
+            color: #059669;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .top-role-plays {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .top-role-plays h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        .role-play-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .role-play-item:last-child {
+            border-bottom: none;
+        }
+
+        .role-play-name {
+            font-size: 12px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .role-play-count {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .stats-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #64748b;
+        }
+
+        /* Pie Chart Styles */
+        .pie-chart-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .pie-chart {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #3b82f6 0deg 72deg,
+                #8b5cf6 72deg 144deg,
+                #06b6d4 144deg 216deg,
+                #10b981 216deg 288deg,
+                #f59e0b 288deg 360deg
+            );
+            position: relative;
+        }
+
+        .pie-chart::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            background: #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .pie-chart-legend {
+            flex: 1;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-color.color-1 { background: #3b82f6; }
+        .legend-color.color-2 { background: #8b5cf6; }
+        .legend-color.color-3 { background: #06b6d4; }
+        .legend-color.color-4 { background: #10b981; }
+        .legend-color.color-5 { background: #f59e0b; }
 
     </style>
 </head>
@@ -307,7 +501,6 @@
                     <h4 id="userName"></h4>
                 </div>
             </div>
-
 
             <div class="user-menu">
                 <a href="#" class="menu-item active" id="dashboardBtn">
@@ -329,19 +522,60 @@
             </div>
         </div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="page-header">
-                <h1 class="page-title">Choose Your AI Training Persona</h1>
-                <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and
-                    challenges.</p>
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Main Content -->
+            <div class="main-content">
+                <div class="page-header">
+                    <h1 class="page-title">Choose Your AI Training Persona</h1>
+                    <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and
+                        challenges.</p>
+                </div>
+
+                <div class="agents-grid" id="agentsGrid">
+                    <!-- Agents will be loaded dynamically from the database -->
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <p class="loading-text">Loading training personas...</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="agents-grid">
-                <!-- Agents will be loaded dynamically from the database -->
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p class="loading-text">Loading training personas...</p>
+            <!-- Admin Statistics Right Sidebar -->
+            <div class="admin-stats-sidebar" id="adminStatsSidebar">
+                <h2>
+                    <span class="material-icons">trending_up</span>
+                    Overview
+                </h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalRecordings">-</div>
+                        <div class="stat-label">Total recordings</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgScore">-</div>
+                        <div class="stat-label">Avg role-play score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalMinutes">-</div>
+                        <div class="stat-label">Total practice minutes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="highScoreCount">-</div>
+                        <div class="stat-label">Recordings with 80%+ score</div>
+                        <div class="stat-percentage" id="highScorePercentage">-</div>
+                    </div>
+                </div>
+                
+                <div class="top-role-plays">
+                    <h3>Top role-plays</h3>
+                    <div id="topRolePlaysList">
+                        <div class="stats-loading">
+                            <div class="loading-spinner"></div>
+                            <span style="margin-left: 12px;">Loading role-play data...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -431,13 +665,23 @@
                 // Check if user is admin and show/hide admin features
                 const userRole = user.role || localStorage.getItem('userRole');
                 const usersBtn = document.getElementById('usersBtn');
+                const adminStatsSidebar = document.getElementById('adminStatsSidebar');
+                const agentsGrid = document.getElementById('agentsGrid');
+                const mainContent = document.querySelector('.main-content');
                 
                 if (userRole === 'admin') {
                     usersBtn.style.display = 'flex';
-                    console.log('Admin user detected, showing users menu');
+                    adminStatsSidebar.classList.add('show');
+                    agentsGrid.classList.add('admin-layout');
+                    mainContent.classList.add('admin-layout');
+                    console.log('Admin user detected, showing admin features');
+                    this.loadAdminStats();
                 } else {
                     usersBtn.style.display = 'none';
-                    console.log('Regular user, hiding users menu');
+                    adminStatsSidebar.classList.remove('show');
+                    agentsGrid.classList.remove('admin-layout');
+                    mainContent.classList.remove('admin-layout');
+                    console.log('Regular user, hiding admin features');
                 }
             }
 
@@ -496,18 +740,25 @@
                 // Clear existing content
                 agentsGrid.innerHTML = '';
 
-                // Group agents into rows of 3
+                // Check if admin layout is active
+                const isAdminLayout = agentsGrid.classList.contains('admin-layout');
+                const itemsPerRow = isAdminLayout ? 2 : 3;
+
+                // Group agents into rows
                 const rows = [];
-                for (let i = 0; i < agents.length; i += 3) {
-                    rows.push(agents.slice(i, i + 3));
+                for (let i = 0; i < agents.length; i += itemsPerRow) {
+                    rows.push(agents.slice(i, i + itemsPerRow));
                 }
 
                 rows.forEach(row => {
                     const agentsRow = document.createElement('div');
-                    agentsRow.className = 'agents-row';
+                    agentsRow.className = isAdminLayout ? 'agents-row admin-layout' : 'agents-row';
 
                     row.forEach(agent => {
                         const agentCard = this.createAgentCard(agent);
+                        if (isAdminLayout) {
+                            agentCard.classList.add('admin-layout');
+                        }
                         agentsRow.appendChild(agentCard);
                     });
 
@@ -531,7 +782,7 @@
                     </div>
                     <h3 class="agent-title">${agent.title}</h3>
                     <p class="agent-description">${truncatedDescription}</p>
-                    <button class="start-button" onclick="startTraining('${agent.agent_key}')">
+                    <button class="start-button" onclick="startTraining('${agent.id}', '${agent.agent_key}', '${agent.title}')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
                     </button>
@@ -563,11 +814,133 @@
                 `;
             }
 
+            async loadAdminStats() {
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    if (!accessToken) {
+                        console.error('No access token found for admin stats');
+                        return;
+                    }
+
+                    console.log('Loading admin statistics...');
+                    const response = await fetch('/api/db/conversation/stats', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.renderAdminStats(data.stats);
+                    } else {
+                        console.error('Failed to load admin stats:', data.error);
+                        this.showAdminStatsError(data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading admin stats:', error);
+                    this.showAdminStatsError('Failed to load statistics. Please try again later.');
+                }
+            }
+
+            renderAdminStats(stats) {
+                // Update stat cards
+                document.getElementById('totalRecordings').textContent = stats.total_recordings || 0;
+                document.getElementById('avgScore').textContent = `${stats.avg_role_play_score || 0}%`;
+                document.getElementById('totalMinutes').textContent = stats.total_practice_minutes || 0;
+                document.getElementById('highScoreCount').textContent = stats.recordings_80_plus_score || 0;
+                document.getElementById('highScorePercentage').textContent = `${stats.recordings_80_plus_percentage || 0}% of total recordings`;
+
+                // Update top role-plays with pie chart
+                const topRolePlaysList = document.getElementById('topRolePlaysList');
+                if (stats.top_role_plays && stats.top_role_plays.length > 0) {
+                    topRolePlaysList.innerHTML = '';
+                    
+                    // Calculate total for percentages
+                    const totalCount = stats.top_role_plays.reduce((sum, [, count]) => sum + count, 0);
+                    
+                    // Create pie chart container
+                    const pieChartContainer = document.createElement('div');
+                    pieChartContainer.className = 'pie-chart-container';
+                    
+                    // Create pie chart with dynamic segments
+                    const pieChart = document.createElement('div');
+                    pieChart.className = 'pie-chart';
+                    
+                    // Generate dynamic conic-gradient based on data
+                    let currentAngle = 0;
+                    const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'];
+                    const gradientParts = [];
+                    
+                    stats.top_role_plays.forEach(([, count], index) => {
+                        if (count > 0) {
+                            const percentage = (count / totalCount) * 100;
+                            const angle = (percentage / 100) * 360;
+                            const endAngle = currentAngle + angle;
+                            
+                            gradientParts.push(`${colors[index]} ${currentAngle}deg ${endAngle}deg`);
+                            currentAngle = endAngle;
+                        }
+                    });
+                    
+                    pieChart.style.background = `conic-gradient(${gradientParts.join(', ')})`;
+                    pieChartContainer.appendChild(pieChart);
+                    
+                    // Create legend
+                    const legend = document.createElement('div');
+                    legend.className = 'pie-chart-legend';
+                    
+                    stats.top_role_plays.forEach(([name, count], index) => {
+                        if (count > 0) {
+                            const legendItem = document.createElement('div');
+                            legendItem.className = 'legend-item';
+                            legendItem.innerHTML = `
+                                <div class="legend-color color-${index + 1}"></div>
+                                <span>${name}</span>
+                            `;
+                            legend.appendChild(legendItem);
+                        }
+                    });
+                    
+                    pieChartContainer.appendChild(legend);
+                    topRolePlaysList.appendChild(pieChartContainer);
+                    
+                    // Add role-play items
+                    stats.top_role_plays.forEach(([name, count]) => {
+                        const rolePlayItem = document.createElement('div');
+                        rolePlayItem.className = 'role-play-item';
+                        rolePlayItem.innerHTML = `
+                            <span class="role-play-name">${name}</span>
+                            <span class="role-play-count">${count}</span>
+                        `;
+                        topRolePlaysList.appendChild(rolePlayItem);
+                    });
+                } else {
+                    topRolePlaysList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No role-play data available</div>';
+                }
+            }
+
+            showAdminStatsError(message) {
+                const topRolePlaysList = document.getElementById('topRolePlaysList');
+                topRolePlaysList.innerHTML = `
+                    <div style="text-align: center; color: #ef4444; padding: 20px;">
+                        <div class="material-icons" style="font-size: 24px; margin-bottom: 8px;">error_outline</div>
+                        <p style="font-size: 14px;">${message}</p>
+                    </div>
+                `;
+            }
+
 
         }
 
-        function startTraining(agentType) {
-            localStorage.setItem('selectedAgentType', agentType);
+        function startTraining(agentId, agentKey, agentTitle) {
+            localStorage.setItem('selectedAgentId', agentId);
+            localStorage.setItem('selectedAgentType', agentKey);
+            localStorage.setItem('selectedAgentTitle', agentTitle);
             window.location.href = '/agent-info.html';
         }
 

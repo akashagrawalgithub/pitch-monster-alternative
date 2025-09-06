@@ -124,6 +124,14 @@ def users():
         # In production, serve from dist folder
         return send_from_directory('dist', 'users.html')
 
+@app.route('/marketing.html')
+def marketing():
+    if IS_DEVELOPMENT:
+        # In development, serve from static folder
+        return send_from_directory('static', 'marketing.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'marketing.html')
 
 
 @app.route('/test_analysis.html')

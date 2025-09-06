@@ -6,6 +6,7 @@
 CREATE TABLE conversations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
     session_id UUID DEFAULT gen_random_uuid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -109,6 +110,7 @@ CREATE TABLE best_pitch (
 
 -- Create indexes for better performance
 CREATE INDEX idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX idx_conversations_agent_id ON conversations(agent_id);
 CREATE INDEX idx_conversations_created_at ON conversations(created_at);
 CREATE INDEX idx_conversations_session_id ON conversations(session_id);
 

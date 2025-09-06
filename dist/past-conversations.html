@@ -594,14 +594,10 @@
                         `${Math.floor(conversation.duration_seconds / 60)}m ${conversation.duration_seconds % 60}s` : 
                         'Unknown';
                     
-                    const exchanges = conversation.transcript?.length || 0;
                     const agentType = conversation.title || 'Sales Training Session';
                     const agentIcon = this.getAgentIcon(agentType);
                     
                     const conversationStatus = this.getConversationStatus(conversation);
-                    
-                    // Get first few words of conversation for preview
-                    const preview = this.getConversationPreview(conversation.transcript);
                     
                     return `
                         <div class="conversation-card">
@@ -624,19 +620,6 @@
                                 <div class="meta-item">
                                     <span><strong>Call Duration:</strong> ${duration}</span>
                                 </div>
-                                <div class="meta-item">
-                                    <span><strong>Total Exchanges:</strong> ${exchanges}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <span><strong>Conversation Quality:</strong> ${this.getConversationQuality(conversation)}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <span><strong>Lead Score:</strong> ${this.getLeadScore(conversation)}/10</span>
-                                </div>
-                            </div>
-                            
-                            <div class="conversation-preview">
-                                <strong>Preview:</strong> "${preview}"
                             </div>
                             
                             <div class="conversation-status">
@@ -695,60 +678,6 @@
                 }
             }
 
-            getConversationPreview(transcript) {
-                if (!transcript || transcript.length === 0) {
-                    return 'No conversation data available';
-                }
-                
-                // Get the first user message for preview
-                const firstMessage = transcript.find(msg => msg.role === 'user');
-                if (firstMessage && firstMessage.content) {
-                    const words = firstMessage.content.split(' ');
-                    return words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
-                }
-                
-                return 'Conversation started';
-            }
-
-            getConversationQuality(conversation) {
-                const duration = conversation.duration_seconds || 0;
-                const exchanges = conversation.transcript?.length || 0;
-                
-                if (exchanges >= 10 && duration > 120) {
-                    return 'Excellent';
-                } else if (exchanges >= 6 && duration > 60) {
-                    return 'Good';
-                } else if (exchanges >= 3 && duration > 30) {
-                    return 'Average';
-                } else {
-                    return 'Poor';
-                }
-            }
-
-            getLeadScore(conversation) {
-                const duration = conversation.duration_seconds || 0;
-                const exchanges = conversation.transcript?.length || 0;
-                
-                let score = 0;
-                
-                // Duration scoring (0-4 points)
-                if (duration > 180) score += 4;
-                else if (duration > 120) score += 3;
-                else if (duration > 60) score += 2;
-                else if (duration > 30) score += 1;
-                
-                // Engagement scoring (0-4 points)
-                if (exchanges > 15) score += 4;
-                else if (exchanges > 10) score += 3;
-                else if (exchanges > 6) score += 2;
-                else if (exchanges > 3) score += 1;
-                
-                // Conversation completion bonus (0-2 points)
-                if (duration > 60 && exchanges > 5) score += 2;
-                else if (duration > 30 && exchanges > 3) score += 1;
-                
-                return Math.min(score, 10);
-            }
 
 
 

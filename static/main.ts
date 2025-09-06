@@ -1597,9 +1597,15 @@ async function navigateToAnalysis() {
         // Store transcript in sessionStorage
         sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
         
+        // Get the selected agent ID from localStorage
+        const selectedAgentId = localStorage.getItem('selectedAgentId');
+        const selectedAgentType = localStorage.getItem('selectedAgentType');
+        const selectedAgentTitle = localStorage.getItem('selectedAgentTitle');
+        
         // Save conversation to database with verified audio data
         const conversationData = {
-            title: "Sales Call - " + new Date().toLocaleString(),
+            title: `${selectedAgentTitle}`,
+            agent_id: selectedAgentId,
             duration_seconds: getCallDuration(),
             total_exchanges: transcriptHistory.length,
             full_conversation: getConversationHistory(),
@@ -1611,8 +1617,8 @@ async function navigateToAnalysis() {
             user_agent: navigator.userAgent,
             ip_address: await getClientIP(),
             status: "completed",
-            tags: ["sales_call", "training"],
-            notes: "Sales training conversation"
+            tags: ["sales_call", "training", selectedAgentType || "general"],
+            notes: `Sales training conversation using ${selectedAgentTitle || 'general'} agent `
         };
 
         console.log('Sending conversation data to database...');
