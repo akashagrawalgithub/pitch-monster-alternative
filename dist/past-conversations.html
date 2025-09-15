@@ -145,10 +145,12 @@
 
         /* Conversations Grid */
         .conversations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
             gap: 24px;
             margin-bottom: 32px;
+            width: 100%;
+            max-width: 100%;
         }
 
         .conversation-card {
@@ -159,6 +161,9 @@
             border: 1px solid #e2e8f0;
             position: relative;
             overflow: hidden;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .conversation-card:hover {
@@ -350,7 +355,13 @@
         /* Responsive Design */
         @media (max-width: 1200px) {
             .conversations-grid {
-                grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .conversations-grid {
+                grid-template-columns: 1fr;
             }
         }
 
