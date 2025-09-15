@@ -83,6 +83,7 @@ def save_conversation():
         # Prepare conversation data with all schema fields
         conversation_data = {
             "user_id": user_id,
+            "agent_id": agent_id,
             "session_id": data.get("session_id") or str(uuid.uuid4()),
             "title": data.get("title", f"Sales Conversation - {datetime.now().strftime('%Y-%m-%d %H:%M')}"),
             "duration_seconds": data.get("duration_seconds", 0),
