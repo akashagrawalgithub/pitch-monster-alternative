@@ -1300,12 +1300,17 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
         // Get the selected agent type from localStorage
         const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
         
+        // Generate a unique session ID for this conversation
+        const sessionId = localStorage.getItem('currentSessionId') || generateSessionId();
+        localStorage.setItem('currentSessionId', sessionId);
+        
         fetch('/chat_stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: userText,
-                agent_type: agentType
+                agent_type: agentType,
+                session_id: sessionId
             }),
             signal: controller.signal
         }).then(response => {
@@ -1661,9 +1666,34 @@ async function navigateToAnalysis() {
     }
 }
 
+// Function to generate a unique session ID
+function generateSessionId(): string {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Function to clear conversation history on the backend
+async function clearConversationHistory() {
+    try {
+        const sessionId = localStorage.getItem('currentSessionId');
+        if (sessionId) {
+            await fetch('/clear_conversation_history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            console.log('✅ Conversation history cleared on backend');
+        }
+    } catch (error) {
+        console.error('❌ Failed to clear conversation history:', error);
+    }
+}
+
 // Function to clear previous analysis data when starting a new conversation
-function clearPreviousAnalysisData() {
+async function clearPreviousAnalysisData() {
     console.log('🧹 Clearing previous analysis data for fresh conversation...');
+    
+    // Clear conversation history on backend first
+    await clearConversationHistory();
     
     // Clear analysis-related data from sessionStorage
     const keysToClear = [
@@ -1692,7 +1722,11 @@ function clearPreviousAnalysisData() {
         console.log('Cleared: audioChunks array');
     }
     
-    console.log('✅ Previous analysis data cleared successfully');
+    // Generate a new session ID for this conversation
+    const newSessionId = generateSessionId();
+    localStorage.setItem('currentSessionId', newSessionId);
+    
+    console.log('✅ Previous analysis data cleared and new session started:', newSessionId);
 }
 
 // Helper functions for conversation data
@@ -1937,7 +1971,7 @@ const micOffIcon = '<span class="material-icons" style="font-size:1.3em;color:#f
 micBtn.onclick = async () => {
     if (!isChatActive) {
         // Clear any previous analysis data to ensure fresh analysis for new conversation
-        clearPreviousAnalysisData();
+        await clearPreviousAnalysisData();
         
         // Start chat
         resetTranscript();

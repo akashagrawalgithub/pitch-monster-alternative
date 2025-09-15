@@ -757,7 +757,7 @@
                         const promptTextarea = document.getElementById('promptTextarea');
                         this.originalPrompt = data.agent.prompt || '';
                         promptTextarea.value = this.originalPrompt;
-                        console.log('Loaded agent prompt:', this.originalPrompt);
+                        // console.log('Loaded agent prompt:', this.originalPrompt);
                     } else {
                         throw new Error(data.error || 'Failed to load agent prompt');
                     }

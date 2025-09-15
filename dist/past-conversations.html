@@ -352,6 +352,52 @@
 
 
 
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 32px;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .pagination-info {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0 16px;
+        }
+
         /* Responsive Design */
         @media (max-width: 1200px) {
             .conversations-grid {
@@ -362,6 +408,17 @@
         @media (max-width: 768px) {
             .conversations-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .pagination-container {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            
+            .pagination-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+                min-width: 36px;
             }
         }
 
@@ -422,6 +479,21 @@
                     <p>Loading your conversations...</p>
                 </div>
             </div>
+
+            <!-- Pagination -->
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <button class="pagination-btn" id="prevBtn" onclick="pastConversationsPage.previousPage()">
+                    <span class="material-icons">chevron_left</span>
+                </button>
+                
+                <div id="pageNumbers"></div>
+                
+                <button class="pagination-btn" id="nextBtn" onclick="pastConversationsPage.nextPage()">
+                    <span class="material-icons">chevron_right</span>
+                </button>
+                
+                <div class="pagination-info" id="paginationInfo"></div>
+            </div>
         </div>
     </div>
 
@@ -430,6 +502,9 @@
             constructor() {
                 this.conversations = [];
                 this.isAdmin = false;
+                this.currentPage = 1;
+                this.itemsPerPage = 15;
+                this.totalPages = 0;
                 this.initializeAuth();
                 this.initializeEventListeners();
                 // loadConversations() is now called from loadUserData() after isAdmin is set
@@ -441,8 +516,8 @@
                     const isAuthenticated = localStorage.getItem('authenticated');
                     const accessToken = localStorage.getItem('accessToken');
                     
-                    console.log('Auth check - isAuthenticated:', isAuthenticated);
-                    console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
+                    // console.log('Auth check - isAuthenticated:', isAuthenticated);
+                    // console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
                     
                     if (!isAuthenticated || !accessToken) {
                         console.log('Missing auth data, redirecting to login');
@@ -451,7 +526,7 @@
                     }
                     
                     // Verify token with backend
-                    console.log('Making auth check request to backend...');
+                    // console.log('Making auth check request to backend...');
                     const response = await fetch('/auth/check', {
                         method: 'GET',
                         headers: {
@@ -459,18 +534,18 @@
                         }
                     });
                     
-                    console.log('Auth check response status:', response.status);
+                    // console.log('Auth check response status:', response.status);
                     
                     if (!response.ok) {
                         // Token is invalid, redirect to login
-                        console.log('Auth check failed, clearing storage and redirecting');
+                        // console.log('Auth check failed, clearing storage and redirecting');
                         localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
                     
                     const data = await response.json();
-                    console.log('Auth check successful, user data:', data.user);
+                    // console.log('Auth check successful, user data:', data.user);
                     this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
@@ -564,6 +639,7 @@
                     
                     if (data.success && data.conversations) {
                         this.conversations = data.conversations;
+                        this.currentPage = 1; // Reset to first page when loading new data
                         this.displayConversations();
                     } else {
                         throw new Error(data.error || 'Failed to fetch conversations');
@@ -586,10 +662,17 @@
                             <p>Start your first training session to see your analysis here.</p>
                         </div>
                     `;
+                    document.getElementById('paginationContainer').style.display = 'none';
                     return;
                 }
                 
-                conversationsGrid.innerHTML = this.conversations.map(conversation => {
+                // Calculate pagination
+                this.totalPages = Math.ceil(this.conversations.length / this.itemsPerPage);
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const paginatedConversations = this.conversations.slice(startIndex, endIndex);
+                
+                conversationsGrid.innerHTML = paginatedConversations.map(conversation => {
                     const date = new Date(conversation.created_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
@@ -644,6 +727,9 @@
                         </div>
                     `;
                 }).join('');
+                
+                // Update pagination controls
+                this.updatePaginationControls();
             }
 
             getAgentIcon(agentType) {
@@ -686,6 +772,72 @@
                     return { text: 'Detailed Discussion', class: 'status-detailed' };
                 } else {
                     return { text: 'Completed', class: 'status-completed' };
+                }
+            }
+
+            updatePaginationControls() {
+                const paginationContainer = document.getElementById('paginationContainer');
+                const pageNumbers = document.getElementById('pageNumbers');
+                const paginationInfo = document.getElementById('paginationInfo');
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                
+                if (this.totalPages <= 1) {
+                    paginationContainer.style.display = 'none';
+                    return;
+                }
+                
+                paginationContainer.style.display = 'flex';
+                
+                // Update prev/next buttons
+                prevBtn.disabled = this.currentPage === 1;
+                nextBtn.disabled = this.currentPage === this.totalPages;
+                
+                // Generate page numbers
+                let pageNumbersHTML = '';
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
+                let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
+                
+                if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    pageNumbersHTML += `
+                        <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" 
+                                onclick="pastConversationsPage.goToPage(${i})">
+                            ${i}
+                        </button>
+                    `;
+                }
+                
+                pageNumbers.innerHTML = pageNumbersHTML;
+                
+                // Update pagination info
+                const startItem = (this.currentPage - 1) * this.itemsPerPage + 1;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, this.conversations.length);
+                paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${this.conversations.length} conversations`;
+            }
+
+            goToPage(page) {
+                if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
+                    this.currentPage = page;
+                    this.displayConversations();
+                }
+            }
+
+            previousPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.displayConversations();
+                }
+            }
+
+            nextPage() {
+                if (this.currentPage < this.totalPages) {
+                    this.currentPage++;
+                    this.displayConversations();
                 }
             }
 

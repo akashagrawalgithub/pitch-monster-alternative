@@ -30,8 +30,8 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY)
 # Initialize Cartesia client
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
 
-# Global conversation tracking
-conversation_history = []
+# Per-session conversation tracking - each session gets fresh history
+session_conversations = {}
 current_session_id = None
 current_user_id = None
 
@@ -314,14 +314,21 @@ def text_to_speech_stream():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global conversation_history
+    global session_conversations
     
     user_input = request.json.get('message', '').strip()
     agent_type = request.json.get('agent_type', 'discovery-call')
+    session_id = request.json.get('session_id', 'default')
     
     if not user_input:
         return jsonify({"reply": "I didn't catch that. Could you repeat?"})
 
+    # Get or create conversation history for this session
+    if session_id not in session_conversations:
+        session_conversations[session_id] = []
+    
+    conversation_history = session_conversations[session_id]
+    
     # Use up to the last 30 turns for context
     max_history = 30
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
@@ -355,7 +362,7 @@ def chat():
         
         reply = response.choices[0].message.content.strip()
         
-        # Add to conversation history
+        # Add to conversation history for this session
         conversation_history.append({
             "user": user_input,
             "assistant": reply,
@@ -364,7 +371,7 @@ def chat():
         
         # Keep history manageable (max 40 messages)
         if len(conversation_history) > 40:
-            conversation_history = conversation_history[-40:]
+            conversation_history[:] = conversation_history[-40:]
         
         processing_time = time.time() - start_time
         print(f"Response time: {processing_time:.2f}s")
@@ -385,14 +392,21 @@ def chat():
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
-    global conversation_history
+    global session_conversations
     
     user_input = request.json.get('message', '').strip()
     agent_type = request.json.get('agent_type', 'discovery-call')
+    session_id = request.json.get('session_id', 'default')
     
     if not user_input:
         return Response('data: {"reply": "I didn\'t catch that. Could you repeat?"}\n\n', mimetype='text/event-stream')
 
+    # Get or create conversation history for this session
+    if session_id not in session_conversations:
+        session_conversations[session_id] = []
+    
+    conversation_history = session_conversations[session_id]
+    
     max_history = 30
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
@@ -426,7 +440,7 @@ def chat_stream():
                     full_reply += delta
                     # Send as SSE event
                     yield f"data: {{\"reply\": \"{delta.replace('\\', '\\\\').replace('"', '\\\"')}\"}}\n\n"
-            # Add to conversation history after streaming is done
+            # Add to conversation history for this session after streaming is done
             conversation_history.append({
                 "user": user_input,
                 "assistant": full_reply,
@@ -448,6 +462,30 @@ def chat_stream():
                 yield 'data: {"reply": "Sorry, I\'m having trouble. Please try again."}\n\n'
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+@app.route('/clear_conversation_history', methods=['POST'])
+def clear_conversation_history():
+    """Clear conversation history for a specific session"""
+    global session_conversations
+    
+    try:
+        data = request.json
+        session_id = data.get('session_id', 'default')
+        
+        # Clear the conversation history for this session
+        if session_id in session_conversations:
+            session_conversations[session_id] = []
+            print(f"✅ Cleared conversation history for session: {session_id}")
+        else:
+            # Initialize empty history for new session
+            session_conversations[session_id] = []
+            print(f"✅ Initialized empty conversation history for session: {session_id}")
+        
+        return jsonify({"success": True, "message": "Conversation history cleared"})
+        
+    except Exception as e:
+        print(f"Error clearing conversation history: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/analyze_conversation', methods=['POST'])
 def analyze_conversation():
