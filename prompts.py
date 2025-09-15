@@ -154,22 +154,22 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
   },
   "sales_skills_assessment": {
     "introduction_quality": {
-      "stars": "number (1-5, human introduction effectiveness)",
+      "stars": "number (0-5, human introduction effectiveness)",
       "score": "number (0-5 with decimals)",
       "description": "string (human's opening and rapport building)"
     },
     "need_analysis": {
-      "stars": "number (1-5, human discovery skills)",
+      "stars": "number (0-5, human discovery skills)",
       "score": "number (0-5 with decimals)",
       "description": "string (human's ability to understand prospect needs)"
     },
     "objection_handling": {
-      "stars": "number (1-5, human objection handling)",
+      "stars": "number (0-5, human objection handling)",
       "score": "number (0-5 with decimals)",
       "description": "string (human's effectiveness in addressing concerns)"
     },
     "closing_skills": {
-      "stars": "number (1-5, human closing effectiveness)",
+      "stars": "number (0-5, human closing effectiveness)",
       "score": "number (0-5 with decimals)",
       "description": "string (human's ability to move toward commitment)"
     }
