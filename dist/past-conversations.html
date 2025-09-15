@@ -753,8 +753,8 @@
                         console.log('chatTranscript:', sessionStorage.getItem('chatTranscript'));
                         console.log('currentAnalysisData:', sessionStorage.getItem('currentAnalysisData'));
                         
-                        // Navigate to analysis page
-                        window.location.href = '/analysis.html';
+                        // Navigate to analysis page with conversation ID
+                        window.location.href = `/analysis.html?conversation_id=${conversationId}`;
                     } else {
                         throw new Error(data.error || 'Failed to load analysis');
                     }

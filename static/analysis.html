@@ -2112,12 +2112,62 @@
             console.log('=== DEBUG: loadDynamicAnalysis started ===');
             
             try {
-                // First check if we have existing analysis data (from viewing past analysis)
+                // Get conversation ID from URL parameters or sessionStorage
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlConversationId = urlParams.get('conversation_id');
+                const sessionConversationId = sessionStorage.getItem('conversationId');
+                const conversationId = urlConversationId || sessionConversationId;
+                
+                console.log('Conversation ID sources:', {
+                    url: urlConversationId,
+                    session: sessionConversationId,
+                    final: conversationId
+                });
+                
+                // PRIORITY 1: If we have a conversation ID, try to load analysis from database first
+                if (conversationId) {
+                    console.log('🔍 Checking for existing analysis in database for conversation:', conversationId);
+                    
+                    try {
+                        const analysisResponse = await fetch('/api/db/get_conversation_analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${await getAccessToken()}`
+                            },
+                            body: JSON.stringify({ conversation_id: conversationId })
+                        });
+                        
+                        if (analysisResponse.ok) {
+                            const analysisData = await analysisResponse.json();
+                            if (analysisData.success && analysisData.analysis) {
+                                console.log('✅ Found existing analysis in database, using it');
+                                updateAnalysisUI(analysisData.analysis);
+                                
+                                // Set up recording player if available
+                                if (analysisData.conversation) {
+                                    const audioData = analysisData.conversation.audio_data;
+                                    const audioDuration = analysisData.conversation.audio_duration_seconds;
+                                    
+                                    console.log('Setting up recording for conversation...');
+                                    setupPastConversationRecording(audioData, audioDuration);
+                                }
+                                
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading analysis from database:', error);
+                        // Continue to other methods
+                    }
+                }
+                
+                // PRIORITY 2: Check if we have existing analysis data (from viewing past analysis)
                 const currentAnalysisData = sessionStorage.getItem('currentAnalysisData');
                 console.log('Current analysis data:', currentAnalysisData ? 'Found' : 'Not found');
                 
                 if (currentAnalysisData) {
-                    console.log('✅ Using existing analysis data from database - no need to call OpenAI');
+                    console.log('✅ Using existing analysis data from sessionStorage - no need to call OpenAI');
                     console.log('Raw currentAnalysisData:', currentAnalysisData);
                     
                     try {
@@ -2136,15 +2186,14 @@
                     }
                     
                     // Set up recording player for past conversation
-                    const conversationId = sessionStorage.getItem('conversationId');
                     if (conversationId) {
                         // Get conversation data to access audio
-                                            const conversationResponse = await fetch('/api/db/get_conversation_analysis', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${await getAccessToken()}`
-                        },
+                        const conversationResponse = await fetch('/api/db/get_conversation_analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${await getAccessToken()}`
+                            },
                             body: JSON.stringify({ conversation_id: conversationId })
                         });
                         
@@ -2167,7 +2216,7 @@
                 const savedAnalysisId = sessionStorage.getItem('analysisId');
                 console.log('Analysis ID from sessionStorage:', savedAnalysisId ? 'Found' : 'Not found');
                 
-                if (savedAnalysisId) {
+                if (savedAnalysisId && conversationId) {
                     console.log('✅ Analysis already saved to database, loading from database');
                     
                     // Get analysis from database
@@ -2228,15 +2277,13 @@
                 // Show loading state
                 showLoadingState();
                 
-                // Step 1: Get conversation ID (should already be saved from main.ts)
-                const conversationId = sessionStorage.getItem('conversationId');
-                
+                // Step 1: Get conversation ID (should already be saved from main.ts or URL)
                 if (!conversationId) {
-                    console.error('No conversation ID found! Conversation should have been saved in main.ts');
+                    console.error('No conversation ID found! Conversation should have been saved in main.ts or provided in URL');
                     throw new Error('Conversation ID not found. Please try again.');
                 }
                 
-                console.log('✅ Using conversation ID from main.ts:', conversationId);
+                console.log('✅ Using conversation ID:', conversationId);
 
                 // Step 2: Get analysis from OpenAI
                 console.log('Step 2: Getting analysis from OpenAI...');
