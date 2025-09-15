@@ -80,6 +80,9 @@ def save_conversation():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
+        # Get agent_id from request data
+        agent_id = data.get("agent_id")
+        
         # Prepare conversation data with all schema fields
         conversation_data = {
             "user_id": user_id,
