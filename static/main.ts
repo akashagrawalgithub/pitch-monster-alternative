@@ -54,7 +54,7 @@ function createRulesPopup() {
     rulesList.style.margin = '0 0 24px 0';
 
     const rules = [
-        'Wear headphones and speak clearly. Don\'t forget to smile 😊',
+        'Wear headphones and speak clearly. Don\'t forget smile 😊',
         'First response can be bit delayed, please wait for AI to respond.',
         'As soon as you finish recording, it will be sent for analysis and feedback. Take this attempt seriously!',
         'Find a quiet place and ensure that your microphone works properly.',
@@ -1401,8 +1401,8 @@ async function startAudioRecording() {
         audioSource = audioContext.createMediaStreamSource(userStream);
         audioSource.connect(audioDestination);
         
-        // Try different MIME types for better browser compatibility
-        let mimeType = 'audio/webm;codecs=opus';
+        // Try different MIME types for better browser compatibility and compression
+        let mimeType = 'audio/webm;codecs=opus'; // Best compression for long recordings
         if (!MediaRecorder.isTypeSupported(mimeType)) {
             mimeType = 'audio/webm';
         }
@@ -1430,24 +1430,31 @@ async function startAudioRecording() {
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 audioChunks.push(event.data);
+                console.log(`Audio chunk received: ${event.data.size} bytes, total chunks: ${audioChunks.length}`);
             }
         };
         
         mediaRecorder.onstop = () => {
+            console.log('MediaRecorder stopped, processing final audio...');
+            
             if (audioChunks.length > 0) {
+                // Create single blob from all chunks - this is the correct way
                 const audioBlob = new Blob(audioChunks, { type: mimeType });
+                console.log('Final audio blob created:', audioBlob.size, 'bytes');
                 
-                // Store recording duration
-                const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
-                sessionStorage.setItem('recordingDuration', recordingDuration.toString());
-                
-                // Convert blob to base64 for storage
+                // Convert to base64 and save
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64Data = reader.result as string;
-                    sessionStorage.setItem('hasRecording', 'true');
                     sessionStorage.setItem('conversationRecording', base64Data);
-                    console.log('Audio recording saved to sessionStorage, duration:', recordingDuration);
+                    sessionStorage.setItem('hasRecording', 'true');
+                    sessionStorage.setItem('recordingTimestamp', Date.now().toString());
+                    
+                    // Store final recording duration
+                    const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+                    sessionStorage.setItem('recordingDuration', recordingDuration.toString());
+                    
+                    console.log('✅ Complete audio recording saved successfully');
                 };
                 reader.readAsDataURL(audioBlob);
             }
@@ -1467,6 +1474,7 @@ async function startAudioRecording() {
         };
         
         mediaRecorder.start(1000); // Collect data every second
+        
         console.log('Audio recording started - will capture both user and AI audio');
         
     } catch (error) {
@@ -1496,31 +1504,30 @@ async function stopAudioRecording(): Promise<void> {
         mediaRecorder.onstop = () => {
             clearTimeout(timeout);
             
+            console.log('Processing final audio recording...');
+            
             if (audioChunks.length > 0) {
+                // Create single blob from all chunks
                 const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+                console.log('Final audio blob created:', audioBlob.size, 'bytes');
                 
-                // Store recording duration
-                const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
-                sessionStorage.setItem('recordingDuration', recordingDuration.toString());
-                
-                // Convert blob to base64 for storage
+                // Convert to base64 and save
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64Data = reader.result as string;
-                    const timestamp = Date.now().toString();
-                    sessionStorage.setItem('hasRecording', 'true');
                     sessionStorage.setItem('conversationRecording', base64Data);
-                    sessionStorage.setItem('recordingTimestamp', timestamp);
-                    console.log('✅ Audio recording processed and saved to sessionStorage, duration:', recordingDuration, 'timestamp:', timestamp);
+                    sessionStorage.setItem('hasRecording', 'true');
+                    sessionStorage.setItem('recordingTimestamp', Date.now().toString());
+                    
+                    // Store final recording duration
+                    const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+                    sessionStorage.setItem('recordingDuration', recordingDuration.toString());
+                    
+                    console.log('✅ Audio recording processed and saved to sessionStorage, duration:', recordingDuration);
                     
                     // Clean up and resolve
                     cleanupAudioRecording();
                     resolve();
-                };
-                reader.onerror = () => {
-                    console.error('Error reading audio blob');
-                    cleanupAudioRecording();
-                    reject(new Error('Failed to process audio recording'));
                 };
                 reader.readAsDataURL(audioBlob);
             } else {
@@ -1761,10 +1768,10 @@ function getBase64Audio(): string {
     if (recordedAudio && hasRecording === 'true' && recordingDuration && recordingTimestamp) {
         // Verify the audio data is substantial (not just a placeholder)
         if (recordedAudio.length > 1000 && !recordedAudio.includes('audio_data_placeholder')) {
-            // Check if the recording is recent (within last 5 minutes)
+            // Check if the recording is recent (within last 2 hours - extended from 5 minutes)
             const timestamp = parseInt(recordingTimestamp);
             const now = Date.now();
-            const isRecent = (now - timestamp) < 5 * 60 * 1000; // 5 minutes
+            const isRecent = (now - timestamp) < 2 * 60 * 60 * 1000; // 2 hours instead of 5 minutes
             
             if (isRecent) {
                 console.log('✅ Returning actual recorded audio data (length:', recordedAudio.length, ', recent:', isRecent, ')');
