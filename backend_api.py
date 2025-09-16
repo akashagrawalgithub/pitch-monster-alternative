@@ -108,14 +108,14 @@ def save_conversation():
         result = db.save_conversation(user_id, conversation_data)
         
         if result["success"]:
-            print(f"✅ Conversation saved successfully: {result['conversation_id']}")
+            # Removed logging for performance
             return jsonify({
                 "success": True,
                 "conversation_id": result["conversation_id"],
                 "message": "Conversation saved successfully"
             })
         else:
-            print(f"❌ Failed to save conversation: {result.get('error')}")
+            # Removed logging for performance
             return jsonify({
                 "success": False,
                 "error": result.get("error", "Failed to save conversation")
@@ -167,7 +167,7 @@ def save_analysis():
         result = db.save_analysis(user_id, conversation_id, analysis_record)
         
         if result["success"]:
-            print(f"✅ Analysis saved successfully: {result['analysis_id']}")
+            # Removed logging for performance
             return jsonify({
                 "success": True,
                 "analysis_id": result["analysis_id"],
@@ -175,7 +175,7 @@ def save_analysis():
                 "message": "Analysis saved successfully"
             })
         else:
-            print(f"❌ Failed to save analysis: {result.get('error')}")
+            # Removed logging for performance
             return jsonify({
                 "success": False,
                 "error": result.get("error", "Failed to save analysis")
@@ -226,7 +226,7 @@ def save_best_pitch():
         result = db.save_best_pitch(user_id, conversation_id, analysis_id, best_pitch_record)
         
         if result["success"]:
-            print(f"✅ Best pitch saved successfully: {result['best_pitch_id']}")
+            # Removed logging for performance
             return jsonify({
                 "success": True,
                 "best_pitch_id": result["best_pitch_id"],
@@ -672,7 +672,7 @@ def get_all_agents():
         agents = db.get_all_agents()
         
         execution_time = (time.time() - start_time) * 1000
-        print(f"✅ API: {len(agents)} agents retrieved in {execution_time:.2f}ms")
+        # Removed logging for performance
         
         return jsonify({
             'success': True,
@@ -681,7 +681,7 @@ def get_all_agents():
         })
         
     except Exception as e:
-        print(f"Error getting agents: {e}")
+        # Removed logging for performance
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @db_api.route('/get_agent_by_key', methods=['POST'])
@@ -909,7 +909,7 @@ def login():
             return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
         
     except Exception as e:
-        print(f"Error in login: {e}")
+        # Removed logging for performance
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @db_api.route('/auth/register', methods=['POST'])

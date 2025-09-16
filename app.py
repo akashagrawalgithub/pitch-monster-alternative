@@ -6,13 +6,13 @@ from datetime import datetime
 import time
 from prompts import analysisPrompt, bestPitchPrompt
 from prompt_manager import prompt_manager
-import asyncio
+# Removed unused import for performance
 from cartesia import Cartesia
 import base64
 import numpy as np
 import json
 from backend_api import db_api
-from supabase import create_client, Client
+# Removed unused import for performance
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
@@ -47,7 +47,7 @@ def process_raw_audio(audio_bytes, sample_rate=44100):
         # Convert back to bytes
         return audio_array.tobytes()
     except Exception as e:
-        print(f"Error processing raw audio: {e}")
+        # Removed logging for performance
         return audio_bytes
 
 def get_current_user_id():
@@ -61,7 +61,7 @@ def get_current_user_id():
         # We'll use a simple approach for now - you can integrate with your auth system
         return "user_" + str(hash(token) % 10000)  # Simple user ID generation
     except Exception as e:
-        print(f"Error getting user ID: {e}")
+        # Removed logging for performance
         return None
 
 import os
@@ -241,9 +241,7 @@ def text_to_speech():
         })
         
     except Exception as e:
-        print(f"TTS Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        # Removed logging for performance
         return jsonify({"error": f"TTS generation failed: {str(e)}"}), 500
 
 @app.route('/tts_stream', methods=['POST'])
@@ -320,8 +318,8 @@ def chat():
     
     conversation_history = session_conversations[session_id]
     
-    # Use up to the last 15 turns for context (reduced for speed)
-    max_history = 15
+    # Use up to the last 10 turns for maximum speed
+    max_history = 10
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
     # Get the dynamic prompt for this agent
@@ -345,10 +343,10 @@ def chat():
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-0125",
             messages=messages,
-            max_tokens=50,  # Reduced for faster responses
-            temperature=0.2,  # Lower for more consistent, faster responses
-            presence_penalty=0.3,  # Reduced for speed
-            frequency_penalty=0.2  # Reduced for speed
+            max_tokens=40,  # Maximum speed
+            temperature=0.1,  # Lowest for fastest responses
+            presence_penalty=0.1,  # Minimal for speed
+            frequency_penalty=0.1  # Minimal for speed
         )
         
         reply = response.choices[0].message.content.strip()
@@ -360,9 +358,9 @@ def chat():
             "timestamp": datetime.now().isoformat()
         })
         
-        # Keep history manageable (max 20 messages for speed)
-        if len(conversation_history) > 20:
-            conversation_history[:] = conversation_history[-20:]
+        # Keep history manageable (max 15 messages for maximum speed)
+        if len(conversation_history) > 15:
+            conversation_history[:] = conversation_history[-15:]
         
         # Removed logging for performance
         
@@ -376,9 +374,9 @@ def chat():
             return jsonify({"reply": "Request timed out. Please try again."}), 408
         elif "api" in error_message:
             return jsonify({"reply": "Service temporarily unavailable."}), 503
-            else:
-                # Removed logging for performance
-                return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
+        else:
+            # Removed logging for performance
+            return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
@@ -397,7 +395,7 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
-    max_history = 15  # Reduced for speed
+    max_history = 10  # Maximum speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
     # Get the dynamic prompt for this agent
@@ -417,10 +415,10 @@ def chat_stream():
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo-0125",
                 messages=messages,
-                max_tokens=40,  # Reduced for faster streaming
-                temperature=0.2,  # Lower for faster responses
-                presence_penalty=0.3,  # Reduced for speed
-                frequency_penalty=0.2,  # Reduced for speed
+                max_tokens=30,  # Maximum speed for streaming
+                temperature=0.1,  # Lowest for fastest responses
+                presence_penalty=0.1,  # Minimal for speed
+                frequency_penalty=0.1,  # Minimal for speed
                 stream=True
             )
             full_reply = ""
@@ -436,8 +434,8 @@ def chat_stream():
                 "assistant": full_reply,
                 "timestamp": datetime.now().isoformat()
             })
-            if len(conversation_history) > 20:
-                conversation_history[:] = conversation_history[-20:]
+            if len(conversation_history) > 15:
+                conversation_history[:] = conversation_history[-15:]
                 
         except Exception as e:
             error_message = str(e).lower()
@@ -474,7 +472,7 @@ def clear_conversation_history():
         return jsonify({"success": True, "message": "Conversation history cleared"})
         
     except Exception as e:
-        print(f"Error clearing conversation history: {e}")
+        # Removed logging for performance
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/analyze_conversation', methods=['POST'])
@@ -536,8 +534,7 @@ def analyze_conversation():
             return jsonify(analysis_data)
             
         except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"Raw response: {analysis_result}")
+            # Removed logging for performance
             return jsonify({"error": "Invalid JSON response from analysis"}), 500
             
     except Exception as e:
@@ -549,9 +546,7 @@ def analyze_conversation():
         elif "api" in error_message:
             return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
         else:
-            print(f"Analysis error: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            # Removed logging for performance
             return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
 
 @app.route('/best-pitch', methods=['POST'])
@@ -630,8 +625,7 @@ INSTRUCTIONS:
             return jsonify({"error": "Invalid JSON response from perfect pitch generation"}), 500
             
     except Exception as e:
-        import traceback
-        traceback.print_exc()
+        # Removed logging for performance
         
         error_message = str(e).lower()
         if "rate limit" in error_message:
@@ -642,11 +636,11 @@ INSTRUCTIONS:
             return jsonify({"error": f"OpenAI API error: {str(e)}"}), 503
         else:
             # Return a more detailed error message for debugging
-                         return jsonify({
-                 "error": f"Perfect pitch generation failed: {str(e)}",
-                 "error_type": type(e).__name__,
-                 "debug_info": "Check server logs for more details"
-             }), 500
+            return jsonify({
+                "error": f"Perfect pitch generation failed: {str(e)}",
+                "error_type": type(e).__name__,
+                "debug_info": "Check server logs for more details"
+            }), 500
 
 # Register the database API blueprint
 app.register_blueprint(db_api, url_prefix='/api/db')
@@ -678,7 +672,7 @@ def login():
             return jsonify({'error': 'Invalid email or password'}), 401
         
     except Exception as e:
-        print(f"Login error: {str(e)}")
+        # Removed logging for performance
         return jsonify({'error': 'Invalid email or password'}), 401
 
 @app.route('/auth/check', methods=['GET'])
@@ -707,9 +701,7 @@ def check_auth():
         return jsonify({'authenticated': False}), 401
             
     except Exception as e:
-        print(f"Auth check error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        # Removed logging for performance
         return jsonify({'authenticated': False}), 401
 
 @app.route('/auth/refresh', methods=['POST'])
@@ -751,7 +743,7 @@ def refresh_token():
         return jsonify({'error': 'Invalid refresh token'}), 401
         
     except Exception as e:
-        print(f"Token refresh error: {str(e)}")
+        # Removed logging for performance
         return jsonify({'error': 'Failed to refresh token'}), 401
 
 # Serve static assets from dist folder in production

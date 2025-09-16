@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any
 import uuid
 import os
 import time
-from functools import lru_cache
+# Removed unused import for performance
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
@@ -28,8 +28,7 @@ class DatabaseManager:
     
     def _setup_optimizations(self):
         """Setup database optimizations for better performance"""
-        # Configure connection pooling and other optimizations
-        # Note: Supabase client handles connection pooling automatically
+        # Removed unnecessary code for performance
         pass
     
     def set_auth_token(self, access_token: str):
@@ -228,7 +227,7 @@ class DatabaseManager:
             ).eq("conversation_id", conversation_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation analysis retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data[0] if result.data else None
         except Exception as e:
@@ -332,6 +331,7 @@ class DatabaseManager:
                                 # Removed logging for performance
                             except json.JSONDecodeError as e:
                                 # Removed logging for performance
+                                pass
                 
                 return best_pitch_data
             else:
@@ -460,6 +460,7 @@ class DatabaseManager:
             # Removed debug logging for performance
             if simple_response.data:
                 # Removed debug logging for performance
+                pass
             
             # Fetch conversations with agent and user information
             # Removed debug logging for performance
@@ -645,6 +646,7 @@ class DatabaseManager:
                                 # Removed logging for performance
                             except json.JSONDecodeError as e:
                                 # Removed logging for performance
+                                pass
                                 # Keep as string if parsing fails
                 
                 return analysis_data

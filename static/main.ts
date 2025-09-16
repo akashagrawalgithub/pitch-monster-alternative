@@ -512,10 +512,8 @@ let timerInterval: number | null = null;
 let secondsElapsed = 0;
 let transcriptHistory: { sender: 'AI' | 'You', text: string, time: string }[] = [];
 let isRecognitionActive = false;
-let audioQueue: string[] = [];
-let isPlayingAudio = false;
 let audioContext: AudioContext | null = null;
-let audioBufferQueue: AudioBuffer[] = [];
+let audioBufferQueue: ArrayBuffer[] = [];
 let isAudioPlaying = false;
 let audioPlaybackQueue: ArrayBuffer[] = [];
 let isPlayingQueue = false;
@@ -764,6 +762,7 @@ function clearAudioPlaybackOnly() {
 // Function to handle user interruption (no longer stops recording)
 function handleUserInterruption() {
 }
+
 
 // Function to clear all outstanding audio
 function clearAllOutstandingAudio() {
