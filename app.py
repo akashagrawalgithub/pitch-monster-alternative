@@ -354,7 +354,7 @@ def chat():
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=25,  # Reduced for maximum speed
+            max_tokens=80,  # Reduced for maximum speed
             temperature=0.0,  # Zero for fastest responses
             presence_penalty=0.0,  # Zero for speed
             frequency_penalty=0.0,  # Zero for speed
@@ -427,12 +427,12 @@ def chat_stream():
             response = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
-                max_tokens=20,  # Reduced for maximum speed
+                max_tokens=80,  # Reduced for maximum speed
                 temperature=0.0,  # Zero for fastest responses
                 presence_penalty=0.0,  # Zero for speed
                 frequency_penalty=0.0,  # Zero for speed
                 stream=True,
-                timeout=8  # 4 second hard deadline
+                timeout=8  
             )
             full_reply = ""
             for chunk in response:
