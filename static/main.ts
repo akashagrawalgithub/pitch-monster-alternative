@@ -1142,7 +1142,9 @@ function processUserInput(text: string) {
         }
         
         // Note: AI response is already added to transcript via streaming, no need to add again
-        
+        if (fullReply.trim()) {
+            addTranscript('AI', fullReply.trim());
+        }
         isProcessing = false;
     }).catch(err => {
         aiTranscript.update('Error: ' + err.message);
@@ -1791,11 +1793,11 @@ async function clearPreviousAnalysisData() {
     // Also clear any in-memory recording state
     if (audioChunks.length > 0) {
         audioChunks = [];
-}
+    }
     
-    // Generate a new session ID for this conversation
-    const newSessionId = generateSessionId();
-    localStorage.setItem('currentSessionId', newSessionId);
+    // Note: Don't generate new session ID - keep existing session for conversation continuity
+    // const newSessionId = generateSessionId();
+    // localStorage.setItem('currentSessionId', newSessionId);
 }
 
 // Helper functions for conversation data
