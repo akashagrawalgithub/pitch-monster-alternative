@@ -34,6 +34,9 @@ session_conversations = {}
 current_session_id = None
 current_user_id = None
 
+# Simple response cache for common inputs (to reduce API calls)
+# Removed per user request to avoid added behavior
+
 def process_raw_audio(audio_bytes, sample_rate=44100):
     """Process raw PCM f32le audio data efficiently"""
     try:
@@ -341,12 +344,13 @@ def chat():
         start_time = time.time()
         
         response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
+            model="gpt-4o-mini",
             messages=messages,
-            max_tokens=40,  # Maximum speed
-            temperature=0.1,  # Lowest for fastest responses
-            presence_penalty=0.1,  # Minimal for speed
-            frequency_penalty=0.1  # Minimal for speed
+            max_tokens=25,  # Reduced for maximum speed
+            temperature=0.0,  # Zero for fastest responses
+            presence_penalty=0.0,  # Zero for speed
+            frequency_penalty=0.0,  # Zero for speed
+            timeout=8  # 4 second hard deadline
         )
         
         reply = response.choices[0].message.content.strip()
@@ -395,7 +399,7 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
-    max_history = 10  # Maximum speed
+    max_history = 5  # Reduced for maximum speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
     # Get the dynamic prompt for this agent
@@ -413,13 +417,14 @@ def chat_stream():
     def generate():
         try:
             response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo-0125",
+                model="gpt-4o-mini",
                 messages=messages,
-                max_tokens=30,  # Maximum speed for streaming
-                temperature=0.1,  # Lowest for fastest responses
-                presence_penalty=0.1,  # Minimal for speed
-                frequency_penalty=0.1,  # Minimal for speed
-                stream=True
+                max_tokens=20,  # Reduced for maximum speed
+                temperature=0.0,  # Zero for fastest responses
+                presence_penalty=0.0,  # Zero for speed
+                frequency_penalty=0.0,  # Zero for speed
+                stream=True,
+                timeout=8  # 4 second hard deadline
             )
             full_reply = ""
             for chunk in response:

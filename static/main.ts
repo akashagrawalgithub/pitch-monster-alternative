@@ -1540,7 +1540,11 @@ function cleanupAudioRecording() {
 // Save conversation and navigate to success page
 async function navigateToAnalysis() {
     try {
-// Wait a moment to ensure audio processing is complete
+        // Update button to show saving progress
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">save</span>';
+        micBtn.style.background = 'rgba(34,197,94,0.95)';
+        
+        // Wait a moment to ensure audio processing is complete
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Verify that we have fresh audio recording
@@ -1605,9 +1609,14 @@ if (!conversationResult.success) {
 
         const conversationId = conversationResult.conversation_id;
         sessionStorage.setItem('conversationId', conversationId);
-// Add delay to ensure database write is complete
-await new Promise(resolve => setTimeout(resolve, 2000));
-// Navigate to success page
+        // Add delay to ensure database write is complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Show final loading state before navigation
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">check_circle</span>';
+        micBtn.style.background = 'rgba(34,197,94,0.95)';
+        
+        // Navigate to success page
         window.location.href = '/success.html';
         
     } catch (error) {
@@ -1919,37 +1928,40 @@ micBtn.onclick = async () => {
         micBtn.style.background = 'rgba(229,39,76,0.92)';
         isChatActive = true;
     } else {
-        // Stop chat
+        // IMMEDIATE FEEDBACK: Show loading state right away
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">hourglass_empty</span>';
+        micBtn.style.background = 'rgba(107,114,128,0.95)';
+        micBtn.disabled = true;
+        micBtn.style.cursor = 'not-allowed';
+        
+        // Stop chat operations
         clearAllOutstandingAudio(); // Clear all outstanding voice/audio
         stopListening();
         stopTimer();
         setVoiceWaveActive(false); // Deactivate voice wave animation
         
-        // Stop audio recording only when user clicks mic_off
-        if (isRecording) {
-try {
+        try {
+            // Stop audio recording only when user clicks mic_off
+            if (isRecording) {
                 await stopAudioRecording();
-} catch (error) {
-                console.error('❌ Error stopping audio recording:', error);
-                // Continue anyway, but log the error
             }
-        }
-        
-        micBtn.innerHTML = micIcon;
-        micBtn.style.background = 'rgba(37,99,235,0.95)';
-        isChatActive = false;
-        
-        // Save conversation first, then navigate after successful save
-        if (transcriptHistory.length > 0) {
-// Show loading state
-            micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">hourglass_empty</span>';
-            micBtn.style.background = 'rgba(107,114,128,0.95)';
-            micBtn.disabled = true;
             
-            // Save conversation and navigate
-            navigateToAnalysis();
-        } else {
-window.location.href = '/success.html';
+            // Save conversation first, then navigate after successful save
+            if (transcriptHistory.length > 0) {
+                // Save conversation and navigate
+                await navigateToAnalysis();
+            } else {
+                window.location.href = '/success.html';
+            }
+        } catch (error) {
+            console.error('❌ Error during disconnect process:', error);
+            // Reset button state on error
+            micBtn.innerHTML = micOffIcon;
+            micBtn.style.background = 'rgba(229,39,76,0.92)';
+            micBtn.disabled = false;
+            micBtn.style.cursor = 'pointer';
+            isChatActive = true; // Keep chat active so user can try again
+            alert('Error disconnecting. Please try again.');
         }
     }
 };
