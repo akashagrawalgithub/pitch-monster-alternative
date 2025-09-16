@@ -23,8 +23,16 @@ CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
-# Initialize OpenAI client
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize OpenAI client with connection pooling
+import httpx
+openai_client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    http_client=httpx.Client(
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
+        timeout=httpx.Timeout(10.0, connect=5.0),
+        http2=True
+    )
+)
 
 # Initialize Cartesia client
 cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)

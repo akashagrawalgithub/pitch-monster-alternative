@@ -662,7 +662,7 @@ function startListening() {
                 clearTimeout(speechTimeout);
             }
             
-            // Set a 1 second pause detection timeout for conversational flow
+            // Set a 300ms pause detection timeout for conversational flow
             speechPauseTimeout = window.setTimeout(() => {
                 if (finalTranscript.trim().length > 0) {
                     // Use the most complete speech available
@@ -681,7 +681,7 @@ function startListening() {
                 }
                 speechPauseTimeout = null;
                 isUserSpeaking = false;
-            }, 1000); // Wait 1 second of silence before processing
+            }, 300); // Wait 300ms of silence before processing
         }
     };
 
@@ -1545,7 +1545,7 @@ async function navigateToAnalysis() {
         micBtn.style.background = 'rgba(34,197,94,0.95)';
         
         // Wait a moment to ensure audio processing is complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Verify that we have fresh audio recording
         const hasRecording = sessionStorage.getItem('hasRecording');
@@ -1554,8 +1554,8 @@ async function navigateToAnalysis() {
         const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
 
 if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
-// Wait a bit more and check again
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait a bit more and check again
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             const retryHasRecording = sessionStorage.getItem('hasRecording');
             const retryRecordedAudio = sessionStorage.getItem('conversationRecording');
@@ -1610,7 +1610,7 @@ if (!conversationResult.success) {
         const conversationId = conversationResult.conversation_id;
         sessionStorage.setItem('conversationId', conversationId);
         // Add delay to ensure database write is complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Show final loading state before navigation
         micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">check_circle</span>';
