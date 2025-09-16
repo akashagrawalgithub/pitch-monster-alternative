@@ -930,9 +930,7 @@ isListening = false;
             // Remove duplicates while preserving order and getting the most complete version
             const uniqueSpeech = allSpeech.filter((item, index) => allSpeech.indexOf(item) === index);
             speechToProcess = uniqueSpeech.join(' ').replace(/\s+/g, ' ').trim();
-if (speechToProcess.length > 0) {
-                processUserInput(speechToProcess);
-            }
+            // Note: processUserInput is already called in the onresult handler above
         }
     }
     
@@ -1143,10 +1141,7 @@ function processUserInput(text: string) {
             }
         }
         
-        // Add the complete AI response to transcript history
-        if (fullReply.trim()) {
-            addTranscript('AI', fullReply.trim());
-        }
+        // Note: AI response is already added to transcript via streaming, no need to add again
         
         isProcessing = false;
     }).catch(err => {
@@ -1375,6 +1370,9 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
         // Generate a unique session ID for this conversation
         const sessionId = localStorage.getItem('currentSessionId') || generateSessionId();
         localStorage.setItem('currentSessionId', sessionId);
+        
+        // Debug: Log session ID to ensure it's consistent
+        console.log('🔍 Using session ID:', sessionId);
         
         fetch('/chat_stream', {
             method: 'POST',
@@ -1767,8 +1765,8 @@ async function clearConversationHistory() {
 
 // Function to clear previous analysis data when starting a new conversation
 async function clearPreviousAnalysisData() {
-// Clear conversation history on backend first
-    await clearConversationHistory();
+    // Note: Don't clear conversation history automatically - let it persist for context
+    // await clearConversationHistory();
     
     // Clear analysis-related data from sessionStorage
     const keysToClear = [
