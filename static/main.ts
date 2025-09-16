@@ -95,6 +95,40 @@ function createRulesPopup() {
     conclusion.style.marginBottom = '24px';
     conclusion.style.marginTop = '0';
 
+    // Create checkbox container
+    const checkboxContainer = document.createElement('div');
+    checkboxContainer.style.display = 'flex';
+    checkboxContainer.style.alignItems = 'center';
+    checkboxContainer.style.gap = '12px';
+    checkboxContainer.style.marginBottom = '24px';
+    checkboxContainer.style.padding = '16px';
+    checkboxContainer.style.background = '#f8fafc';
+    checkboxContainer.style.borderRadius = '8px';
+    checkboxContainer.style.border = '1px solid #e2e8f0';
+
+    // Create checkbox
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = 'rulesCheckbox';
+    checkbox.style.width = '18px';
+    checkbox.style.height = '18px';
+    checkbox.style.cursor = 'pointer';
+    checkbox.style.accentColor = '#8b5cf6';
+
+    // Create checkbox label
+    const checkboxLabel = document.createElement('label');
+    checkboxLabel.htmlFor = 'rulesCheckbox';
+    checkboxLabel.textContent = 'I have read and understood the rules above';
+    checkboxLabel.style.fontSize = '14px';
+    checkboxLabel.style.fontWeight = '500';
+    checkboxLabel.style.color = '#475569';
+    checkboxLabel.style.cursor = 'pointer';
+    checkboxLabel.style.flex = '1';
+
+    // Add checkbox elements to container
+    checkboxContainer.appendChild(checkbox);
+    checkboxContainer.appendChild(checkboxLabel);
+
     // Create agree button (initially disabled)
     const agreeButton = document.createElement('button');
     agreeButton.textContent = 'I agree';
@@ -115,6 +149,7 @@ function createRulesPopup() {
     popup.appendChild(title);
     popup.appendChild(rulesList);
     popup.appendChild(conclusion);
+    popup.appendChild(checkboxContainer);
     popup.appendChild(agreeButton);
 
     // Add popup to overlay
@@ -123,14 +158,25 @@ function createRulesPopup() {
     // Add overlay to body
     document.body.appendChild(overlay);
 
-    // Enable button after 5 seconds
-    setTimeout(() => {
-        agreeButton.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
-        agreeButton.style.color = 'white';
-        agreeButton.style.cursor = 'pointer';
-        agreeButton.disabled = false;
-        agreeButton.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
-    }, 10000);
+    // Function to update button state based on checkbox
+    const updateButtonState = () => {
+        if (checkbox.checked) {
+            agreeButton.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+            agreeButton.style.color = 'white';
+            agreeButton.style.cursor = 'pointer';
+            agreeButton.disabled = false;
+            agreeButton.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)';
+        } else {
+            agreeButton.style.background = '#e2e8f0';
+            agreeButton.style.color = '#64748b';
+            agreeButton.style.cursor = 'not-allowed';
+            agreeButton.disabled = true;
+            agreeButton.style.boxShadow = 'none';
+        }
+    };
+
+    // Add checkbox event listener
+    checkbox.addEventListener('change', updateButtonState);
 
     // Handle agree button click
     agreeButton.addEventListener('click', () => {
@@ -254,6 +300,34 @@ function createUI() {
     topBar.appendChild(timerWrap);
     document.body.appendChild(topBar);
 
+    // Customer name display below top bar
+    const customerName = document.createElement('div');
+    customerName.id = 'customerName';
+    customerName.style.position = 'fixed';
+    customerName.style.left = '50%';
+    customerName.style.top = '50px';
+    customerName.style.transform = 'translateX(-50%)';
+    customerName.style.zIndex = '10';
+    customerName.style.color = '#1e293b';
+    customerName.style.fontSize = '16px';
+    customerName.style.fontWeight = '600';
+    customerName.style.textAlign = 'center';
+    customerName.style.whiteSpace = 'nowrap';
+    customerName.style.pointerEvents = 'none';
+    customerName.style.background = 'rgba(255, 255, 255, 0.9)';
+    customerName.style.padding = '8px 16px';
+    customerName.style.marginTop = '36px';
+
+    customerName.style.borderRadius = '20px';
+    customerName.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+    customerName.style.border = '1px solid rgba(226, 232, 240, 0.8)';
+    
+    // Set customer name content
+    const selectedAgentName = localStorage.getItem('selectedAgentName') || 'Customer';
+    customerName.textContent = `Customer Name: ${selectedAgentName}`;
+    
+    document.body.appendChild(customerName);
+
     // Voice wave visualization area (full screen)
     const voiceWaveArea = document.createElement('div');
     voiceWaveArea.className = 'voice-wave-area';
@@ -349,6 +423,22 @@ function createUI() {
     micBtn.style.outline = 'none';
     micBtn.style.visibility = 'visible';
 
+    // Create text element above the button
+    const buttonText = document.createElement('div');
+    buttonText.id = 'buttonText';
+    buttonText.textContent = 'Start Recording';
+    buttonText.style.position = 'absolute';
+    buttonText.style.top = '-40px';
+    buttonText.style.left = '50%';
+    buttonText.style.transform = 'translateX(-50%)';
+    buttonText.style.color = '#1e293b';
+    buttonText.style.fontSize = '14px';
+    buttonText.style.fontWeight = '600';
+    buttonText.style.whiteSpace = 'nowrap';
+    buttonText.style.pointerEvents = 'none';
+    buttonText.style.transition = 'color 0.2s';
+
+    micWrap.appendChild(buttonText);
     micWrap.appendChild(micBtn);
     micWrap.appendChild(ocean);
     document.body.appendChild(micWrap);
@@ -1406,6 +1496,13 @@ async function startAudioRecording() {
         isRecording = true;
         recordingStartTime = Date.now();
         
+        // Update text above button to show "Stop Recording"
+        const buttonText = document.getElementById('buttonText');
+        if (buttonText) {
+            buttonText.textContent = 'Stop Recording';
+            buttonText.style.color = '#ef4444'; // Red color for stop
+        }
+        
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 audioChunks.push(event.data);
@@ -1535,6 +1632,13 @@ function cleanupAudioRecording() {
     }
     mediaRecorder = null;
     audioChunks = [];
+    
+    // Reset text above button to "Start Recording"
+    const buttonText = document.getElementById('buttonText');
+    if (buttonText) {
+        buttonText.textContent = 'Start Recording';
+        buttonText.style.color = '#1e293b'; // Dark color for start
+    }
 }
 
 // Save conversation and navigate to success page
@@ -1543,6 +1647,13 @@ async function navigateToAnalysis() {
         // Update button to show saving progress
         micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">save</span>';
         micBtn.style.background = 'rgba(34,197,94,0.95)';
+        
+        // Update text above button
+        const savingText = document.getElementById('buttonText');
+        if (savingText) {
+            savingText.textContent = 'Saving...';
+            savingText.style.color = '#059669'; // Green color for saving
+        }
         
         // Wait a moment to ensure audio processing is complete
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1615,6 +1726,13 @@ if (!conversationResult.success) {
         // Show final loading state before navigation
         micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">check_circle</span>';
         micBtn.style.background = 'rgba(34,197,94,0.95)';
+        
+        // Update text above button
+        const successText = document.getElementById('buttonText');
+        if (successText) {
+            successText.textContent = 'Success!';
+            successText.style.color = '#059669'; // Green color for success
+        }
         
         // Navigate to success page
         window.location.href = '/success.html';

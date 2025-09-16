@@ -10,8 +10,9 @@ class PromptManager:
         # Initialize Supabase client with service role for admin operations
         self.supabase: Client = create_client(self.supabase_url, self.supabase_service_key)
         
-        # In-memory storage for prompts (loaded on startup)
+        # In-memory storage for prompts and sample scripts (loaded on startup)
         self._prompts: Dict[str, str] = {}
+        self._sample_scripts: Dict[str, str] = {}
         
         # Load all prompts into memory on initialization
         self._load_all_prompts()
@@ -21,14 +22,15 @@ class PromptManager:
         try:
             print("🔄 Loading agent prompts from database...")
             
-            # Fetch all active agents with their prompts
+            # Fetch all active agents with their prompts and sample scripts
             result = self.supabase.table("agents").select(
-                "agent_key, prompt"
+                "agent_key, prompt, sample_script"
             ).eq("is_active", True).execute()
             
-            # Store prompts in memory
+            # Store prompts and sample scripts in memory
             for agent in result.data:
                 self._prompts[agent['agent_key']] = agent['prompt']
+                self._sample_scripts[agent['agent_key']] = agent.get('sample_script', '')
             
             print(f"✅ Loaded {len(self._prompts)} agent prompts into memory")
             
@@ -263,11 +265,26 @@ Learn about your challenges and potential solutions while gathering information 
     
     def get_prompt(self, agent_key: str) -> str:
         """Get prompt for a specific agent (from memory - no DB call)"""
-        return self._prompts.get(agent_key, self._prompts.get('discovery-call', ''))
+        base_prompt = self._prompts.get(agent_key, self._prompts.get('discovery-call', ''))
+        sample_script = self._sample_scripts.get(agent_key, '')
+        
+        # If there's a sample script, append it to the prompt
+        if sample_script:
+            return f"{base_prompt}\n\n### SAMPLE SCRIPT FOR REFERENCE:\n\n{sample_script}"
+        
+        return base_prompt
     
     def get_all_prompts(self) -> Dict[str, str]:
         """Get all prompts (from memory - no DB call)"""
         return self._prompts.copy()
+    
+    def get_sample_script(self, agent_key: str) -> str:
+        """Get sample script for a specific agent (from memory - no DB call)"""
+        return self._sample_scripts.get(agent_key, '')
+    
+    def get_all_sample_scripts(self) -> Dict[str, str]:
+        """Get all sample scripts (from memory - no DB call)"""
+        return self._sample_scripts.copy()
     
     def update_prompt(self, agent_key: str, new_prompt: str) -> bool:
         """Update prompt in both database and memory"""
@@ -318,10 +335,37 @@ Learn about your challenges and potential solutions while gathering information 
             traceback.print_exc()
             return False
     
-    def reload_prompts(self) -> bool:
-        """Reload all prompts from database"""
+    def update_sample_script(self, agent_key: str, new_sample_script: str) -> bool:
+        """Update sample script in both database and memory"""
         try:
-            print("🔄 Reloading prompts from database...")
+            print(f"🔄 Updating sample script for agent: {agent_key}")
+            
+            # Update in database
+            result = self.supabase.table("agents").update({
+                "sample_script": new_sample_script
+            }).eq("agent_key", agent_key).eq("is_active", True).execute()
+            
+            if result.data:
+                # Update in memory
+                self._sample_scripts[agent_key] = new_sample_script
+                print(f"✅ Sample script updated for agent: {agent_key}")
+                return True
+            else:
+                print(f"❌ No agent found with key: {agent_key}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error updating sample script: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def reload_prompts(self) -> bool:
+        """Reload all prompts and sample scripts from database"""
+        try:
+            print("🔄 Reloading prompts and sample scripts from database...")
+            self._prompts.clear()
+            self._sample_scripts.clear()
             self._load_all_prompts()
             return True
         except Exception as e:

@@ -840,6 +840,35 @@ def update_agent_prompt():
         print(f"Error updating agent prompt: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@db_api.route('/update_agent_sample_script', methods=['POST'])
+def update_agent_sample_script():
+    """Update the sample script for a specific agent"""
+    try:
+        data = request.get_json()
+        agent_key = data.get('agent_key')
+        sample_script = data.get('sample_script')
+        
+        if not agent_key:
+            return jsonify({'success': False, 'error': 'Agent key required'}), 400
+        
+        if not sample_script:
+            return jsonify({'success': False, 'error': 'Sample script content required'}), 400
+        
+        # Update sample script using prompt manager (updates both DB and memory)
+        success = prompt_manager.update_sample_script(agent_key, sample_script)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Sample script updated successfully for agent: {agent_key}'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to update sample script'}), 500
+        
+    except Exception as e:
+        print(f"Error updating agent sample script: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @db_api.route('/reload_prompts', methods=['POST'])
 def reload_prompts():
     """Reload all prompts from database"""

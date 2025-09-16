@@ -666,22 +666,22 @@ class DatabaseManager:
             # Use the service role client for database operations
             client = self.supabase
             
-            print(f"🔍 DEBUG: Admin: Fetching analysis for conversation_id: {conversation_id}")
+            # print(f"🔍 DEBUG: Admin: Fetching analysis for conversation_id: {conversation_id}")
             
             # Select all necessary columns for complete analysis data
             response = client.table('analysis').select(
                 'id,conversation_id,overall_score,key_metrics,strengths,improvements,created_at,session_info,voice_delivery_analysis,sales_skills_assessment,sales_process_flow,detailed_feedback,recommendations,user_id'
             ).eq('conversation_id', conversation_id).execute()
             
-            print(f"🔍 DEBUG: Admin: Raw response data: {response.data}")
-            print(f"🔍 DEBUG: Admin: Response count: {len(response.data) if response.data else 0}")
+            # print(f"🔍 DEBUG: Admin: Raw response data: {response.data}")
+            # print(f"🔍 DEBUG: Admin: Response count: {len(response.data) if response.data else 0}")
             
             execution_time = (time.time() - start_time) * 1000
             print(f"✅ Admin: Analysis for conversation {conversation_id} retrieved in {execution_time:.2f}ms")
             
             if response.data:
                 analysis_data = response.data[0]
-                print(f"🔍 DEBUG: Admin: Analysis data keys: {list(analysis_data.keys())}")
+                # print(f"🔍 DEBUG: Admin: Analysis data keys: {list(analysis_data.keys())}")
                 
                 # Parse JSON fields if they are stored as strings
                 json_fields = ['overall_score', 'key_metrics', 'strengths', 'improvements', 
@@ -690,8 +690,8 @@ class DatabaseManager:
                 
                 for field in json_fields:
                     if field in analysis_data and analysis_data[field]:
-                        print(f"🔍 DEBUG: Admin: Field {field} type: {type(analysis_data[field])}")
-                        print(f"🔍 DEBUG: Admin: Field {field} value: {analysis_data[field]}")
+                        # print(f"🔍 DEBUG: Admin: Field {field} type: {type(analysis_data[field])}")
+                        # print(f"🔍 DEBUG: Admin: Field {field} value: {analysis_data[field]}")
                         if isinstance(analysis_data[field], str):
                             try:
                                 analysis_data[field] = json.loads(analysis_data[field])
@@ -702,7 +702,7 @@ class DatabaseManager:
                 
                 return analysis_data
             else:
-                print(f"🔍 DEBUG: Admin: No analysis data found for conversation_id: {conversation_id}")
+                # print(f"🔍 DEBUG: Admin: No analysis data found for conversation_id: {conversation_id}")
                 return None
                 
         except Exception as e:
@@ -736,7 +736,7 @@ class DatabaseManager:
             service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
             
             result = service_client.table("agents").select(
-                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active"
             ).eq("is_active", True).order("title").execute()
             
             execution_time = (time.time() - start_time) * 1000
@@ -756,7 +756,7 @@ class DatabaseManager:
             service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
             
             result = service_client.table("agents").select(
-                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active,sample_script"
             ).eq("agent_key", agent_key).eq("is_active", True).execute()
             
             execution_time = (time.time() - start_time) * 1000
@@ -767,13 +767,33 @@ class DatabaseManager:
             print(f"Error getting agent by key: {e}")
             return None
     
+    def update_agent_sample_script(self, agent_key: str, sample_script: str) -> bool:
+        """Update the sample script for a specific agent"""
+        try:
+            start_time = time.time()
+            
+            # Use service role client for agent operations to bypass RLS
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            result = service_client.table("agents").update({
+                "sample_script": sample_script
+            }).eq("agent_key", agent_key).eq("is_active", True).execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Agent {agent_key} sample script updated in {execution_time:.2f}ms")
+            
+            return len(result.data) > 0
+        except Exception as e:
+            print(f"Error updating agent sample script: {e}")
+            return False
+
     def get_agents_by_type(self, agent_type: str) -> List[Dict]:
         """Get all agents of a specific type"""
         try:
             start_time = time.time()
             
             result = self.supabase.table("agents").select(
-                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active"
             ).eq("type", agent_type).eq("is_active", True).order("title").execute()
             
             execution_time = (time.time() - start_time) * 1000
@@ -790,7 +810,7 @@ class DatabaseManager:
             start_time = time.time()
             
             result = self.supabase.table("agents").select(
-                "id,agent_key,title,icon,icon_class,type,guidelines,difficulty,is_active"
+                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active"
             ).eq("difficulty", difficulty).eq("is_active", True).order("title").execute()
             
             execution_time = (time.time() - start_time) * 1000

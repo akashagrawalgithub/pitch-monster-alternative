@@ -345,6 +345,31 @@
             display: block;
         }
 
+        /* Sample Pitch Styles */
+        .sample-pitch-view {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .sample-pitch-content {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #475569;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .sample-pitch-actions {
+            margin-top: 20px;
+        }
+
+        .sample-pitch-edit {
+            margin-top: 20px;
+        }
+
         /* Agent-specific icons */
         .icon-payment { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         .icon-competitor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
@@ -354,7 +379,7 @@
         .icon-discovery { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
 
     </style>
-  <script type="module" crossorigin src="/assets/agent-info-vYJ8TuQe.js"></script>
+  <script type="module" crossorigin src="/assets/agent-info-Bhr4xBj0.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
 </head>
 
@@ -412,6 +437,7 @@
             <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" data-tab="overview">Overview</button>
+                <button class="tab" data-tab="sample-pitch">Sample Pitch</button>
                 <button class="tab" data-tab="prompt" id="promptTab" style="display: none;">Prompt</button>
             </div>
 
@@ -461,6 +487,47 @@
                             You'll be interacting with an AI that simulates a realistic prospect with specific characteristics and objections. 
                             Focus on building rapport, understanding needs, and effectively communicating your value proposition.
                         </p>
+                    </div>
+                </div>
+
+                <!-- Sample Pitch Tab Content -->
+                <div class="tab-content" id="sample-pitchContent">
+                    <div class="info-card">
+                        <h3 class="card-title">Sample Pitch</h3>
+                        <p style="color: #64748b; margin-bottom: 20px; font-size: 14px;">
+                            <span id="samplePitchDescription">View the sample pitch script for this role-play scenario.</span>
+                        </p>
+                        <div id="samplePitchView" class="sample-pitch-view">
+                            <div class="sample-pitch-content" id="samplePitchText"></div>
+                        </div>
+                        <div id="samplePitchEdit" class="sample-pitch-edit" style="display: none;">
+                            <textarea 
+                                id="samplePitchTextarea" 
+                                class="prompt-textarea" 
+                                placeholder="Enter the sample pitch script here..."
+                            ></textarea>
+                            <div class="prompt-actions">
+                                <button class="btn btn-primary" id="saveSamplePitchBtn">
+                                    <span class="material-icons">save</span>
+                                    Save Changes
+                                </button>
+                                <button class="btn btn-secondary" id="resetSamplePitchBtn">
+                                    <span class="material-icons">refresh</span>
+                                    Reset to Original
+                                </button>
+                                <button class="btn btn-secondary" id="cancelSamplePitchBtn">
+                                    <span class="material-icons">close</span>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                        <div id="samplePitchActions" class="sample-pitch-actions" style="display: none;">
+                            <button class="btn btn-primary" id="editSamplePitchBtn">
+                                <span class="material-icons">edit</span>
+                                Edit Sample Pitch
+                            </button>
+                        </div>
+                        <div id="samplePitchStatus" class="status-message"></div>
                     </div>
                 </div>
 

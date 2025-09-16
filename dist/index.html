@@ -774,7 +774,7 @@ this.loadAdminStats();
                     </div>
                     <h3 class="agent-title">${agent.title}</h3>
                     <p class="agent-description">${truncatedDescription}</p>
-                    <button class="start-button" onclick="startTraining('${agent.id}', '${agent.agent_key}', '${agent.title}')">
+                    <button class="start-button" onclick="startTraining('${agent.id}', '${agent.agent_key}', '${agent.title}' , '${agent.agent_name}')">
                         <span class="material-icons">play_arrow</span>
                         Start Practice
                     </button>
@@ -926,10 +926,11 @@ const response = await fetch('/api/db/conversation/stats', {
 
         }
 
-        function startTraining(agentId, agentKey, agentTitle) {
+        function startTraining(agentId, agentKey, agentTitle , agentName) {
             localStorage.setItem('selectedAgentId', agentId);
             localStorage.setItem('selectedAgentType', agentKey);
             localStorage.setItem('selectedAgentTitle', agentTitle);
+            localStorage.setItem('selectedAgentName', agentName);
             window.location.href = '/agent-info.html';
         }
 

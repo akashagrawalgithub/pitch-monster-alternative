@@ -29,7 +29,7 @@ openai_client = OpenAI(
     api_key=OPENAI_API_KEY,
     http_client=httpx.Client(
         limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
-        timeout=httpx.Timeout(10.0, connect=5.0),
+        timeout=httpx.Timeout(30.0, connect=10.0),  # Increased timeout for longer requests
         http2=True
     )
 )
@@ -621,7 +621,8 @@ INSTRUCTIONS:
             messages=messages,
             max_tokens=3000,
             temperature=0.2,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            timeout=30.0  # 30 seconds for perfect pitch generation
         )
         
         perfect_pitch_result = response.choices[0].message.content.strip()

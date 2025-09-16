@@ -345,6 +345,31 @@
             display: block;
         }
 
+        /* Sample Pitch Styles */
+        .sample-pitch-view {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .sample-pitch-content {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #475569;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .sample-pitch-actions {
+            margin-top: 20px;
+        }
+
+        .sample-pitch-edit {
+            margin-top: 20px;
+        }
+
         /* Agent-specific icons */
         .icon-payment { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         .icon-competitor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
@@ -410,6 +435,7 @@
             <!-- Tabs -->
             <div class="tabs">
                 <button class="tab active" data-tab="overview">Overview</button>
+                <button class="tab" data-tab="sample-pitch">Sample Pitch</button>
                 <button class="tab" data-tab="prompt" id="promptTab" style="display: none;">Prompt</button>
             </div>
 
@@ -462,6 +488,47 @@
                     </div>
                 </div>
 
+                <!-- Sample Pitch Tab Content -->
+                <div class="tab-content" id="sample-pitchContent">
+                    <div class="info-card">
+                        <h3 class="card-title">Sample Pitch</h3>
+                        <p style="color: #64748b; margin-bottom: 20px; font-size: 14px;">
+                            <span id="samplePitchDescription">View the sample pitch script for this role-play scenario.</span>
+                        </p>
+                        <div id="samplePitchView" class="sample-pitch-view">
+                            <div class="sample-pitch-content" id="samplePitchText"></div>
+                        </div>
+                        <div id="samplePitchEdit" class="sample-pitch-edit" style="display: none;">
+                            <textarea 
+                                id="samplePitchTextarea" 
+                                class="prompt-textarea" 
+                                placeholder="Enter the sample pitch script here..."
+                            ></textarea>
+                            <div class="prompt-actions">
+                                <button class="btn btn-primary" id="saveSamplePitchBtn">
+                                    <span class="material-icons">save</span>
+                                    Save Changes
+                                </button>
+                                <button class="btn btn-secondary" id="resetSamplePitchBtn">
+                                    <span class="material-icons">refresh</span>
+                                    Reset to Original
+                                </button>
+                                <button class="btn btn-secondary" id="cancelSamplePitchBtn">
+                                    <span class="material-icons">close</span>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                        <div id="samplePitchActions" class="sample-pitch-actions" style="display: none;">
+                            <button class="btn btn-primary" id="editSamplePitchBtn">
+                                <span class="material-icons">edit</span>
+                                Edit Sample Pitch
+                            </button>
+                        </div>
+                        <div id="samplePitchStatus" class="status-message"></div>
+                    </div>
+                </div>
+
                 <!-- Prompt Tab Content -->
                 <div class="tab-content" id="promptContent">
                     <div class="info-card">
@@ -498,6 +565,7 @@
 this.agentData = null;
                 this.isAdmin = false;
                 this.originalPrompt = '';
+                this.originalSamplePitch = '';
                 this.initializeAuth();
                 this.initializeEventListeners();
                 this.loadAgentInfo();
@@ -571,6 +639,23 @@ this.startRecording();
                     this.resetPrompt();
                 });
 
+                // Sample pitch functionality
+                document.getElementById('editSamplePitchBtn')?.addEventListener('click', () => {
+                    this.editSamplePitch();
+                });
+
+                document.getElementById('saveSamplePitchBtn')?.addEventListener('click', () => {
+                    this.saveSamplePitch();
+                });
+
+                document.getElementById('resetSamplePitchBtn')?.addEventListener('click', () => {
+                    this.resetSamplePitch();
+                });
+
+                document.getElementById('cancelSamplePitchBtn')?.addEventListener('click', () => {
+                    this.cancelSamplePitchEdit();
+                });
+
             }
             
             loadUserData(user) {
@@ -590,10 +675,24 @@ this.startRecording();
                     this.isAdmin = true;
                     promptTab.style.display = 'block';
                     usersBtn.style.display = 'flex';
+                    // Show edit button for sample pitch
+                    const samplePitchActions = document.getElementById('samplePitchActions');
+                    if (samplePitchActions) {
+                        samplePitchActions.style.display = 'block';
+                    }
+                    const samplePitchDescription = document.getElementById('samplePitchDescription');
+                    if (samplePitchDescription) {
+                        samplePitchDescription.textContent = 'View and edit the sample pitch script for this role-play scenario.';
+                    }
 } else {
                     this.isAdmin = false;
                     promptTab.style.display = 'none';
                     usersBtn.style.display = 'none';
+                    // Hide edit button for sample pitch
+                    const samplePitchActions = document.getElementById('samplePitchActions');
+                    if (samplePitchActions) {
+                        samplePitchActions.style.display = 'none';
+                    }
 }
             }
 
@@ -651,6 +750,9 @@ window.location.href = '/index.html';
                     if (this.isAdmin) {
                         this.loadAgentPrompt(agent.agent_key);
                     }
+                    
+                    // Load sample pitch for all users
+                    this.loadSamplePitch(agent);
                     
                 } catch (error) {
                     console.error('Error loading agent from API:', error);
@@ -804,6 +906,106 @@ window.location.href = '/index.html';
             // Show prompt status message
             showPromptStatus(message, type = 'success') {
                 const statusDiv = document.getElementById('promptStatus');
+                statusDiv.textContent = message;
+                statusDiv.className = `status-message ${type}`;
+                statusDiv.style.display = 'block';
+                
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+
+            // Load sample pitch content
+            loadSamplePitch(agent) {
+                const samplePitchText = document.getElementById('samplePitchText');
+                const samplePitch = agent.sample_script || 'No sample pitch available for this role-play scenario.';
+                
+                this.originalSamplePitch = samplePitch;
+                samplePitchText.textContent = samplePitch;
+            }
+
+            // Edit sample pitch (admin only)
+            editSamplePitch() {
+                const samplePitchView = document.getElementById('samplePitchView');
+                const samplePitchEdit = document.getElementById('samplePitchEdit');
+                const samplePitchActions = document.getElementById('samplePitchActions');
+                const samplePitchTextarea = document.getElementById('samplePitchTextarea');
+                
+                samplePitchView.style.display = 'none';
+                samplePitchEdit.style.display = 'block';
+                samplePitchActions.style.display = 'none';
+                
+                samplePitchTextarea.value = this.originalSamplePitch;
+            }
+
+            // Cancel sample pitch edit
+            cancelSamplePitchEdit() {
+                const samplePitchView = document.getElementById('samplePitchView');
+                const samplePitchEdit = document.getElementById('samplePitchEdit');
+                const samplePitchActions = document.getElementById('samplePitchActions');
+                
+                samplePitchView.style.display = 'block';
+                samplePitchEdit.style.display = 'none';
+                if (this.isAdmin) {
+                    samplePitchActions.style.display = 'block';
+                }
+            }
+
+            // Save sample pitch changes
+            async saveSamplePitch() {
+                const samplePitchTextarea = document.getElementById('samplePitchTextarea');
+                const newSamplePitch = samplePitchTextarea.value.trim();
+                
+                if (!newSamplePitch) {
+                    this.showSamplePitchStatus('Sample pitch cannot be empty', 'error');
+                    return;
+                }
+
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    const agentKey = localStorage.getItem('selectedAgentType');
+                    
+                    const response = await fetch('/api/db/update_agent_sample_script', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({
+                            agent_key: agentKey,
+                            sample_script: newSamplePitch
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.originalSamplePitch = newSamplePitch;
+                        document.getElementById('samplePitchText').textContent = newSamplePitch;
+                        this.cancelSamplePitchEdit();
+                        this.showSamplePitchStatus('Sample pitch updated successfully', 'success');
+                    } else {
+                        throw new Error(data.error || 'Failed to update sample pitch');
+                    }
+                } catch (error) {
+                    console.error('Error updating sample pitch:', error);
+                    this.showSamplePitchStatus('Error updating sample pitch: ' + error.message, 'error');
+                }
+            }
+
+            // Reset sample pitch to original
+            resetSamplePitch() {
+                const samplePitchTextarea = document.getElementById('samplePitchTextarea');
+                samplePitchTextarea.value = this.originalSamplePitch;
+                this.showSamplePitchStatus('Sample pitch reset to original', 'success');
+            }
+
+            // Show sample pitch status message
+            showSamplePitchStatus(message, type = 'success') {
+                const statusDiv = document.getElementById('samplePitchStatus');
                 statusDiv.textContent = message;
                 statusDiv.className = `status-message ${type}`;
                 statusDiv.style.display = 'block';
