@@ -310,9 +310,7 @@
         });
         
         if (preComputedAnalysis) {
-            console.log('Analysis data already available, saving to database and redirecting');
-            
-            // Update progress step to show we're saving
+// Update progress step to show we're saving
             const analysisStep = document.getElementById('analysisStep');
             if (analysisStep) {
                 analysisStep.className = 'step active';
@@ -335,9 +333,8 @@
                     const conversationId = sessionStorage.getItem('conversationId');
                     
                     if (conversationId) {
-                        console.log('=== PRE-COMPUTED ANALYSIS SAVE DEBUG ===');
-                        console.log('Saving pre-computed analysis to database...');
-                        const accessToken = getAccessToken();
+
+const accessToken = getAccessToken();
                         
                         console.log('Pre-computed debug info:', {
                             conversationId: conversationId,
@@ -365,8 +362,7 @@
                         if (saveAnalysisResponse.ok) {
                             const saveResult = await saveAnalysisResponse.json();
                             if (saveResult.success) {
-                                console.log('✅ Pre-computed analysis saved to database:', saveResult.analysis_id);
-                                sessionStorage.setItem('analysisId', saveResult.analysis_id);
+sessionStorage.setItem('analysisId', saveResult.analysis_id);
                             } else {
                                 console.error('❌ Failed to save pre-computed analysis:', saveResult.error);
                             }
@@ -446,8 +442,7 @@
                 // Get transcript data
                 const transcriptData = sessionStorage.getItem('chatTranscript');
                 if (!transcriptData) {
-                    console.warn('No transcript data found');
-                    goToAnalysis();
+goToAnalysis();
                     return;
                 }
                 
@@ -474,9 +469,8 @@
                 
                 // Save analysis to database immediately
                 try {
-                    console.log('=== ANALYSIS SAVE DEBUG ===');
-                    console.log('Saving analysis to database...');
-                    const conversationId = sessionStorage.getItem('conversationId');
+
+const conversationId = sessionStorage.getItem('conversationId');
                     const accessToken = getAccessToken();
                     
                     console.log('Debug info:', {
@@ -506,8 +500,7 @@
                         if (saveAnalysisResponse.ok) {
                             const saveResult = await saveAnalysisResponse.json();
                             if (saveResult.success) {
-                                console.log('✅ Analysis saved to database:', saveResult.analysis_id);
-                                sessionStorage.setItem('analysisId', saveResult.analysis_id);
+sessionStorage.setItem('analysisId', saveResult.analysis_id);
                             } else {
                                 console.error('❌ Failed to save analysis:', saveResult.error);
                             }
@@ -587,24 +580,20 @@
             // Ensure transcript data is available for analysis
             const transcriptData = sessionStorage.getItem('chatTranscript');
             if (!transcriptData) {
-                console.warn('No transcript data found in sessionStorage');
-            } else {
+} else {
                 console.log('Transcript data available for analysis:', JSON.parse(transcriptData).length, 'exchanges');
             }
             
             // Check if analysis data exists
             const analysisData = sessionStorage.getItem('analysisData');
             if (analysisData) {
-                console.log('Analysis data found, will use dynamic analysis');
-            } else {
-                console.log('No analysis data found, will use static data');
-            }
+} else {
+}
             
             // Force redirect to analysis page
             try {
                 window.location.href = '/analysis.html';
-                console.log('Redirect initiated to /analysis.html');
-            } catch (error) {
+} catch (error) {
                 console.error('Redirect failed:', error);
                 // Fallback redirect
                 window.location.replace('/analysis.html');
@@ -622,8 +611,7 @@
         
         // Manual redirect button
         document.getElementById('manualRedirectBtn').addEventListener('click', () => {
-            console.log('Manual redirect button clicked');
-            goToAnalysis();
+goToAnalysis();
         });
     </script>
 </body>

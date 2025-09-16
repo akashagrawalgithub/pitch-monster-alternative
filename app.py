@@ -20,7 +20,6 @@ CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pi
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
 
-
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
@@ -133,7 +132,6 @@ def marketing():
         # In production, serve from dist folder
         return send_from_directory('dist', 'marketing.html')
 
-
 @app.route('/test_analysis.html')
 def test_analysis_page():
     if IS_DEVELOPMENT:
@@ -196,12 +194,6 @@ def conversation_page():
     else:
         # In production, serve from dist folder
         return send_from_directory('dist', 'conversation.html')
-
-
-
-
-
-
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
@@ -311,7 +303,6 @@ def text_to_speech_stream():
     except Exception as e:
         return jsonify({"error": "TTS streaming failed"}), 500
 
-
 @app.route('/chat', methods=['POST'])
 def chat():
     global session_conversations
@@ -329,8 +320,8 @@ def chat():
     
     conversation_history = session_conversations[session_id]
     
-    # Use up to the last 30 turns for context
-    max_history = 30
+    # Use up to the last 15 turns for context (reduced for speed)
+    max_history = 15
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
     # Get the dynamic prompt for this agent
@@ -354,10 +345,10 @@ def chat():
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo-0125",
             messages=messages,
-            max_tokens=70,
-            temperature=0.3,  # Balanced for natural responses
-            presence_penalty=0.6,
-            frequency_penalty=0.4
+            max_tokens=50,  # Reduced for faster responses
+            temperature=0.2,  # Lower for more consistent, faster responses
+            presence_penalty=0.3,  # Reduced for speed
+            frequency_penalty=0.2  # Reduced for speed
         )
         
         reply = response.choices[0].message.content.strip()
@@ -369,12 +360,11 @@ def chat():
             "timestamp": datetime.now().isoformat()
         })
         
-        # Keep history manageable (max 40 messages)
-        if len(conversation_history) > 40:
-            conversation_history[:] = conversation_history[-40:]
+        # Keep history manageable (max 20 messages for speed)
+        if len(conversation_history) > 20:
+            conversation_history[:] = conversation_history[-20:]
         
-        processing_time = time.time() - start_time
-        print(f"Response time: {processing_time:.2f}s")
+        # Removed logging for performance
         
         return jsonify({"reply": reply})
 
@@ -386,9 +376,9 @@ def chat():
             return jsonify({"reply": "Request timed out. Please try again."}), 408
         elif "api" in error_message:
             return jsonify({"reply": "Service temporarily unavailable."}), 503
-        else:
-            print(f"Error: {str(e)}")
-            return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
+            else:
+                # Removed logging for performance
+                return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
@@ -407,7 +397,7 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
-    max_history = 30
+    max_history = 15  # Reduced for speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
     # Get the dynamic prompt for this agent
@@ -427,10 +417,10 @@ def chat_stream():
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo-0125",
                 messages=messages,
-                max_tokens=50,
-                temperature=0.3,
-                presence_penalty=0.6,
-                frequency_penalty=0.4,
+                max_tokens=40,  # Reduced for faster streaming
+                temperature=0.2,  # Lower for faster responses
+                presence_penalty=0.3,  # Reduced for speed
+                frequency_penalty=0.2,  # Reduced for speed
                 stream=True
             )
             full_reply = ""
@@ -446,8 +436,8 @@ def chat_stream():
                 "assistant": full_reply,
                 "timestamp": datetime.now().isoformat()
             })
-            if len(conversation_history) > 40:
-                conversation_history[:] = conversation_history[-40:]
+            if len(conversation_history) > 20:
+                conversation_history[:] = conversation_history[-20:]
                 
         except Exception as e:
             error_message = str(e).lower()
@@ -458,7 +448,7 @@ def chat_stream():
             elif "api" in error_message:
                 yield 'data: {"reply": "Service temporarily unavailable."}\n\n'
             else:
-                print(f"Error: {str(e)}")
+                # Removed logging for performance
                 yield 'data: {"reply": "Sorry, I\'m having trouble. Please try again."}\n\n'
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
@@ -475,11 +465,11 @@ def clear_conversation_history():
         # Clear the conversation history for this session
         if session_id in session_conversations:
             session_conversations[session_id] = []
-            print(f"✅ Cleared conversation history for session: {session_id}")
+            # Removed logging for performance
         else:
             # Initialize empty history for new session
             session_conversations[session_id] = []
-            print(f"✅ Initialized empty conversation history for session: {session_id}")
+            # Removed logging for performance
         
         return jsonify({"success": True, "message": "Conversation history cleared"})
         

@@ -581,8 +581,6 @@
         </div>
     </div>
 
-
-
     <script>
         class AgentsPage {
             constructor() {
@@ -597,37 +595,34 @@
                     const isAuthenticated = localStorage.getItem('authenticated');
                     const accessToken = localStorage.getItem('accessToken');
                     
-                    // console.log('Auth check - isAuthenticated:', isAuthenticated);
-                    // console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
-                    
-                    if (!isAuthenticated || !accessToken) {
-                        console.log('Missing auth data, redirecting to login');
-                        window.location.href = '/login.html';
+                    //
+//
+if (!isAuthenticated || !accessToken) {
+window.location.href = '/login.html';
                         return;
                     }
                     
                     // Verify token with backend
-                    // console.log('Making auth check request to backend...');
-                    const response = await fetch('/auth/check', {
+                    //
+const response = await fetch('/auth/check', {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
                         }
                     });
                     
-                    // console.log('Auth check response status:', response.status);
-                    
-                    if (!response.ok) {
+                    //
+if (!response.ok) {
                         // Token is invalid, redirect to login
-                        // console.log('Auth check failed, clearing storage and redirecting');
-                        localStorage.clear();
+                        //
+localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
                     
                     const data = await response.json();
-                    // console.log('Auth check successful, user data:', data.user);
-                    this.loadUserData(data.user);
+                    //
+this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     localStorage.clear();
@@ -650,7 +645,6 @@
                     e.preventDefault();
                     window.location.href = '/past-conversations.html';
                 });
-                
 
             }
             
@@ -674,15 +668,13 @@
                     adminStatsSidebar.classList.add('show');
                     agentsGrid.classList.add('admin-layout');
                     mainContent.classList.add('admin-layout');
-                    console.log('Admin user detected, showing admin features');
-                    this.loadAdminStats();
+this.loadAdminStats();
                 } else {
                     usersBtn.style.display = 'none';
                     adminStatsSidebar.classList.remove('show');
                     agentsGrid.classList.remove('admin-layout');
                     mainContent.classList.remove('admin-layout');
-                    console.log('Regular user, hiding admin features');
-                }
+}
             }
 
             async handleLogout() {
@@ -821,9 +813,7 @@
                         console.error('No access token found for admin stats');
                         return;
                     }
-
-                    console.log('Loading admin statistics...');
-                    const response = await fetch('/api/db/conversation/stats', {
+const response = await fetch('/api/db/conversation/stats', {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
@@ -933,7 +923,6 @@
                     </div>
                 `;
             }
-
 
         }
 

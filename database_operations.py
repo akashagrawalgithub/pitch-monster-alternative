@@ -14,7 +14,6 @@ import os
 import time
 from functools import lru_cache
 
-
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
@@ -91,8 +90,7 @@ class DatabaseManager:
             # Insert into database
             result = client.table("conversations").insert(conversation_record).execute()
             
-            execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation saved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if result.data:
                 return {
@@ -118,7 +116,7 @@ class DatabaseManager:
             ).eq("id", conversation_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data[0] if result.data else None
         except Exception as e:
@@ -135,8 +133,7 @@ class DatabaseManager:
                 "id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status"
             ).eq("user_id", user_id).order("created_at", desc=True).limit(limit).execute()
             
-            execution_time = (time.time() - start_time) * 1000
-            print(f"✅ {len(result.data)} conversations retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data
         except Exception as e:
@@ -151,7 +148,7 @@ class DatabaseManager:
             result = self.supabase.table("conversations").update(updates).eq("id", conversation_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation updated in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return len(result.data) > 0
         except Exception as e:
@@ -166,7 +163,7 @@ class DatabaseManager:
             result = self.supabase.table("conversations").delete().eq("id", conversation_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation deleted in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return len(result.data) > 0
         except Exception as e:
@@ -190,8 +187,7 @@ class DatabaseManager:
             
             result = self.supabase.table("analysis").insert(analysis_record).execute()
             
-            execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Analysis saved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if result.data:
                 return {
@@ -215,7 +211,7 @@ class DatabaseManager:
             ).eq("id", analysis_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Analysis retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data[0] if result.data else None
         except Exception as e:
@@ -258,14 +254,12 @@ class DatabaseManager:
             if "created_at" not in best_pitch_record:
                 best_pitch_record["created_at"] = datetime.now().isoformat()
             
-            print(f"🔍 DEBUG: Saving best pitch for conversation_id: {conversation_id}, analysis_id: {analysis_id}")
-            print(f"🔍 DEBUG: Best pitch record keys: {list(best_pitch_record.keys())}")
-            print(f"🔍 DEBUG: User ID: {user_id}")
+            # Removed debug logging for performance
             
             result = client.table("best_pitch").insert(best_pitch_record).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Best pitch saved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if result.data:
                 return {
@@ -292,7 +286,7 @@ class DatabaseManager:
             ).eq("id", best_pitch_id).eq("user_id", user_id).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Best pitch retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data[0] if result.data else None
         except Exception as e:
@@ -308,27 +302,25 @@ class DatabaseManager:
             # The auth.uid() function in RLS policies doesn't work with custom JWT tokens
             client = self.supabase  # This is the service role client
             
-            print(f"🔍 DEBUG: Fetching best pitch for conversation_id: {conversation_id}")
-            print(f"🔍 DEBUG: Using service role client to bypass RLS")
+            # Removed debug logging for performance
             
             # First, let's check what's in the best_pitch table for this conversation
             all_best_pitches = client.table("best_pitch").select("*").eq("conversation_id", conversation_id).execute()
-            print(f"🔍 DEBUG: All best pitches for conversation {conversation_id}: {all_best_pitches.data}")
+            # Removed debug logging for performance
             
             # Only filter by conversation_id, not by user_id, since best pitch is conversation-specific
             result = client.table("best_pitch").select(
                 "id,conversation_id,analysis_id,perfect_conversation,score_improvement,created_at,overall_improvements"
             ).eq("conversation_id", conversation_id).execute()
             
-            print(f"🔍 DEBUG: Best pitch response data: {result.data}")
-            print(f"🔍 DEBUG: Best pitch response count: {len(result.data) if result.data else 0}")
+            # Removed debug logging for performance
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation best pitch retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if result.data:
                 best_pitch_data = result.data[0]
-                print(f"🔍 DEBUG: Best pitch data keys: {list(best_pitch_data.keys())}")
+                # Removed debug logging for performance
                 
                 # Parse JSON fields if they are stored as strings
                 json_fields = ['perfect_conversation', 'score_improvement', 'overall_improvements']
@@ -337,13 +329,13 @@ class DatabaseManager:
                         if isinstance(best_pitch_data[field], str):
                             try:
                                 best_pitch_data[field] = json.loads(best_pitch_data[field])
-                                print(f"✅ Parsed JSON field: {field}")
+                                # Removed logging for performance
                             except json.JSONDecodeError as e:
-                                print(f"⚠️ Failed to parse JSON field {field}: {e}")
+                                # Removed logging for performance
                 
                 return best_pitch_data
             else:
-                print(f"🔍 DEBUG: No best pitch found for conversation_id: {conversation_id}")
+                # Removed debug logging for performance
                 return None
                 
         except Exception as e:
@@ -365,7 +357,7 @@ class DatabaseManager:
             ).eq("user_id", user_id).order("conversation_created", desc=True).limit(limit).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Conversation summary retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return result.data
         except Exception as e:
@@ -386,7 +378,7 @@ class DatabaseManager:
             }).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Complete conversation data retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if result.data:
                 return result.data[0]
@@ -416,7 +408,7 @@ class DatabaseManager:
             best_pitch = self.get_conversation_best_pitch(conversation_id, user_id)
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ Fallback complete data retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             return {
                 "conversation": conversation,
@@ -441,7 +433,7 @@ class DatabaseManager:
             ).eq('user_id', user_id).order('created_at', desc=True).execute()
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ {len(response.data)} conversations retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if response.data:
                 return response.data
@@ -460,37 +452,37 @@ class DatabaseManager:
             # Use the service role client for database operations since we're using custom JWT auth
             client = self.supabase
             
-            print("🔍 DEBUG: Starting admin conversations query...")
+            # Removed debug logging for performance
             
             # First, let's try a simple query without join to see if we get any conversations
-            print("🔍 DEBUG: Testing simple query first...")
+            # Removed debug logging for performance
             simple_response = client.table('conversations').select('id,title,user_id').execute()
-            print(f"🔍 DEBUG: Simple query returned {len(simple_response.data)} conversations")
+            # Removed debug logging for performance
             if simple_response.data:
-                print(f"🔍 DEBUG: First conversation user_id: {simple_response.data[0].get('user_id')}")
+                # Removed debug logging for performance
             
             # Fetch conversations with agent and user information
-            print("🔍 DEBUG: Fetching conversations with agent and user info...")
+            # Removed debug logging for performance
             conversations_response = client.table('conversations').select(
                 'id,title,session_id,duration_seconds,total_exchanges,created_at,updated_at,status,user_id,agent_id,agents(title,agent_key)'
             ).order('created_at', desc=True).execute()
             
-            print(f"🔍 DEBUG: Conversations query returned {len(conversations_response.data)} conversations")
+            # Removed debug logging for performance
             
             # Fetch all users to create a lookup map
-            print("🔍 DEBUG: Fetching users for lookup...")
+            # Removed debug logging for performance
             users_response = client.table('users').select('id,first_name,last_name,email').execute()
-            print(f"🔍 DEBUG: Users query returned {len(users_response.data)} users")
+            # Removed debug logging for performance
             
             # Create a user lookup map
             users_map = {}
             for user in users_response.data:
                 users_map[user['id']] = user
             
-            print(f"🔍 DEBUG: Users map created with {len(users_map)} users")
+            # Removed debug logging for performance
             
             execution_time = (time.time() - start_time) * 1000
-            print(f"✅ {len(conversations_response.data)} conversations (admin) retrieved in {execution_time:.2f}ms")
+            # Removed logging for performance
             
             if conversations_response.data:
                 # Process the data to include user name and agent information
@@ -650,9 +642,9 @@ class DatabaseManager:
                         if isinstance(analysis_data[field], str):
                             try:
                                 analysis_data[field] = json.loads(analysis_data[field])
-                                print(f"✅ Parsed JSON field: {field}")
+                                # Removed logging for performance
                             except json.JSONDecodeError as e:
-                                print(f"⚠️ Failed to parse JSON field {field}: {e}")
+                                # Removed logging for performance
                                 # Keep as string if parsing fails
                 
                 return analysis_data
@@ -889,7 +881,6 @@ class DatabaseManager:
                 'recordings_80_plus_percentage': 0,
                 'top_role_plays': []
             }
-    
 
 # Utility functions for audio handling
 def encode_audio_to_base64(audio_bytes: bytes) -> str:

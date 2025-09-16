@@ -27,13 +27,13 @@ def get_current_user_id():
             return None
         
         token = auth_header.split(' ')[1]
-        print(f"Token received: {token[:20]}...")
+        # Removed logging for performance
         
         # Use our custom user manager to verify the token
         payload = user_manager.verify_token(token)
         
         if payload and 'user_id' in payload:
-            print(f"User ID: {payload['user_id']}")
+            # Removed logging for performance
             return payload['user_id']
         else:
             print("No valid user ID in token payload")
@@ -57,7 +57,7 @@ def get_user_role():
         payload = user_manager.verify_token(token)
         
         if payload and 'role' in payload:
-            print(f"User Role: {payload['role']}")
+            # Removed logging for performance
             return payload['role']
         else:
             print("No valid role in token payload")

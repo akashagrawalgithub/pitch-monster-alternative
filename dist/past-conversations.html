@@ -77,7 +77,6 @@
             margin-bottom: 8px;
         }
 
-
         .menu-item {
             display: flex;
             align-items: center;
@@ -140,8 +139,6 @@
         .back-button:hover {
             background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
         }
-
-
 
         /* Conversations Grid */
         .conversations-grid {
@@ -309,8 +306,6 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
-
-
         /* Loading and Empty States */
         .loading-state {
             text-align: center;
@@ -349,8 +344,6 @@
             margin-bottom: 16px;
             opacity: 0.5;
         }
-
-
 
         /* Pagination Styles */
         .pagination-container {
@@ -422,8 +415,6 @@
             }
         }
 
-        
-        
     </style>
 </head>
 <body>
@@ -470,8 +461,6 @@
                 </a>
             </div>
 
-
-
             <!-- Conversations Grid -->
             <div class="conversations-grid" id="conversationsGrid">
                 <div class="loading-state">
@@ -516,37 +505,34 @@
                     const isAuthenticated = localStorage.getItem('authenticated');
                     const accessToken = localStorage.getItem('accessToken');
                     
-                    // console.log('Auth check - isAuthenticated:', isAuthenticated);
-                    // console.log('Auth check - accessToken:', accessToken ? 'exists' : 'missing');
-                    
-                    if (!isAuthenticated || !accessToken) {
-                        console.log('Missing auth data, redirecting to login');
-                        window.location.href = '/login.html';
+                    //
+//
+if (!isAuthenticated || !accessToken) {
+window.location.href = '/login.html';
                         return;
                     }
                     
                     // Verify token with backend
-                    // console.log('Making auth check request to backend...');
-                    const response = await fetch('/auth/check', {
+                    //
+const response = await fetch('/auth/check', {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
                         }
                     });
                     
-                    // console.log('Auth check response status:', response.status);
-                    
-                    if (!response.ok) {
+                    //
+if (!response.ok) {
                         // Token is invalid, redirect to login
-                        // console.log('Auth check failed, clearing storage and redirecting');
-                        localStorage.clear();
+                        //
+localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
                     
                     const data = await response.json();
-                    // console.log('Auth check successful, user data:', data.user);
-                    this.loadUserData(data.user);
+                    //
+this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     localStorage.clear();
@@ -572,10 +558,8 @@
                 // Check if user is admin and show/hide admin features
                 const userRole = user.role || localStorage.getItem('userRole');
                 const usersBtn = document.getElementById('usersBtn');
-                
-                console.log('🔍 DEBUG: User object =', user);
-                console.log('🔍 DEBUG: userRole =', userRole);
-                console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRole'));
+
+console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRole'));
                 
                 if (userRole === 'admin') {
                     this.isAdmin = true;
@@ -584,16 +568,14 @@
                         <span class="material-icons">history</span>
                         All Conversations
                     `;
-                    console.log('Admin user detected, showing users menu');
-                } else {
+} else {
                     this.isAdmin = false;
                     usersBtn.style.display = 'none';
                     document.getElementById('pageTitle').innerHTML = `
                         <span class="material-icons">history</span>
                         Past Conversations
                     `;
-                    console.log('Regular user, hiding users menu');
-                }
+}
                 
                 // Load conversations AFTER setting isAdmin flag
                 this.loadConversations();
@@ -620,11 +602,8 @@
                     // Fetch all conversations (admin sees all, regular users see only their own)
                     const accessToken = localStorage.getItem('accessToken');
                     const endpoint = this.isAdmin ? '/api/db/get_all_conversations_admin' : '/api/db/get_all_conversations';
-                    
-                    console.log('🔍 DEBUG: isAdmin =', this.isAdmin);
-                    console.log('🔍 DEBUG: Using endpoint =', endpoint);
-                    
-                    const response = await fetch(endpoint, {
+
+const response = await fetch(endpoint, {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
@@ -841,9 +820,6 @@
                 }
             }
 
-
-
-
             showError(message) {
                 const conversationsGrid = document.getElementById('conversationsGrid');
                 conversationsGrid.innerHTML = `
@@ -857,9 +833,7 @@
 
             async viewFullAnalysis(conversationId) {
                 try {
-                    console.log('Loading full analysis for conversation:', conversationId);
-                    
-                    // Fetch the analysis data
+// Fetch the analysis data
                     const accessToken = localStorage.getItem('accessToken');
                     const response = await fetch('/api/db/get_conversation_analysis', {
                         method: 'POST',
@@ -875,14 +849,10 @@
                     }
                     
                     const data = await response.json();
-                    console.log('API Response data:', data);
-                    
-                    if (data.success) {
+if (data.success) {
                         // Debug the data structure
-                        console.log('Conversation data:', data.conversation);
-                        console.log('Analysis data:', data.analysis);
-                        
-                        // Check if we have the required data
+
+// Check if we have the required data
                         if (!data.conversation) {
                             throw new Error('No conversation data received');
                         }
@@ -892,17 +862,14 @@
                         }
                         
                         if (!data.conversation.transcript) {
-                            console.warn('No transcript data in conversation');
-                        }
+}
                         
                         // Store the data in sessionStorage for the analysis page
                         sessionStorage.setItem('chatTranscript', JSON.stringify(data.conversation.transcript || []));
                         sessionStorage.setItem('conversationId', conversationId);
                         sessionStorage.setItem('analysisId', data.analysis.id);
                         sessionStorage.setItem('currentAnalysisData', JSON.stringify(data.analysis));
-                        
-                        console.log('Data stored in sessionStorage successfully');
-                        console.log('chatTranscript:', sessionStorage.getItem('chatTranscript'));
+console.log('chatTranscript:', sessionStorage.getItem('chatTranscript'));
                         console.log('currentAnalysisData:', sessionStorage.getItem('currentAnalysisData'));
                         
                         // Navigate to analysis page with conversation ID
