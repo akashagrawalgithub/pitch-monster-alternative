@@ -12,7 +12,7 @@ import base64
 import numpy as np
 import json
 from backend_api import db_api
-# Removed unused import for performance
+from supabase import create_client, Client
 
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
