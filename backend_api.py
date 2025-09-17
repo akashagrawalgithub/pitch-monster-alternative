@@ -1134,6 +1134,56 @@ def deactivate_user():
         print(f"Error deactivating user: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@db_api.route('/users/create', methods=['POST'])
+def create_user_admin():
+    """Create a new user (admin only)"""
+    try:
+        # Get user ID from token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'No token provided'}), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = user_manager.verify_token(token)
+        
+        if not payload:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
+        
+        # Check if requesting user is admin
+        requesting_user = user_manager.get_user_by_id(payload['user_id'])
+        if not requesting_user or requesting_user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+        
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        role = data.get('role', 'user')
+        
+        if not email or not password:
+            return jsonify({'success': False, 'error': 'Email and password required'}), 400
+        
+        # Validate role
+        if role not in ['user', 'admin']:
+            return jsonify({'success': False, 'error': 'Invalid role. Must be "user" or "admin"'}), 400
+        
+        # Create user
+        user_data = user_manager.create_user(email, password, first_name, last_name, role)
+        
+        if user_data:
+            return jsonify({
+                'success': True,
+                'user': user_data,
+                'message': 'User created successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'User already exists or creation failed'}), 409
+        
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @db_api.route('/users/activate', methods=['POST'])
 def activate_user():
     """Activate user (admin only)"""

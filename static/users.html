@@ -356,6 +356,134 @@
                 padding: 8px 10px;
             }
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .close:hover {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background-color: #ffffff;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            background: #f9fafb;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .btn-cancel:hover {
+            background: #f3f4f6;
+        }
+
+        .form-group.required label::after {
+            content: " *";
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -429,6 +557,10 @@
             <div class="users-section">
                 <div class="section-header">
                     <h2 class="section-title">All Users</h2>
+                    <button class="btn btn-primary" id="createUserBtn">
+                        <span class="material-icons" style="font-size: 16px; margin-right: 8px;">add</span>
+                        Create User
+                    </button>
                 </div>
                 
                 <div class="table-container">
@@ -452,6 +584,53 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New User</h3>
+                <button class="close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createUserForm">
+                    <div class="form-row">
+                        <div class="form-group required">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group required">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="lastName" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required minlength="8">
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label for="role">Role</label>
+                        <select id="role" name="role" required>
+                            <option value="">Select a role</option>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-cancel" id="cancelBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn" form="createUserForm">Create User</button>
             </div>
         </div>
     </div>
@@ -511,6 +690,30 @@
                 document.getElementById('pastAnalysisBtn').addEventListener('click', (e) => {
                     e.preventDefault();
                     window.location.href = '/past-conversations.html';
+                });
+
+                // Modal event listeners
+                document.getElementById('createUserBtn').addEventListener('click', () => {
+                    this.openCreateUserModal();
+                });
+
+                document.getElementById('closeModal').addEventListener('click', () => {
+                    this.closeCreateUserModal();
+                });
+
+                document.getElementById('cancelBtn').addEventListener('click', () => {
+                    this.closeCreateUserModal();
+                });
+
+                document.getElementById('createUserModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'createUserModal') {
+                        this.closeCreateUserModal();
+                    }
+                });
+
+                document.getElementById('createUserForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.handleCreateUser();
                 });
             }
             
@@ -660,6 +863,79 @@
                 setTimeout(() => {
                     statusDiv.remove();
                 }, 5000);
+            }
+
+            openCreateUserModal() {
+                document.getElementById('createUserModal').style.display = 'block';
+                document.getElementById('firstName').focus();
+            }
+
+            closeCreateUserModal() {
+                document.getElementById('createUserModal').style.display = 'none';
+                document.getElementById('createUserForm').reset();
+            }
+
+            async handleCreateUser() {
+                try {
+                    const form = document.getElementById('createUserForm');
+                    const formData = new FormData(form);
+                    
+                    const userData = {
+                        first_name: formData.get('firstName'),
+                        last_name: formData.get('lastName'),
+                        email: formData.get('email'),
+                        password: formData.get('password'),
+                        role: formData.get('role')
+                    };
+
+                    // Validate form
+                    if (!userData.first_name || !userData.last_name || !userData.email || !userData.password || !userData.role) {
+                        this.showStatus('Please fill in all required fields', 'error');
+                        return;
+                    }
+
+                    // Disable submit button and show loading
+                    const submitBtn = document.getElementById('submitBtn');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Creating...';
+
+                    const accessToken = await this.getAccessToken();
+                    const response = await fetch('/api/db/users/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify(userData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showStatus('User created successfully!', 'success');
+                        this.closeCreateUserModal();
+                        
+                        // Refresh the users table and stats
+                        await this.loadUsers();
+                        await this.loadStats();
+                    } else {
+                        this.showStatus(data.error || 'Failed to create user', 'error');
+                    }
+
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+
+                } catch (error) {
+                    console.error('Error creating user:', error);
+                    this.showStatus('Error creating user: ' + error.message, 'error');
+                    
+                    // Re-enable submit button
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create User';
+                }
             }
 
             async handleLogout() {
