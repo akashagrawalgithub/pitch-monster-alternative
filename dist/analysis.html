@@ -1804,7 +1804,7 @@ audioPlayer = alternativeAudio;
         }
 
         // Function to setup recording player for past conversations
-        function setupPastConversationRecording(audioData, audioDuration) {
+        function setupPastConversationRecording(audioData, audioDuration, audioUrl = null) {
             const recordingPlayer = document.getElementById('recordingPlayer');
             const playBtn = document.getElementById('playBtn');
             const playIcon = document.getElementById('playIcon');
@@ -1812,8 +1812,28 @@ audioPlayer = alternativeAudio;
             const audioProgressFill = document.getElementById('audioProgressFill');
             const audioTime = document.getElementById('audioTime');
 
-console.log('Audio data preview:', audioData ? audioData.substring(0, 100) : 'null');
+            console.log('Audio data preview:', audioData ? audioData.substring(0, 100) : 'null');
+            console.log('Audio URL:', audioUrl);
 
+            // Priority 1: Check if we have a Supabase Storage URL (for large files)
+            if (audioUrl && audioUrl.length > 0) {
+                console.log('📤 Using audio from Supabase Storage:', audioUrl);
+                recordingPlayer.style.display = 'block';
+                
+                // Create audio element from storage URL
+                audioPlayer = new Audio(audioUrl);
+                
+                // Set duration if available
+                if (audioDuration) {
+                    audioPlayer.duration = parseFloat(audioDuration);
+                }
+                
+                // Setup audio event listeners
+                setupAudioEventListeners();
+                return;
+            }
+            
+            // Priority 2: Check if we have embedded audio data (for small files)
             if (audioData && audioData.length > 0) {
                 // Check if this is placeholder data
                 if (audioData === 'YXVkaW9fZGF0YV9wbGFjZWhvbGRlcg==' || audioData === 'audio_data_placeholder') {
@@ -2075,8 +2095,9 @@ updateAnalysisUI(analysisData.analysis);
                                 // Set up recording player if available
                                 if (analysisData.conversation) {
                                     const audioData = analysisData.conversation.audio_data;
+                                    const audioUrl = analysisData.conversation.audio_url;
                                     const audioDuration = analysisData.conversation.audio_duration_seconds;
-setupPastConversationRecording(audioData, audioDuration);
+                                    setupPastConversationRecording(audioData, audioDuration, audioUrl);
                                 }
                                 
                                 return;
@@ -2122,8 +2143,9 @@ console.log('Analysis data keys:', Object.keys(analysisData || {}));
                             const conversationData = await conversationResponse.json();
                             if (conversationData.success && conversationData.conversation) {
                                 const audioData = conversationData.conversation.audio_data;
+                                const audioUrl = conversationData.conversation.audio_url;
                                 const audioDuration = conversationData.conversation.audio_duration_seconds;
-setupPastConversationRecording(audioData, audioDuration);
+                                setupPastConversationRecording(audioData, audioDuration, audioUrl);
                             }
                         }
                     }

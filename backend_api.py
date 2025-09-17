@@ -67,6 +67,45 @@ def get_user_role():
         print(f"Error getting user role: {e}")
         return None
 
+@db_api.route('/upload_audio', methods=['POST'])
+def upload_audio():
+    """Upload large audio files to Supabase Storage"""
+    try:
+        data = request.get_json()
+        audio_data = data.get('audio_data')
+        filename = data.get('filename', f'audio_{int(time.time())}.webm')
+        
+        if not audio_data:
+            return jsonify({"success": False, "error": "No audio data provided"}), 400
+        
+        # Convert base64 to bytes
+        import base64
+        audio_bytes = base64.b64decode(audio_data.split(',')[1] if ',' in audio_data else audio_data)
+        
+        # Upload to Supabase Storage
+        from supabase import create_client
+        supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        # Upload file to storage bucket
+        storage_path = f"conversation_audio/{filename}"
+        result = supabase.storage.from_("audio-recordings").upload(storage_path, audio_bytes)
+        
+        if result:
+            # Get public URL
+            audio_url = supabase.storage.from_("audio-recordings").get_public_url(storage_path)
+            return jsonify({
+                "success": True,
+                "audio_url": audio_url,
+                "storage_path": storage_path,
+                "file_size_mb": len(audio_bytes) / 1024 / 1024
+            })
+        else:
+            return jsonify({"success": False, "error": "Failed to upload to storage"}), 500
+            
+    except Exception as e:
+        print(f"Audio upload error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @db_api.route('/save_conversation', methods=['POST'])
 def save_conversation():
     """Save complete conversation data when user ends the call"""

@@ -776,14 +776,57 @@ function startListening() {
     };
 
     recognition.onerror = (event: any) => {
-        isListening = false;
-        isProcessing = false;
-        isRecognitionActive = false;
-        recognition?.stop();
-        alert('Speech recognition error: ' + event.error);
+        console.error('Speech recognition error:', event.error);
+        
+        // Handle different types of errors
+        if (event.error === 'network') {
+            console.warn('Network error in speech recognition, attempting restart...');
+            // Don't stop completely for network errors, try to restart
+            setTimeout(() => {
+                if (isListening && !isRecognitionActive) {
+                    recognition?.start();
+                }
+            }, 1000);
+        } else if (event.error === 'aborted') {
+            // Recognition was intentionally aborted, don't restart
+            console.log('Speech recognition was aborted');
+            isListening = false;
+            isProcessing = false;
+            isRecognitionActive = false;
+        } else if (event.error === 'audio-capture') {
+            console.error('Audio capture error - microphone issue');
+            isListening = false;
+            isProcessing = false;
+            isRecognitionActive = false;
+            alert('Microphone access error. Please check your microphone permissions and try again.');
+        } else if (event.error === 'not-allowed') {
+            console.error('Speech recognition not allowed');
+            isListening = false;
+            isProcessing = false;
+            isRecognitionActive = false;
+            alert('Speech recognition permission denied. Please allow microphone access and reload the page.');
+        } else {
+            // For other errors (including service-not-available, no-speech), try to restart
+            console.warn(`Speech recognition error: ${event.error}, attempting restart...`);
+            isRecognitionActive = false;
+            
+            // Try to restart after a short delay
+            setTimeout(() => {
+                if (isListening && !isRecognitionActive) {
+                    try {
+                        recognition?.start();
+                    } catch (e) {
+                        console.error('Failed to restart recognition:', e);
+                    }
+                }
+            }, 2000); // 2 second delay before restart
+        }
     };
 
-    recognition.onstart = () => { isRecognitionActive = true; };
+    recognition.onstart = () => { 
+        isRecognitionActive = true; 
+        console.log('🎤 Microphone is listening and ready for speech input');
+    };
 
     recognition.onend = () => {
         isRecognitionActive = false;
@@ -799,6 +842,7 @@ function startListening() {
                 setTimeout(() => {
                     if (isListening && !isRecognitionActive) {
                         recognition?.start();
+                        console.log('🎤 Microphone restarted and listening again');
                         
                         // Restore interim text if we had one
                         if (currentInterimText && interimBubble) {
@@ -823,6 +867,23 @@ function startListening() {
     };
 
     recognition.start();
+    
+    // Proactive restart every 4 minutes to prevent 5-minute browser limit
+    const proactiveRestartInterval = setInterval(() => {
+        if (isListening && isRecognitionActive) {
+            console.log('🔄 Proactively restarting speech recognition to prevent 5-minute timeout');
+            console.log('🎤 Microphone restart - will resume listening shortly');
+            try {
+                recognition?.stop();
+                // The onend handler will restart it automatically
+            } catch (e) {
+                console.error('Error during proactive restart:', e);
+            }
+        } else if (!isListening) {
+            // Clear interval if we're no longer listening
+            clearInterval(proactiveRestartInterval);
+        }
+    }, 4 * 60 * 1000); // Every 4 minutes
 }
 
 // Function to clear only audio playback (not speech recognition)
@@ -1009,6 +1070,13 @@ async function speakStream(text: string): Promise<void> {
                                 combinedAudio.set(chunk, offset);
                                 offset += chunk.length;
                             }
+                            // Clear audio chunks to free memory
+                            audioChunks = [];
+                            
+                            // Force garbage collection if available
+                            if (window.gc) {
+                                window.gc();
+                            }
                             await playAudioBuffer(combinedAudio.buffer, 44100);
                         }
                         resolve();
@@ -1145,10 +1213,30 @@ function processUserInput(text: string) {
         if (fullReply.trim()) {
             addTranscript('AI', fullReply.trim());
         }
+        
+        // Clear memory to prevent accumulation
+        fullReply = '';
+        textBuffer = '';
         isProcessing = false;
+        
+        // Monitor memory usage and cleanup if needed
+        monitorMemoryUsage();
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+        }
     }).catch(err => {
         aiTranscript.update('Error: ' + err.message);
+        
+        // Clear memory even on error
+        fullReply = '';
+        textBuffer = '';
         isProcessing = false;
+        
+        if (window.gc) {
+            window.gc();
+        }
     });
 }
 
@@ -1297,6 +1385,13 @@ async function getAudioBuffer(text: string): Promise<ArrayBuffer> {
                                 combinedAudio.set(chunk, offset);
                                 offset += chunk.length;
                             }
+                            // Clear audio chunks to free memory
+                            audioChunks = [];
+                            
+                            // Force garbage collection if available
+                            if (window.gc) {
+                                window.gc();
+                            }
                             resolve(combinedAudio.buffer);
                         } else {
                             reject(new Error('No audio data received'));
@@ -1366,6 +1461,12 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
     return new Promise((resolve, reject) => {
         const controller = new AbortController();
         
+        // Add timeout to prevent hanging connections that block isProcessing
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            reject(new Error('Request timeout after 60 seconds'));
+        }, 60000); // 60 second timeout
+        
         // Get the selected agent type from localStorage
         const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
         
@@ -1375,6 +1476,8 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
         
         // Debug: Log session ID to ensure it's consistent
         console.log('🔍 Using session ID:', sessionId);
+        console.log('🔍 User input:', userText);
+        console.log('🔍 Agent type:', agentType);
         
         fetch('/chat_stream', {
             method: 'POST',
@@ -1393,6 +1496,7 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
             function read() {
                 reader.read().then(({ done, value }) => {
                     if (done) {
+                        clearTimeout(timeoutId);
                         resolve();
                         return;
                     }
@@ -1412,10 +1516,16 @@ function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void
                         }
                     }
                     read();
-                }).catch(reject);
+                }).catch((error) => {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                });
             }
             read();
-        }).catch(reject);
+        }).catch((error) => {
+            clearTimeout(timeoutId);
+            reject(error);
+        });
     });
 }
 
@@ -1522,7 +1632,8 @@ async function startAudioRecording() {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64Data = reader.result as string;
-                    sessionStorage.setItem('conversationRecording', base64Data);
+                    // Store audio data in memory instead of storage to avoid quota exceeded
+                    (window as any).conversationRecordingData = base64Data;
                     sessionStorage.setItem('hasRecording', 'true');
                     sessionStorage.setItem('recordingTimestamp', Date.now().toString());
                     
@@ -1585,7 +1696,8 @@ if (audioChunks.length > 0) {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64Data = reader.result as string;
-                    sessionStorage.setItem('conversationRecording', base64Data);
+                    // Store audio data in memory instead of storage to avoid quota exceeded
+                    (window as any).conversationRecordingData = base64Data;
                     sessionStorage.setItem('hasRecording', 'true');
                     sessionStorage.setItem('recordingTimestamp', Date.now().toString());
                     
@@ -1660,7 +1772,7 @@ async function navigateToAnalysis() {
         
         // Verify that we have fresh audio recording
         const hasRecording = sessionStorage.getItem('hasRecording');
-        const recordedAudio = sessionStorage.getItem('conversationRecording');
+        const recordedAudio = (window as any).conversationRecordingData;
         const recordingDuration = sessionStorage.getItem('recordingDuration');
         const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
 
@@ -1669,7 +1781,7 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
             await new Promise(resolve => setTimeout(resolve, 500));
             
             const retryHasRecording = sessionStorage.getItem('hasRecording');
-            const retryRecordedAudio = sessionStorage.getItem('conversationRecording');
+            const retryRecordedAudio = (window as any).conversationRecordingData;
             
             if (!retryHasRecording || retryHasRecording !== 'true' || !retryRecordedAudio) {
                 console.error('❌ Still no audio recording after retry - proceeding with placeholder');
@@ -1685,7 +1797,40 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
         const selectedAgentType = localStorage.getItem('selectedAgentType');
         const selectedAgentTitle = localStorage.getItem('selectedAgentTitle');
         
-        // Save conversation to database with verified audio data
+        // Handle audio data - upload to storage if large, embed if small
+        const audioData = getBase64Audio();
+        const audioSizeMB = audioData.length / 1024 / 1024;
+        let audioUrl = null;
+        let finalAudioData = audioData;
+        
+        // If audio is larger than 5MB, upload to Supabase Storage
+        if (audioSizeMB > 5) {
+            console.log(`📤 Uploading large audio file (${audioSizeMB.toFixed(2)}MB) to storage...`);
+            try {
+                const uploadResponse = await authenticatedFetch('/api/upload_audio', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        audio_data: audioData,
+                        filename: `conversation_${Date.now()}.webm`
+                    })
+                });
+                
+                if (uploadResponse.ok) {
+                    const uploadResult = await uploadResponse.json();
+                    audioUrl = uploadResult.audio_url;
+                    finalAudioData = btoa(`stored_in_supabase_storage:${audioUrl}`);
+                    console.log(`✅ Audio uploaded to storage: ${audioUrl}`);
+                } else {
+                    console.warn('⚠️ Audio upload failed, using truncated data');
+                    finalAudioData = btoa(`upload_failed_${audioSizeMB.toFixed(2)}MB`);
+                }
+            } catch (error) {
+                console.error('Audio upload error:', error);
+                finalAudioData = btoa(`upload_error_${audioSizeMB.toFixed(2)}MB`);
+            }
+        }
+
+        // Save conversation to database
         const conversationData = {
             title: `${selectedAgentTitle}`,
             agent_id: selectedAgentId,
@@ -1693,7 +1838,8 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
             total_exchanges: transcriptHistory.length,
             full_conversation: getConversationHistory(),
             transcript: transcriptHistory,
-            audio_data: getBase64Audio(),
+            audio_data: finalAudioData,
+            audio_url: audioUrl,
             audio_format: "pcm_f32le",
             sample_rate: 44100,
             audio_duration_seconds: getAudioDuration(),
@@ -1703,10 +1849,17 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
             tags: ["sales_call", "training", selectedAgentType || "general"],
             notes: `Sales training conversation using ${selectedAgentTitle || 'general'} agent `
         };
-const conversationResponse = await authenticatedFetch('/api/db/save_conversation', {
+// Add timeout for database save operation
+        const saveTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Database save timeout after 30 seconds')), 30000)
+        );
+        
+        const saveOperation = authenticatedFetch('/api/db/save_conversation', {
             method: 'POST',
             body: JSON.stringify(conversationData)
         });
+        
+        const conversationResponse = await Promise.race([saveOperation, saveTimeout]) as Response;
 if (!conversationResponse.ok) {
             const errorText = await conversationResponse.text();
             console.error('Conversation save error:', errorText);
@@ -1739,8 +1892,32 @@ if (!conversationResult.success) {
         
     } catch (error) {
         console.error('Error saving conversation:', error);
-        alert('Failed to save conversation. Please try again.');
-        // Don't navigate if save fails - let user try again
+        
+        // Check if it's a timeout or size issue
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('timeout') || errorMessage.includes('too large')) {
+            alert('Conversation was too long for database storage. The transcript has been saved locally, but audio recording was not saved due to size limits.');
+            
+            // Save transcript locally as backup
+            const transcriptBackup = {
+                timestamp: new Date().toISOString(),
+                duration: getCallDuration(),
+                transcript: transcriptHistory,
+                agent_type: localStorage.getItem('selectedAgentType')
+            };
+            localStorage.setItem('lastConversationBackup', JSON.stringify(transcriptBackup));
+            
+            // Navigate anyway since transcript is preserved
+            window.location.href = '/success.html';
+        } else {
+            alert('Failed to save conversation. Please try again.');
+            // Reset button state for retry
+            micBtn.innerHTML = micOffIcon;
+            micBtn.style.background = 'rgba(229,39,76,0.92)';
+            micBtn.disabled = false;
+            micBtn.style.cursor = 'pointer';
+            isChatActive = true;
+        }
     }
 }
 
@@ -1765,8 +1942,49 @@ async function clearConversationHistory() {
     }
 }
 
-// Function to clear previous analysis data when starting a new conversation
-async function clearPreviousAnalysisData() {
+// Function to clear accumulated data and prevent memory buildup
+function clearAccumulatedData() {
+    // Clear text chunks
+    textChunks = [];
+    
+    // Clear accumulated speech
+    accumulatedSpeech = '';
+    finalTranscript = '';
+    
+    // Clear audio chunks
+    audioChunks = [];
+    
+    // DON'T clear conversation recording data during active conversation
+    // This was breaking the recording system during conversations
+    // (window as any).conversationRecordingData = null;
+    
+    // Force garbage collection if available
+    if (window.gc) {
+        window.gc();
+    }
+    
+    console.log('🧹 Cleared accumulated data to prevent memory buildup');
+}
+
+// Function to monitor memory usage and prevent 15MB limit
+function monitorMemoryUsage() {
+    // Check if we're approaching memory limits
+    const audioDataSize = (window as any).conversationRecordingData ? 
+        (window as any).conversationRecordingData.length : 0;
+    const textChunksSize = textChunks.join('').length;
+    const totalEstimatedSize = audioDataSize + textChunksSize;
+    
+    // If we're approaching 10MB, clear accumulated data
+    if (totalEstimatedSize > 10 * 1024 * 1024) {
+        console.warn('⚠️ Approaching memory limit, clearing accumulated data');
+        clearAccumulatedData();
+    }
+    
+    // Log memory usage for debugging
+    console.log(`📊 Memory usage: Audio: ${(audioDataSize / 1024 / 1024).toFixed(2)}MB, Text: ${(textChunksSize / 1024).toFixed(2)}KB`);
+}
+
+function clearPreviousAnalysisData() {
     // Note: Don't clear conversation history automatically - let it persist for context
     // await clearConversationHistory();
     
@@ -1777,7 +1995,7 @@ async function clearPreviousAnalysisData() {
         'analysisId',
         'conversationId',
         'chatTranscript',
-        'conversationRecording',
+        // 'conversationRecording', // Now stored in memory, not storage
         'recordingDuration',
         'hasRecording',
         'recordingTimestamp',
@@ -1794,6 +2012,12 @@ async function clearPreviousAnalysisData() {
     if (audioChunks.length > 0) {
         audioChunks = [];
     }
+    
+    // Clear audio data from memory to prevent memory leaks
+    (window as any).conversationRecordingData = null;
+    
+    // Clear all accumulated data to prevent memory buildup
+    clearAccumulatedData();
     
     // Note: Don't generate new session ID - keep existing session for conversation continuity
     // const newSessionId = generateSessionId();
@@ -1818,35 +2042,29 @@ function getConversationHistory(): any[] {
 }
 
 function getBase64Audio(): string {
-    // Get actual recorded audio from sessionStorage
-    const recordedAudio = sessionStorage.getItem('conversationRecording');
+    // Get actual recorded audio from memory
+    const recordedAudio = (window as any).conversationRecordingData;
     const hasRecording = sessionStorage.getItem('hasRecording');
     const recordingDuration = sessionStorage.getItem('recordingDuration');
     const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
     
-    // Removed logging for performance
-    
     if (recordedAudio && hasRecording === 'true' && recordingDuration && recordingTimestamp) {
         // Verify the audio data is substantial (not just a placeholder)
         if (recordedAudio.length > 1000 && !recordedAudio.includes('audio_data_placeholder')) {
-            // Check if the recording is recent (within last 2 hours - extended from 5 minutes)
+            // Check if the recording is recent (within last 2 hours)
             const timestamp = parseInt(recordingTimestamp);
             const now = Date.now();
-            const isRecent = (now - timestamp) < 2 * 60 * 60 * 1000; // 2 hours instead of 5 minutes
+            const isRecent = (now - timestamp) < 2 * 60 * 60 * 1000;
             
             if (isRecent) {
-                // Removed logging for performance
+                const audioSizeMB = recordedAudio.length / 1024 / 1024;
+                console.log(`📊 Audio size: ${audioSizeMB.toFixed(2)}MB`);
                 return recordedAudio;
-            } else {
-                // Removed logging for performance
             }
-        } else {
-            // Removed logging for performance
         }
     }
     
     // Fallback to placeholder if no recording exists
-    // Removed logging for performance
     return btoa('audio_data_placeholder');
 }
 
@@ -1854,7 +2072,7 @@ function getAudioDuration(): number {
     // Get actual recording duration from sessionStorage
     const recordedDuration = sessionStorage.getItem('recordingDuration');
     const hasRecording = sessionStorage.getItem('hasRecording');
-    const recordedAudio = sessionStorage.getItem('conversationRecording');
+    const recordedAudio = (window as any).conversationRecordingData;
 
 if (recordedDuration && hasRecording === 'true' && recordedAudio) {
         const duration = parseFloat(recordedDuration);
@@ -2090,12 +2308,26 @@ micBtn.style.background = 'rgba(37,99,235,0.95)';
 isChatActive = false;
 setRecordingIndicator(false);
 
-// Set up periodic check for AI speaking status (no longer stops recording)
+// Set up periodic check for AI speaking status and stuck processing
+let lastProcessingTime = 0;
 setInterval(() => {
     if (!isBuffering && audioPlaybackQueue.length === 0 && !isPlayingQueue) {
         // Double-check that we're not in the middle of processing
         if (!isProcessing) {
-}
+            // Reset processing time tracker
+            lastProcessingTime = 0;
+        }
+    }
+    
+    // Check if isProcessing is stuck (longer than 2 minutes)
+    if (isProcessing) {
+        if (lastProcessingTime === 0) {
+            lastProcessingTime = Date.now();
+        } else if (Date.now() - lastProcessingTime > 120000) { // 2 minutes
+            console.error('⚠️ isProcessing stuck for 2+ minutes, forcing reset');
+            isProcessing = false;
+            lastProcessingTime = 0;
+        }
     }
 }, 3000); // Check every 3 seconds
 

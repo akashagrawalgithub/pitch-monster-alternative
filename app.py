@@ -407,6 +407,11 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
+    # Debug: Log conversation history
+    print(f"🔍 Session ID: {session_id}")
+    print(f"🔍 Conversation history length: {len(conversation_history)}")
+    print(f"🔍 Recent history: {conversation_history[-3:] if len(conversation_history) > 0 else 'Empty'}")
+    
     max_history = 5  # Reduced for maximum speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
@@ -421,6 +426,11 @@ def chat_stream():
         messages.append({"role": "user", "content": msg["user"]})
         messages.append({"role": "assistant", "content": msg["assistant"]})
     messages.append({"role": "user", "content": user_input})
+    
+    # Debug: Log messages being sent to AI
+    print(f"🔍 Messages being sent to AI: {len(messages)} total")
+    for i, msg in enumerate(messages[-6:]):  # Show last 6 messages
+        print(f"🔍 Message {i}: {msg['role']}: {msg['content'][:100]}...")
 
     def generate():
         try:
@@ -449,6 +459,10 @@ def chat_stream():
             })
             if len(conversation_history) > 15:
                 conversation_history[:] = conversation_history[-15:]
+            
+            # Debug: Log conversation history after saving
+            print(f"🔍 Conversation history saved. Length: {len(conversation_history)}")
+            print(f"🔍 Last entry: User: {user_input[:50]}... | Assistant: {full_reply[:50]}...")
                 
         except Exception as e:
             error_message = str(e).lower()
