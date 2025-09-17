@@ -568,6 +568,10 @@
                 this.currentPage = 1;
                 this.itemsPerPage = 15;
                 this.totalPages = 0;
+                
+                // Ensure loader is hidden on page initialization (fixes back button issue)
+                this.hideLoader();
+                
                 this.initializeAuth();
                 this.initializeEventListeners();
                 // loadConversations() is now called from loadUserData() after isAdmin is set
@@ -979,6 +983,34 @@ const response = await fetch(endpoint, {
         
         document.addEventListener('DOMContentLoaded', function () {
             pastConversationsPage = new PastConversationsPage();
+        });
+
+        // Hide loader when page becomes visible (handles browser back button)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page became visible, hide any lingering loader
+                const loaderOverlay = document.getElementById('loaderOverlay');
+                if (loaderOverlay) {
+                    loaderOverlay.classList.remove('show');
+                }
+            }
+        });
+
+        // Also hide loader on page focus (additional safety net)
+        window.addEventListener('focus', function() {
+            const loaderOverlay = document.getElementById('loaderOverlay');
+            if (loaderOverlay) {
+                loaderOverlay.classList.remove('show');
+            }
+        });
+
+        // Hide loader immediately when page loads (handles browser back button)
+        window.addEventListener('pageshow', function(event) {
+            // This event fires when page is loaded from cache (back button)
+            const loaderOverlay = document.getElementById('loaderOverlay');
+            if (loaderOverlay) {
+                loaderOverlay.classList.remove('show');
+            }
         });
     </script>
 </body>
