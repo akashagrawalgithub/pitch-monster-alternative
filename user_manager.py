@@ -26,18 +26,34 @@ class UserManager:
         return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
     
     def create_user(self, email: str, password: str, first_name: str = None, last_name: str = None, role: str = 'user') -> Optional[Dict]:
-        """Create a new user"""
+        """Create a new user - First in Supabase Auth, then in custom users table"""
         try:
-            # Check if user already exists
+            # Check if user already exists in custom users table
             existing_user = self.get_user_by_email(email)
             if existing_user:
                 return None
             
-            # Hash the password
+            # Step 1: Create user in Supabase Authentication
+            auth_response = self.supabase.auth.admin.create_user({
+                "email": email,
+                "password": password,
+                "email_confirm": True  # Auto-confirm email
+            })
+            
+            if not auth_response.user:
+                print("Failed to create user in Supabase Auth")
+                return None
+            
+            # Get the UUID from Supabase Auth
+            auth_user_id = auth_response.user.id
+            print(f"✅ Created user in Supabase Auth with ID: {auth_user_id}")
+            
+            # Step 2: Create user record in custom users table with same UUID
+            # Hash the password for our custom table (for custom auth if needed)
             password_hash = self.hash_password(password)
             
-            # Create user
             result = self.supabase.table("users").insert({
+                "id": auth_user_id,  # Use the same UUID from auth.users
                 "email": email,
                 "password_hash": password_hash,
                 "first_name": first_name,
@@ -50,9 +66,16 @@ class UserManager:
                 user = result.data[0]
                 # Don't return password hash
                 user.pop('password_hash', None)
+                print(f"✅ Created user record in custom users table")
                 return user
-            
-            return None
+            else:
+                # If custom table insert fails, clean up auth user
+                print("❌ Failed to create user in custom table, cleaning up auth user")
+                try:
+                    self.supabase.auth.admin.delete_user(auth_user_id)
+                except Exception as cleanup_error:
+                    print(f"Failed to cleanup auth user: {cleanup_error}")
+                return None
             
         except Exception as e:
             print(f"Error creating user: {e}")
