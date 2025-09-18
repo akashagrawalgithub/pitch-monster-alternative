@@ -1807,7 +1807,7 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
         if (audioSizeMB > 5) {
             console.log(`📤 Uploading large audio file (${audioSizeMB.toFixed(2)}MB) to storage...`);
             try {
-                const uploadResponse = await authenticatedFetch('/api/upload_audio', {
+                const uploadResponse = await authenticatedFetch('/api/db/upload_audio', {
                     method: 'POST',
                     body: JSON.stringify({
                         audio_data: audioData,
