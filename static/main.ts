@@ -435,8 +435,27 @@ function createUI() {
     buttonText.style.fontSize = '14px';
     buttonText.style.fontWeight = '600';
     buttonText.style.whiteSpace = 'nowrap';
-    buttonText.style.pointerEvents = 'none';
+    buttonText.style.pointerEvents = 'auto';
     buttonText.style.transition = 'color 0.2s';
+
+    // Add click handler to buttonText for manual restart
+    buttonText.onclick = () => {
+        if (isListening && !isRecognitionActive) {
+            console.log('🔧 Manual restart triggered by user');
+            buttonText.style.color = '#f59e0b';
+            buttonText.textContent = 'Restarting...';
+            
+            try {
+                recognition?.start();
+            } catch (e) {
+                console.error('Manual restart failed:', e);
+                // Force fresh start
+                startListening();
+            }
+        }
+    };
+    buttonText.style.cursor = 'pointer';
+    buttonText.style.userSelect = 'none';
 
     micWrap.appendChild(buttonText);
     micWrap.appendChild(micBtn);
@@ -602,6 +621,7 @@ let timerInterval: number | null = null;
 let secondsElapsed = 0;
 let transcriptHistory: { sender: 'AI' | 'You', text: string, time: string }[] = [];
 let isRecognitionActive = false;
+let isRestartingRecognition = false; // Prevent multiple restart attempts
 let audioContext: AudioContext | null = null;
 let audioBufferQueue: ArrayBuffer[] = [];
 let isAudioPlaying = false;
@@ -752,7 +772,7 @@ function startListening() {
                 clearTimeout(speechTimeout);
             }
             
-            // Set a 300ms pause detection timeout for conversational flow
+            // Set a 1000ms pause detection timeout for conversational flow (increased for longer thinking time)
             speechPauseTimeout = window.setTimeout(() => {
                 if (finalTranscript.trim().length > 0) {
                     // Use the most complete speech available
@@ -771,7 +791,7 @@ function startListening() {
                 }
                 speechPauseTimeout = null;
                 isUserSpeaking = false;
-            }, 300); // Wait 300ms of silence before processing
+            }, 300); // Wait 1000ms of silence before processing
         }
     };
 
@@ -813,11 +833,7 @@ function startListening() {
             // Try to restart after a short delay
             setTimeout(() => {
                 if (isListening && !isRecognitionActive) {
-                    try {
-                        recognition?.start();
-                    } catch (e) {
-                        console.error('Failed to restart recognition:', e);
-                    }
+                    restartRecognitionSafely('error-recovery');
                 }
             }, 2000); // 2 second delay before restart
         }
@@ -826,10 +842,26 @@ function startListening() {
     recognition.onstart = () => { 
         isRecognitionActive = true; 
         console.log('🎤 Microphone is listening and ready for speech input');
+        
+        // Update UI to show recognition is active
+        const buttonText = document.getElementById('buttonText');
+        if (buttonText && isListening) {
+            buttonText.style.color = '#10b981'; // Green when actively listening
+            buttonText.textContent = 'Listening...';
+        }
     };
 
     recognition.onend = () => {
         isRecognitionActive = false;
+        console.log('🎤 Speech recognition ended');
+        
+        // Update UI to show recognition stopped
+        const buttonText = document.getElementById('buttonText');
+        if (buttonText && isListening) {
+            buttonText.style.color = '#f59e0b'; // Orange when restarting
+            buttonText.textContent = 'Restarting...';
+        }
+        
         if (isListening && !isProcessing) {
             // Restart recognition immediately if we're still supposed to be listening
             if (!isRecognitionActive && isListening) {
@@ -838,11 +870,14 @@ function startListening() {
                 const currentFinalText = finalTranscript;
                 const currentAccumulatedSpeech = accumulatedSpeech;
                 
-                // Restart immediately to avoid gaps in speech capture
+                // Use safe restart to avoid conflicts
                 setTimeout(() => {
                     if (isListening && !isRecognitionActive) {
-                        recognition?.start();
-                        console.log('🎤 Microphone restarted and listening again');
+                        // Restore speech state
+                        if (currentFinalText) finalTranscript = currentFinalText;
+                        if (currentAccumulatedSpeech) accumulatedSpeech = currentAccumulatedSpeech;
+                        
+                        restartRecognitionSafely('natural-end');
                         
                         // Restore interim text if we had one
                         if (currentInterimText && interimBubble) {
@@ -850,40 +885,38 @@ function startListening() {
                                 if (interimBubble) {
                                     interimBubble.update(currentInterimText);
                                 }
-                            }, 50);
-                        }
-                        
-                        // Restore final transcript and accumulated speech if we had any
-                        if (currentFinalText) {
-                            finalTranscript = currentFinalText;
-                        }
-                        if (currentAccumulatedSpeech) {
-                            accumulatedSpeech = currentAccumulatedSpeech;
+                            }, 150);
                         }
                     }
-                }, 50); // Minimal delay to restart recognition
+                }, 100); // Minimal delay to restart recognition
             }
         }
     };
 
     recognition.start();
+    recognition.startTime = Date.now(); // Track when recognition started
     
-    // Proactive restart every 4 minutes to prevent 5-minute browser limit
-    const proactiveRestartInterval = setInterval(() => {
-        if (isListening && isRecognitionActive) {
-            console.log('🔄 Proactively restarting speech recognition to prevent 5-minute timeout');
-            console.log('🎤 Microphone restart - will resume listening shortly');
-            try {
-                recognition?.stop();
-                // The onend handler will restart it automatically
-            } catch (e) {
-                console.error('Error during proactive restart:', e);
-            }
-        } else if (!isListening) {
-            // Clear interval if we're no longer listening
-            clearInterval(proactiveRestartInterval);
+    // Single health monitor for long conversations
+    const healthMonitorInterval = setInterval(() => {
+        if (!isListening) {
+            clearInterval(healthMonitorInterval);
+            return;
         }
-    }, 4 * 60 * 1000); // Every 4 minutes
+        
+        // Health check every 10 seconds
+        if (isListening && !isRecognitionActive && !isProcessing && !isRestartingRecognition) {
+            console.log('🏥 Health check: Recognition not active, restarting...');
+            restartRecognitionSafely('health-check');
+        }
+        
+        // Proactive restart every 3 minutes to prevent browser timeout
+        const now = Date.now();
+        if (recognition && recognition.startTime && (now - recognition.startTime) > 3 * 60 * 1000) {
+            console.log('🔄 Proactive restart to prevent browser timeout');
+            recognition.startTime = now; // Reset timer
+            restartRecognitionSafely('proactive-timeout');
+        }
+    }, 10 * 1000); // Check every 10 seconds
 }
 
 // Function to clear only audio playback (not speech recognition)
@@ -945,10 +978,48 @@ function clearAllOutstandingAudio() {
     isBuffering = false;
 }
 
+// Centralized restart function to prevent conflicts
+function restartRecognitionSafely(reason: string = 'manual') {
+    if (isRestartingRecognition || !isListening) {
+        console.log(`⏭️ Skipping restart (${reason}) - already restarting or not listening`);
+        return;
+    }
+    
+    isRestartingRecognition = true;
+    console.log(`🔄 Safe restart triggered: ${reason}`);
+    
+    try {
+        // Stop current recognition if active
+        if (recognition && isRecognitionActive) {
+            recognition.stop();
+        }
+        
+        // Wait a moment then start fresh
+        setTimeout(() => {
+            if (isListening && !isRecognitionActive) {
+                try {
+                    recognition?.start();
+                    console.log('✅ Recognition restarted successfully');
+                } catch (e) {
+                    console.error('Restart failed, creating new recognition:', e);
+                    // Create completely new recognition instance
+                    startListening();
+                }
+            }
+            isRestartingRecognition = false;
+        }, 100);
+        
+    } catch (e) {
+        console.error('Error in safe restart:', e);
+        isRestartingRecognition = false;
+    }
+}
+
 function stopListening() {
 isListening = false;
     isProcessing = false;
     isRecognitionActive = false;
+    isRestartingRecognition = false;
     
     if (recognition) {
         try {
@@ -1219,6 +1290,13 @@ function processUserInput(text: string) {
         textBuffer = '';
         isProcessing = false;
         
+        // Ensure speech recognition is actively listening after AI response
+        setTimeout(() => {
+            if (isListening && !isRecognitionActive && !isProcessing) {
+                restartRecognitionSafely('after-ai-response');
+            }
+        }, 500); // Small delay to ensure AI audio starts playing first
+        
         // Monitor memory usage and cleanup if needed
         monitorMemoryUsage();
         
@@ -1233,6 +1311,13 @@ function processUserInput(text: string) {
         fullReply = '';
         textBuffer = '';
         isProcessing = false;
+        
+        // Restart speech recognition after error too
+        setTimeout(() => {
+            if (isListening && !isRecognitionActive && !isProcessing) {
+                restartRecognitionSafely('after-ai-error');
+            }
+        }, 1000);
         
         if (window.gc) {
             window.gc();
