@@ -1841,12 +1841,34 @@ recordingPlayer.style.display = 'none';
                     return;
                 }
                 
+                // Check if audio_data contains a Supabase storage reference
+                try {
+                    const decodedAudioData = atob(audioData);
+                    if (decodedAudioData.startsWith('stored_in_supabase_storage:')) {
+                        const supabaseUrl = decodedAudioData.replace('stored_in_supabase_storage:', '');
+                        console.log('📤 Found Supabase URL in audio_data:', supabaseUrl);
+                        
+                        // Use the Supabase URL directly
+                        recordingPlayer.style.display = 'block';
+                        audioPlayer = new Audio(supabaseUrl);
+                        
+                        if (audioDuration) {
+                            audioPlayer.duration = parseFloat(audioDuration);
+                        }
+                        
+                        setupAudioEventListeners();
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Audio data is not base64 encoded storage reference');
+                }
+                
                 // Check if audio data is already a data URL
                 let audioDataUrl;
                 if (audioData.startsWith('data:audio/')) {
                     // Already a data URL
                     audioDataUrl = audioData;
-} else {
+                } else {
                     // Try to detect the audio format and create proper data URL
                     // First, try to determine if it's base64 encoded
                     const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(audioData);
