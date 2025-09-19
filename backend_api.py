@@ -95,9 +95,22 @@ def upload_audio():
             
         supabase = create_client(supabase_url, supabase_key)
         
-        # Upload file to storage bucket
+        # Upload file to storage bucket with correct content-type
         storage_path = f"conversation_audio/{filename}"
-        result = supabase.storage.from_("audio-recordings").upload(storage_path, audio_bytes)
+        
+        # Create file-like object with proper content type
+        import io
+        audio_file = io.BytesIO(audio_bytes)
+        
+        # Upload with proper content type specification
+        result = supabase.storage.from_("audio-recordings").upload(
+            storage_path,
+            audio_file,
+            file_options={
+                "content-type": "audio/webm",
+                "cache-control": "public, max-age=3600"
+            }
+        )
         
         if result:
             # Get public URL
