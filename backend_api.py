@@ -84,7 +84,15 @@ def upload_audio():
         
         # Upload to Supabase Storage
         from supabase import create_client
-        supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        
+        # Get environment variables
+        supabase_url = os.environ.get('SUPABASE_URL')
+        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+        
+        if not supabase_url or not supabase_key:
+            return jsonify({"success": False, "error": "Supabase environment variables not found"}), 500
+            
+        supabase = create_client(supabase_url, supabase_key)
         
         # Upload file to storage bucket
         storage_path = f"conversation_audio/{filename}"
