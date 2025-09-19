@@ -11,6 +11,7 @@ from datetime import datetime
 import json
 import uuid
 import time
+import os
 
 # Create Blueprint for database API routes
 db_api = Blueprint('db_api', __name__)
