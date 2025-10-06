@@ -199,9 +199,9 @@ IMPORTANT: You must respond ONLY with valid JSON. Do not include any explanatory
 ### Scoring Guidelines:
 - **Original Score**: Use the provided analysis data overall_score.percentage, or analyze if not provided
 - **Perfect Score Calculation**: 
-  - Short conversation (1-3 exchanges): 80-85% max
-  - Medium conversation (4-6 exchanges): 85-90% max  
-  - Long conversation (7+ exchanges): 90-95% max
+  - Short conversation (1-3 exchanges): 40-50% max
+  - Medium conversation (4-6 exchanges): 55-75% max  
+  - Long conversation (7+ exchanges): 75-80% max
   - Consider conversation complexity and prospect difficulty
 
 For each exchange in the conversation, provide:
