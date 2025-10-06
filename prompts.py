@@ -84,44 +84,49 @@ When analyzing a sales call, always produce:
 - Objection Handling (g/y/r + evidence)  
 - Closing (g/y/r + evidence)  
 
-### 3. Scoring (Integer-Only, Strict)
-- **Sales Skills (40%)**: 0–5⭐ (→ percent). Strict evidence-gated (Intro, Discovery, Presentation, Objection/Closing).  
-- **Voice & Delivery (30%)**: 0–100, integers only. Evidence of clarity, tone, confidence. Cap ≤ 75 unless all 4 positives are present.  
-- **Process Flow (20%)**: Stage points (2=green,1=yellow,0=red). Scale to percent.  
-- **Engagement & Professionalism (10%)**: 0–100 integer. Curiosity, relevance, politeness.  
+### 3. Scoring (Integer-Only, Strict, Skills-Only)
 
-### 4. Penalties & Caps
-- **No demo ask** → cap overall 69%.  
-- **Weak discovery (<60%)** → cap 74%.  
-- **Objection unhandled** → cap 70%.  
-- **Persona mismatch** → –10 overall & cap 79%.  
-- **Objection unresolved**:  
-  - ROI = –12  
-  - Tool already used = –10  
-  - Data outdated = –15  
-  - Too busy = –8  
-- **Call <3 human turns** = –15.  
+Step 1: Base Score
+- Start with **Human Sales Skills Assessment** (Intro, Discovery, Presentation, Objection Handling, Closing).
+- Convert stars → percent (e.g., 3⭐ = 60%).
+- Add adjustments from **Voice & Delivery, Process Flow, Engagement**.
+- This gives the **raw skill score**.
 
-### 5. Weighted Calculation
-base = 0.40*(SalesSkills%) + 0.30*(Voice%) + 0.20*(Process%) + 0.10*(Engagement%)
-overall_hard = floor(base * 0.88) - 5
-overall_score = int(max(0, min(overall_hard, cap)))
+Step 2: Apply Penalties & Caps
+- No demo ask → cap overall at 69%
+- Weak discovery (<60%) → cap 74%
+- Objection unhandled → cap 70%
+- Persona mismatch → –10 points & cap 79%
+- Objections unresolved:
+  - ROI concern = –12
+  - “Already have tool” = –10
+  - Data outdated = –15
+  - Too busy = –8
+- <3 rep turns = –15
 
-### 6. Grade Scale
-- 90–100 = A+  
-- 85–89 = A  
-- 80–84 = B+  
-- 75–79 = B  
-- 70–74 = C+  
-- 60–69 = C  
-- 50–59 = D  
-- <50 = F  
+Step 3: Final Score
+base_score = SalesSkills% + adjustments (Voice + Process + Engagement)  
+overall_score = int(floor(min(base_score, penalty_caps)))
+
+Step 4: Grade Scale
+- 90–100 = A+
+- 85–89 = A
+- 80–84 = B+
+- 75–79 = B
+- 70–74 = C+
+- 60–69 = C
+- 50–59 = D
+- <50 = F
+
+---
 
 ### Edge Cases to Handle:
-- Very short conversations: Focus on communication basics and demo invitation attempt
-- One-sided conversations: Score based on available rep responses
-- Incomplete calls: Mark missing stages appropriately
-- Different personas: Adjust expectations (e.g., ROI focus for startups, supplier trust for importers, verified buyers for exporters)
+- Very short conversations: Focus on communication basics and demo invitation attempt  
+- One-sided conversations: Score based on available rep responses  
+- Incomplete calls: Mark missing stages appropriately  
+- Different personas: Adjust expectations (e.g., ROI focus for startups, supplier trust for importers, verified buyers for exporters)  
+
+---
 
 ## Response Format:
 You MUST respond with ONLY a valid JSON object in the exact format specified below. Do not include any additional text, explanations, or formatting outside the JSON structure.
@@ -137,7 +142,7 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
     "confidence_level": "number (0-100, based on human performance)"
   },
   "overall_score": {
-    "percentage": "number (0-100, based on human sales performance)",
+    "percentage": "number (0-100, based on human Sales Skills Assessment)",
     "grade": "string (e.g., 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D', 'F')"
   },
   "key_metrics": {
@@ -174,22 +179,22 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
   "sales_skills_assessment": {
     "introduction_quality": {
       "stars": "number (0-5, human introduction effectiveness)",
-      "score": "number (0-5 with decimals)",
+      "score": "number (0-5 with integer)",
       "description": "string (human's opening and rapport building)"
     },
     "need_analysis": {
       "stars": "number (0-5, human discovery skills)",
-      "score": "number (0-5 with decimals)",
+      "score": "number (0-5 with integer)",
       "description": "string (human's ability to understand prospect needs)"
     },
     "objection_handling": {
       "stars": "number (0-5, human objection handling)",
-      "score": "number (0-5 with decimals)",
+      "score": "number (0-5 with integer)",
       "description": "string (human's effectiveness in addressing concerns)"
     },
     "closing_skills": {
       "stars": "number (0-5, human closing effectiveness)",
-      "score": "number (0-5 with decimals)",
+      "score": "number (0-5 with integer)",
       "description": "string (human's ability to move toward commitment)"
     }
   },
