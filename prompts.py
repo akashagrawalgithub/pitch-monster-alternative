@@ -16,13 +16,13 @@ Volza is a **global trade intelligence platform** that empowers:
 - **Importers** → source suppliers, minimize cost, reduce delivery risk  
 - **Startups** → lean intelligence, ROI-driven sourcing  
 
-**Volza’s Key Features**:  
+**Volza's Key Features**:  
 - Global shipment data & competitive analysis  
 - Verified buyer/supplier contact discovery  
 - Advanced filters & duty minimizer  
 - Hot product tracker & real-time alerts  
 
-**Coaching Implication**: Always guide reps to **map Volza’s features** to buyer persona **NPFDQ** (Needs, Problems, Desires, Fears, Questions).
+**Coaching Implication**: Always guide reps to **map Volza's features** to buyer persona **NPFDQ** (Needs, Problems, Desires, Fears, Questions).
 
 ---
 
@@ -102,12 +102,12 @@ For each stage, determine completion score (0-100%):
 - missed = 0-39% (not done or very poor)
 
 **Step 2: Calculate Overall Score**
-overall_score = (introduction_score × 0.20) + (discovery_score × 0.20) + (presentation_score × 0.20) + (objection_score × 0.20) + (closing_score × 0.20)
+overall_score = (introduction_score x 0.20) + (discovery_score x 0.20) + (presentation_score x 0.20) + (objection_score x 0.20) + (closing_score x 0.20)
 
 **Examples:**
 - All stages at 100% = 100% overall
 - All stages at 50% = 50% overall
-- Intro 50%, rest missed = 10% overall (50% × 0.20 = 10%)
+- Intro 50%, rest missed = 10% overall (50% x 0.20 = 10%)
 - Intro 100%, Discovery 100%, rest missed = 40% overall
 - Minimal conversation (nothing done) = 0-10% overall
 
@@ -121,15 +121,15 @@ overall_score = (introduction_score × 0.20) + (discovery_score × 0.20) + (pres
 overall_score = int(floor(overall_score))
 
 **Step 5: Grade Scale**
-- 90–100 = A+ (All stages completed excellently)
-- 80–89 = A (All stages completed well)
-- 70–79 = B+ (Most stages completed, 1 stage weak)
-- 60–69 = B (3-4 stages completed)
-- 50–59 = C+ (2-3 stages completed)
-- 40–49 = C (2 stages completed)
-- 30–39 = D (1 stage completed)
-- 20–29 = F (Only introduction done)
-- 0–19 = F (Nothing/minimal done)
+- 90-100 = A+ (All stages completed excellently)
+- 80-89 = A (All stages completed well)
+- 70-79 = B+ (Most stages completed, 1 stage weak)
+- 60-69 = B (3-4 stages completed)
+- 50-59 = C+ (2-3 stages completed)
+- 40-49 = C (2 stages completed)
+- 30-39 = D (1 stage completed)
+- 20-29 = F (Only introduction done)
+- 0-19 = F (Nothing/minimal done)
 
 ---
 
@@ -137,7 +137,7 @@ overall_score = int(floor(overall_score))
 **Overall Score = % of Complete Sales Job Done**
 
 - **100%**: Perfect execution of all 5 stages
-- **80%**: All 5 stages done well (4×100% + 1×0%)
+- **80%**: All 5 stages done well (4x100% + 1×0%)
 - **60%**: 3 out of 5 stages completed at 100%
 - **40%**: 2 out of 5 stages completed at 100%
 - **20%**: Only 1 stage (usually intro) completed
@@ -283,7 +283,7 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
     ]
   }
 }
-```
+"""
 
 
 bestPitchPrompt = """You are a sales training expert. You will receive a conversation transcript and existing analysis data. Your task is to create the PERFECT version of this conversation by replacing only the salesperson's responses with optimal responses while keeping the AI/prospect responses exactly the same.

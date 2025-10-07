@@ -79,9 +79,21 @@ def upload_audio():
         if not audio_data:
             return jsonify({"success": False, "error": "No audio data provided"}), 400
         
+        # Check file size before processing
+        audio_size_mb = len(audio_data) / 1024 / 1024
+        print(f"📤 Processing audio upload: {audio_size_mb:.2f}MB")
+        
+        # Limit file size to prevent memory issues
+        if audio_size_mb > 50:  # 50MB limit
+            return jsonify({"success": False, "error": f"File too large: {audio_size_mb:.2f}MB (max 50MB)"}), 413
+        
         # Convert base64 to bytes
         import base64
-        audio_bytes = base64.b64decode(audio_data.split(',')[1] if ',' in audio_data else audio_data)
+        try:
+            audio_bytes = base64.b64decode(audio_data.split(',')[1] if ',' in audio_data else audio_data)
+        except Exception as decode_error:
+            print(f"Base64 decode error: {decode_error}")
+            return jsonify({"success": False, "error": "Invalid audio data format"}), 400
         
         # Upload to Supabase Storage
         from supabase import create_client
@@ -91,42 +103,291 @@ def upload_audio():
         supabase_key = os.environ.get('SUPABASE_ANON_KEY')
         
         if not supabase_url or not supabase_key:
+            print("❌ Supabase environment variables missing")
             return jsonify({"success": False, "error": "Supabase environment variables not found"}), 500
             
-        supabase = create_client(supabase_url, supabase_key)
+        try:
+            supabase = create_client(supabase_url, supabase_key)
+        except Exception as client_error:
+            print(f"❌ Supabase client creation failed: {client_error}")
+            return jsonify({"success": False, "error": "Failed to connect to Supabase"}), 500
         
         # Upload file to storage bucket with correct content-type
         storage_path = f"conversation_audio/{filename}"
         
-        # Create file-like object with proper content type
-        import io
-        audio_file = io.BytesIO(audio_bytes)
+        print(f"📤 Uploading to Supabase Storage: {storage_path}")
         
         # Upload with proper content type specification
-        result = supabase.storage.from_("audio-recordings").upload(
-            storage_path,
-            audio_file,
-            file_options={
-                "content-type": "audio/webm",
-                "cache-control": "public, max-age=3600"
-            }
-        )
+        # Supabase expects bytes, not BytesIO object
+        try:
+            result = supabase.storage.from_("audio-recordings").upload(
+                storage_path,
+                audio_bytes,  # Pass bytes directly, not BytesIO
+                file_options={
+                    "content-type": "audio/webm",
+                    "cache-control": "public, max-age=3600"
+                }
+            )
+        except Exception as upload_error:
+            print(f"❌ Supabase upload failed: {upload_error}")
+            return jsonify({"success": False, "error": f"Upload failed: {str(upload_error)}"}), 500
         
         if result:
             # Get public URL
-            audio_url = supabase.storage.from_("audio-recordings").get_public_url(storage_path)
-            return jsonify({
-                "success": True,
-                "audio_url": audio_url,
-                "storage_path": storage_path,
-                "file_size_mb": len(audio_bytes) / 1024 / 1024
-            })
+            try:
+                audio_url = supabase.storage.from_("audio-recordings").get_public_url(storage_path)
+                print(f"✅ Upload successful: {audio_url}")
+                return jsonify({
+                    "success": True,
+                    "audio_url": audio_url,
+                    "storage_path": storage_path,
+                    "file_size_mb": len(audio_bytes) / 1024 / 1024
+                })
+            except Exception as url_error:
+                print(f"❌ Failed to get public URL: {url_error}")
+                return jsonify({"success": False, "error": "Upload successful but failed to get URL"}), 500
         else:
+            print("❌ Upload returned no result")
             return jsonify({"success": False, "error": "Failed to upload to storage"}), 500
             
     except Exception as e:
-        print(f"Audio upload error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        print(f"❌ Audio upload error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Server error: {str(e)}"}), 500
+
+@db_api.route('/test_large_upload', methods=['POST'])
+def test_large_upload():
+    """Test uploading a large file to identify the exact error"""
+    try:
+        import requests
+        import base64
+        import time
+        
+        # Download a large test file (40MB)
+        print("📥 Downloading large test file...")
+        test_url = "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"  # Large audio file
+        
+        # Alternative: Create a large dummy file
+        print("📝 Creating 40MB dummy audio file...")
+        dummy_data = b"RIFF" + b"WAVE" + b"data" + (b"0" * (40 * 1024 * 1024))  # 40MB dummy WAV
+        
+        # Convert to base64
+        audio_base64 = base64.b64encode(dummy_data).decode('utf-8')
+        audio_size_mb = len(audio_base64) / 1024 / 1024
+        
+        print(f"📊 Created test file: {audio_size_mb:.2f}MB")
+        
+        # Test the upload process step by step
+        from supabase import create_client
+        
+        # Get environment variables
+        supabase_url = os.environ.get('SUPABASE_URL')
+        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+        
+        if not supabase_url or not supabase_key:
+            return jsonify({
+                "success": False,
+                "error": "Supabase environment variables not found",
+                "step": "environment_check"
+            }), 500
+        
+        print("🔗 Creating Supabase client...")
+        try:
+            supabase = create_client(supabase_url, supabase_key)
+        except Exception as client_error:
+            return jsonify({
+                "success": False,
+                "error": f"Failed to create Supabase client: {str(client_error)}",
+                "step": "client_creation"
+            }), 500
+        
+        print("🪣 Checking storage bucket...")
+        try:
+            buckets = supabase.storage.list_buckets()
+            audio_bucket = None
+            for bucket in buckets:
+                if bucket.name == 'audio-recordings':
+                    audio_bucket = bucket
+                    break
+            
+            if not audio_bucket:
+                return jsonify({
+                    "success": False,
+                    "error": "audio-recordings bucket not found",
+                    "available_buckets": [bucket.name for bucket in buckets],
+                    "step": "bucket_check"
+                }), 404
+        except Exception as bucket_error:
+            return jsonify({
+                "success": False,
+                "error": f"Failed to list buckets: {str(bucket_error)}",
+                "step": "bucket_listing"
+            }), 500
+        
+        print("🔄 Converting base64 to bytes...")
+        try:
+            audio_bytes = base64.b64decode(audio_base64)
+            print(f"✅ Converted to bytes: {len(audio_bytes) / 1024 / 1024:.2f}MB")
+        except Exception as decode_error:
+            return jsonify({
+                "success": False,
+                "error": f"Base64 decode failed: {str(decode_error)}",
+                "step": "base64_decode"
+            }), 500
+        
+        # Test upload with detailed logging
+        storage_path = f"test_audio/large_test_{int(time.time())}.wav"
+        print(f"📤 Attempting upload to: {storage_path}")
+        
+        try:
+            result = supabase.storage.from_("audio-recordings").upload(
+                storage_path,
+                audio_bytes,  # Pass bytes directly, not BytesIO
+                file_options={
+                    "content-type": "audio/wav",
+                    "cache-control": "public, max-age=3600"
+                }
+            )
+            
+            if result:
+                print("✅ Upload successful!")
+                try:
+                    audio_url = supabase.storage.from_("audio-recordings").get_public_url(storage_path)
+                    return jsonify({
+                        "success": True,
+                        "message": "Large file upload test successful",
+                        "file_size_mb": len(audio_bytes) / 1024 / 1024,
+                        "storage_path": storage_path,
+                        "audio_url": audio_url,
+                        "bucket_info": {
+                            "name": audio_bucket.name,
+                            "public": audio_bucket.public
+                        }
+                    })
+                except Exception as url_error:
+                    return jsonify({
+                        "success": False,
+                        "error": f"Upload successful but failed to get URL: {str(url_error)}",
+                        "step": "url_generation",
+                        "storage_path": storage_path
+                    }), 500
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Upload returned no result",
+                    "step": "upload_result"
+                }), 500
+                
+        except Exception as upload_error:
+            print(f"❌ Upload failed: {upload_error}")
+            import traceback
+            traceback.print_exc()
+            
+            return jsonify({
+                "success": False,
+                "error": f"Upload failed: {str(upload_error)}",
+                "step": "upload_attempt",
+                "file_size_mb": len(audio_bytes) / 1024 / 1024,
+                "storage_path": storage_path,
+                "bucket_info": {
+                    "name": audio_bucket.name,
+                    "public": audio_bucket.public
+                },
+                "traceback": traceback.format_exc()
+            }), 500
+            
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": f"Test failed: {str(e)}",
+            "step": "general_error",
+            "traceback": traceback.format_exc()
+        }), 500
+
+@db_api.route('/test_storage', methods=['GET'])
+def test_storage():
+    """Test Supabase Storage connection and permissions"""
+    try:
+        from supabase import create_client
+        
+        # Get environment variables
+        supabase_url = os.environ.get('SUPABASE_URL')
+        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+        
+        if not supabase_url or not supabase_key:
+            return jsonify({
+                "success": False, 
+                "error": "Supabase environment variables not found",
+                "details": {
+                    "supabase_url": bool(supabase_url),
+                    "supabase_key": bool(supabase_key)
+                }
+            }), 500
+            
+        try:
+            supabase = create_client(supabase_url, supabase_key)
+        except Exception as client_error:
+            return jsonify({
+                "success": False, 
+                "error": f"Failed to create Supabase client: {str(client_error)}"
+            }), 500
+        
+        # Test bucket access
+        try:
+            buckets = supabase.storage.list_buckets()
+            audio_bucket = None
+            for bucket in buckets:
+                if bucket.name == 'audio-recordings':
+                    audio_bucket = bucket
+                    break
+            
+            if not audio_bucket:
+                return jsonify({
+                    "success": False,
+                    "error": "audio-recordings bucket not found",
+                    "available_buckets": [bucket.name for bucket in buckets]
+                }), 404
+            
+            # Test file listing (should work with public access)
+            try:
+                files = supabase.storage.from_("audio-recordings").list("conversation_audio")
+                return jsonify({
+                    "success": True,
+                    "message": "Storage connection successful",
+                    "bucket_info": {
+                        "name": audio_bucket.name,
+                        "id": audio_bucket.id,
+                        "public": audio_bucket.public,
+                        "created_at": str(audio_bucket.created_at)
+                    },
+                    "file_count": len(files) if files else 0
+                })
+            except Exception as list_error:
+                return jsonify({
+                    "success": False,
+                    "error": f"Failed to list files: {str(list_error)}",
+                    "bucket_info": {
+                        "name": audio_bucket.name,
+                        "id": audio_bucket.id,
+                        "public": audio_bucket.public
+                    }
+                }), 500
+                
+        except Exception as bucket_error:
+            return jsonify({
+                "success": False,
+                "error": f"Failed to access buckets: {str(bucket_error)}"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"Storage test failed: {str(e)}"
+        }), 500
 
 @db_api.route('/save_conversation', methods=['POST'])
 def save_conversation():
