@@ -84,47 +84,79 @@ When analyzing a sales call, always produce:
 - Objection Handling (g/y/r + evidence)  
 - Closing (g/y/r + evidence)  
 
-### 3. Scoring (Integer-Only, Strict, Skills-Only)
+### 3. Scoring (Objective Job Completion Scoring)
 
-Step 1: Base Score
-- Start with **Human Sales Skills Assessment** (Intro, Discovery, Presentation, Objection Handling, Closing).
-- Convert stars → percent (e.g., 3⭐ = 60%).
-- Add adjustments from **Voice & Delivery, Process Flow, Engagement**.
-- This gives the **raw skill score**.
+**CRITICAL: Overall Score = % of Sales Job Completed**
 
-Step 2: Apply Penalties & Caps
-- No demo ask → cap overall at 69%
-- Weak discovery (<60%) → cap 74%
-- Objection unhandled → cap 70%
-- Persona mismatch → –10 points & cap 79%
-- Objections unresolved:
-  - ROI concern = –12
-  - “Already have tool” = –10
-  - Data outdated = –15
-  - Too busy = –8
-- <3 rep turns = –15
+The salesperson's job has 5 equal stages, each worth 20%:
+- Introduction: 20%
+- Discovery: 20%
+- Presentation: 20%
+- Objection Handling: 20%
+- Closing: 20%
 
-Step 3: Final Score
-base_score = SalesSkills% + adjustments (Voice + Process + Engagement)  
-overall_score = int(floor(min(base_score, penalty_caps)))
+**Step 1: Score Each Stage (from Sales Process Flow)**
+For each stage, determine completion score (0-100%):
+- completed = 80-100% (excellent execution)
+- partial = 40-79% (attempted but incomplete)
+- missed = 0-39% (not done or very poor)
 
-Step 4: Grade Scale
-- 90–100 = A+
-- 85–89 = A
-- 80–84 = B+
-- 75–79 = B
-- 70–74 = C+
-- 60–69 = C
-- 50–59 = D
-- <50 = F
+**Step 2: Calculate Overall Score**
+overall_score = (introduction_score × 0.20) + (discovery_score × 0.20) + (presentation_score × 0.20) + (objection_score × 0.20) + (closing_score × 0.20)
+
+**Examples:**
+- All stages at 100% = 100% overall
+- All stages at 50% = 50% overall
+- Intro 50%, rest missed = 10% overall (50% × 0.20 = 10%)
+- Intro 100%, Discovery 100%, rest missed = 40% overall
+- Minimal conversation (nothing done) = 0-10% overall
+
+**Step 3: Apply Reality Checks**
+- If total exchanges < 3: overall score MUST be ≤ 20%
+- If no discovery questions asked: discovery_score = 0%
+- If no demo/meeting/next-step asked: closing_score = 0%
+- If no objections raised: objection_score = N/A (redistribute weight to other 4 stages = 25% each)
+
+**Step 4: Final Score**
+overall_score = int(floor(overall_score))
+
+**Step 5: Grade Scale**
+- 90–100 = A+ (All stages completed excellently)
+- 80–89 = A (All stages completed well)
+- 70–79 = B+ (Most stages completed, 1 stage weak)
+- 60–69 = B (3-4 stages completed)
+- 50–59 = C+ (2-3 stages completed)
+- 40–49 = C (2 stages completed)
+- 30–39 = D (1 stage completed)
+- 20–29 = F (Only introduction done)
+- 0–19 = F (Nothing/minimal done)
 
 ---
 
+### What Overall Score Signifies:
+**Overall Score = % of Complete Sales Job Done**
+
+- **100%**: Perfect execution of all 5 stages
+- **80%**: All 5 stages done well (4×100% + 1×0%)
+- **60%**: 3 out of 5 stages completed at 100%
+- **40%**: 2 out of 5 stages completed at 100%
+- **20%**: Only 1 stage (usually intro) completed
+- **10%**: Half of introduction done, nothing else
+- **0%**: Minimal/no sales activity
+
 ### Edge Cases to Handle:
-- Very short conversations: Focus on communication basics and demo invitation attempt  
-- One-sided conversations: Score based on available rep responses  
-- Incomplete calls: Mark missing stages appropriately  
-- Different personas: Adjust expectations (e.g., ROI focus for startups, supplier trust for importers, verified buyers for exporters)  
+- Minimal conversation (1-2 exchanges): Usually 0-10% (only greeting, no real sales work)
+- Very short conversations (3-4 exchanges): Usually 10-30% (intro + partial discovery)
+- Short conversations (5-7 exchanges): Usually 30-50% (intro + discovery, missing close)
+- No objections raised by prospect: Redistribute objection_handling weight (25% each to other 4 stages)
+- Different personas: Same 5-stage model applies to all
+
+### Critical Scoring Rules:
+1. Minimal conversation (nothing done) = 0%
+2. Only greeting/introduction = 10-20%
+3. Missing closing (no demo/meeting ask) = closing_score = 0%
+4. Missing discovery (no questions) = discovery_score = 0%
+5. Each missed stage = lose that 20%
 
 ---
 
@@ -253,17 +285,6 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
 }
 ```
 
-## Important Notes:
-1. **Focus on Human Performance**: All scores and assessments should reflect the human sales representative's skills and effectiveness
-2. **Use AI Context**: Consider the AI's responses to understand what the human was responding to and how well they handled different scenarios
-3. **Realistic Scoring**: Score based on actual human performance, not ideal scenarios
-4. **Actionable Feedback**: Provide specific, actionable advice for the human to improve their sales skills
-5. **Always return valid JSON** - no additional text or formatting
-6. **Handle edge cases gracefully** (short conversations, incomplete calls, etc.)
-7. **Ensure all numeric values are within specified ranges**
-8. **Use descriptive text that provides value for human sales training**
-"""
-
 
 bestPitchPrompt = """You are a sales training expert. You will receive a conversation transcript and existing analysis data. Your task is to create the PERFECT version of this conversation by replacing only the salesperson's responses with optimal responses while keeping the AI/prospect responses exactly the same.
 
@@ -284,11 +305,14 @@ IMPORTANT: You must respond ONLY with valid JSON. Do not include any explanatory
 
 ### Scoring Guidelines:
 - **Original Score**: Use the provided analysis data overall_score.percentage, or analyze if not provided
-- **Perfect Score Calculation**: 
-  - Short conversation (1-3 exchanges): 40-50% max
-  - Medium conversation (4-6 exchanges): 55-75% max  
-  - Long conversation (7+ exchanges): 75-80% max
-  - Consider conversation complexity and prospect difficulty
+- **Perfect Score Calculation** (Based on job completion % with perfect responses):
+  - Calculate what % of the 5 sales stages (intro, discovery, presentation, objection, close) were ATTEMPTED
+  - Each stage worth 20%, perfect execution = 100% of that 20%
+  - Short conversation (1-3 exchanges): Usually only intro + partial discovery = 60-70% max with perfect responses
+  - Medium conversation (4-6 exchanges): Intro + discovery + presentation = 75-85% max with perfect responses
+  - Long conversation (7+ exchanges): All stages = 90-100% possible
+  - Missing close (no demo ask) = cap at 80% even with perfect responses
+- **Improvement** = perfect_score - original_score
 
 For each exchange in the conversation, provide:
 1. The original response they gave
