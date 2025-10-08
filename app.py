@@ -655,7 +655,7 @@ INSTRUCTIONS:
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=2000,  # Reduced for faster response
+            max_tokens=3000,  # Reduced for faster response
             temperature=0.1,  # Lower for faster, more consistent output
             response_format={"type": "json_object"},
             timeout=60.0  # Increased to 60 seconds for complex requests
@@ -680,6 +680,15 @@ INSTRUCTIONS:
             # Enhanced error logging for debugging
             print(f"❌ JSON Parse Error: {str(e)}")
             print(f"❌ Raw response that failed to parse: {perfect_pitch_result}")
+            
+            # Check if response was truncated (common cause of JSON errors)
+            if not perfect_pitch_result.endswith('}'):
+                print("⚠️ Response appears to be truncated - incomplete JSON")
+                return jsonify({
+                    "error": "Response was truncated - insufficient token limit for conversation length",
+                    "debug_info": f"Response length: {len(perfect_pitch_result)}, Ends with: {perfect_pitch_result[-50:]}",
+                    "suggestion": "Try with a shorter conversation or increase token limit"
+                }), 500
             
             # Try to extract JSON from response if it has extra text
             try:

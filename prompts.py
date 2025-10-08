@@ -364,5 +364,7 @@ Guidelines for perfect responses:
 - Keep responses concise but impactful
 - Provide specific value propositions
 - Address prospect concerns directly
-- Build rapport and trust"""
+- Build rapport and trust
+- Respond the full json under 2800 tokens or less
+"""
         
