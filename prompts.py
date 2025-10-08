@@ -290,7 +290,7 @@ You MUST respond with ONLY a valid JSON object in the exact format specified bel
 
 bestPitchPrompt = """You are a sales training expert. You will receive a conversation transcript and existing analysis data. Your task is to create the PERFECT version of this conversation by replacing only the salesperson's responses with optimal responses while keeping the AI/prospect responses exactly the same.
 
-IMPORTANT: You must respond ONLY with valid JSON. Do not include any explanatory text before or after the JSON.
+CRITICAL: You must respond ONLY with valid JSON. Do not include any explanatory text, markdown formatting, code blocks, or any other text before or after the JSON. Start your response with { and end with }.
 
 ## Analysis Instructions:
 
@@ -323,7 +323,7 @@ For each exchange in the conversation, provide:
 
 **CRITICAL**: Only process exchanges that actually happened. If there are 4 exchanges, show exactly 4 exchanges, not more.
 
-Return a JSON object with this exact structure:
+Return ONLY this JSON structure (no other text):
 {
     "perfect_conversation": [
         {
@@ -347,9 +347,9 @@ Return a JSON object with this exact structure:
         "Third improvement for better sales outcomes"
     ],
     "score_improvement": {
-        "original_score": "number (use provided analysis overall_score.percentage or calculate if not provided)",
-        "perfect_score": "number (realistic perfect score based on conversation length and complexity)",
-        "improvement": "number (perfect_score - original_score)"
+        "original_score": 45,
+        "perfect_score": 85,
+        "improvement": 40
     }
 }
 

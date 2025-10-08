@@ -662,6 +662,11 @@ INSTRUCTIONS:
         )
         
         perfect_pitch_result = response.choices[0].message.content.strip()
+        
+        # Debug logging for JSON parsing issues
+        print(f"🔍 Raw OpenAI response length: {len(perfect_pitch_result)}")
+        print(f"🔍 Raw response preview: {perfect_pitch_result[:200]}...")
+        
         try:
             perfect_pitch_data = json.loads(perfect_pitch_result)
             required_fields = ['perfect_conversation', 'overall_improvements', 'score_improvement']
@@ -672,7 +677,27 @@ INSTRUCTIONS:
             return jsonify(perfect_pitch_data)
             
         except json.JSONDecodeError as e:
-            return jsonify({"error": "Invalid JSON response from perfect pitch generation"}), 500
+            # Enhanced error logging for debugging
+            print(f"❌ JSON Parse Error: {str(e)}")
+            print(f"❌ Raw response that failed to parse: {perfect_pitch_result}")
+            
+            # Try to extract JSON from response if it has extra text
+            try:
+                # Look for JSON object in the response
+                start_idx = perfect_pitch_result.find('{')
+                end_idx = perfect_pitch_result.rfind('}') + 1
+                if start_idx != -1 and end_idx > start_idx:
+                    json_part = perfect_pitch_result[start_idx:end_idx]
+                    print(f"🔍 Attempting to parse extracted JSON: {json_part[:200]}...")
+                    perfect_pitch_data = json.loads(json_part)
+                    return jsonify(perfect_pitch_data)
+            except:
+                pass
+            
+            return jsonify({
+                "error": "Invalid JSON response from perfect pitch generation",
+                "debug_info": f"Response length: {len(perfect_pitch_result)}, Preview: {perfect_pitch_result[:100]}"
+            }), 500
             
     except Exception as e:
         # Removed logging for performance
