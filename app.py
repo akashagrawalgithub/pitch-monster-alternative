@@ -29,7 +29,7 @@ openai_client = OpenAI(
     api_key=OPENAI_API_KEY,
     http_client=httpx.Client(
         limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
-        timeout=httpx.Timeout(30.0, connect=10.0),  # Increased timeout for longer requests
+        timeout=httpx.Timeout(90.0, connect=15.0),  # Increased timeout for complex requests
         http2=True
     )
 )
@@ -651,14 +651,14 @@ INSTRUCTIONS:
             }
         ]
         
-        # Call OpenAI for perfect pitch generation
+        # Call OpenAI for perfect pitch generation with optimized settings
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=3000,
-            temperature=0.2,
+            max_tokens=2000,  # Reduced for faster response
+            temperature=0.1,  # Lower for faster, more consistent output
             response_format={"type": "json_object"},
-            timeout=30.0  # 30 seconds for perfect pitch generation
+            timeout=60.0  # Increased to 60 seconds for complex requests
         )
         
         perfect_pitch_result = response.choices[0].message.content.strip()
