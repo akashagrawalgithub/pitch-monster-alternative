@@ -91,10 +91,10 @@ When analyzing a sales call, always produce:
 **CRITICAL: Overall Score = % of Sales Job Completed**
 
 The salesperson's job has 5 equal stages, each worth 20%:
-- Introduction: 10%
-- Discovery: 25%
+- Introduction: 20%
+- Discovery: 20%
 - Presentation: 20%
-- Objection Handling: 25%
+- Objection Handling: 20%
 - Closing: 20%
 
 **Step 1: Score Each Stage (from Sales Process Flow)**
@@ -104,7 +104,7 @@ For each stage, determine completion score (0-100%):
 - missed = 0-39% (not done or very poor)
 
 **Step 2: Calculate Overall Score**
-overall_score = (introduction_score x 0.10) + (discovery_score x 0.25) + (presentation_score x 0.20) + (objection_score x 0.25) + (closing_score x 0.20)
+overall_score = (introduction_score x 0.20) + (discovery_score x 0.20) + (presentation_score x 0.20) + (objection_score x 0.20) + (closing_score x 0.20)
 
 **Examples:**
 - All stages at 100% = 100% overall
