@@ -407,11 +407,6 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
-    # Debug: Log conversation history
-    print(f"🔍 Session ID: {session_id}")
-    print(f"🔍 Conversation history length: {len(conversation_history)}")
-    print(f"🔍 Recent history: {conversation_history[-3:] if len(conversation_history) > 0 else 'Empty'}")
-    
     max_history = 5  # Reduced for maximum speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
@@ -428,7 +423,7 @@ def chat_stream():
     messages.append({"role": "user", "content": user_input})
     
     # Debug: Log messages being sent to AI
-    print(f"🔍 Messages being sent to AI: {len(messages)} total")
+    # print(f"🔍 Messages being sent to AI: {len(messages)} total")
     for i, msg in enumerate(messages[-6:]):  # Show last 6 messages
         print(f"🔍 Message {i}: {msg['role']}: {msg['content'][:100]}...")
 
@@ -508,6 +503,8 @@ def analyze_conversation():
     try:
         data = request.json
         transcript = data.get('transcript', [])
+        agent_id = data.get('agent_id')
+        agent_key = data.get('agent_key')
         
         if not transcript:
             return jsonify({"error": "No transcript provided"}), 400
@@ -520,11 +517,36 @@ def analyze_conversation():
             time_stamp = exchange.get('time', '')
             conversation_text += f"Exchange {i} ({time_stamp}):\n{sender}: {text}\n\n"
         
-        # Prepare the analysis prompt with the conversation
+        # Fetch sample script from database if agent information is provided
+        sample_script = ""
+        if agent_id or agent_key:
+            try:
+                from database_operations import DatabaseManager
+                db = DatabaseManager()
+                
+                if agent_key:
+                    # Get agent by key
+                    agent = db.get_agent_by_key(agent_key)
+                    if agent:
+                        sample_script = agent.get('sample_script', '')
+                elif agent_id:
+                    # Get agent by ID
+                    agent = db.get_agent_by_id(agent_id)
+                    if agent:
+                        sample_script = agent.get('sample_script', '')
+            except Exception as e:
+                print(f"Error fetching sample script: {e}")
+                # Continue without sample script if there's an error
+        
+        # Prepare the analysis prompt with the conversation and sample script
+        analysis_prompt = analysisPrompt
+        if sample_script:
+            analysis_prompt += f"\n\n### SAMPLE SCRIPT FOR REFERENCE:\n\n{sample_script}"
+        
         analysis_messages = [
             {
                 "role": "system",
-                "content": analysisPrompt
+                "content": analysis_prompt
             },
             {
                 "role": "user",

@@ -154,20 +154,7 @@ class DatabaseManager:
             print(f"Error updating conversation: {e}")
             return False
     
-    def delete_conversation(self, conversation_id: str, user_id: str) -> bool:
-        """Delete a conversation (will cascade to analysis and best_pitch)"""
-        try:
-            start_time = time.time()
-            
-            result = self.supabase.table("conversations").delete().eq("id", conversation_id).eq("user_id", user_id).execute()
-            
-            execution_time = (time.time() - start_time) * 1000
-            # Removed logging for performance
-            
-            return len(result.data) > 0
-        except Exception as e:
-            print(f"Error deleting conversation: {e}")
-            return False
+    
     
     # OPTIMIZED ANALYSIS OPERATIONS
     def save_analysis(self, user_id: str, conversation_id: str, analysis_data: Dict) -> Dict:
@@ -767,6 +754,26 @@ class DatabaseManager:
             print(f"Error getting agent by key: {e}")
             return None
     
+    def get_agent_by_id(self, agent_id: str) -> Optional[Dict]:
+        """Get a specific agent by its ID"""
+        try:
+            start_time = time.time()
+            
+            # Use service role client for agent operations to bypass RLS
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            result = service_client.table("agents").select(
+                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active,sample_script"
+            ).eq("id", agent_id).eq("is_active", True).execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ Agent {agent_id} retrieved in {execution_time:.2f}ms")
+            
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"Error getting agent by ID: {e}")
+            return None
+    
     def update_agent_sample_script(self, agent_key: str, sample_script: str) -> bool:
         """Update the sample script for a specific agent"""
         try:
@@ -804,22 +811,7 @@ class DatabaseManager:
             print(f"Error getting agents by type: {e}")
             return []
     
-    def get_agents_by_difficulty(self, difficulty: str) -> List[Dict]:
-        """Get all agents of a specific difficulty level"""
-        try:
-            start_time = time.time()
-            
-            result = self.supabase.table("agents").select(
-                "id,agent_key,title,agent_name,icon,icon_class,type,guidelines,difficulty,is_active"
-            ).eq("difficulty", difficulty).eq("is_active", True).order("title").execute()
-            
-            execution_time = (time.time() - start_time) * 1000
-            print(f"✅ {len(result.data)} agents of difficulty {difficulty} retrieved in {execution_time:.2f}ms")
-            
-            return result.data
-        except Exception as e:
-            print(f"Error getting agents by difficulty: {e}")
-            return []
+    
 
     def get_conversation_stats(self) -> Dict:
         """Get conversation statistics for admin dashboard"""

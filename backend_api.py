@@ -156,238 +156,9 @@ def upload_audio():
         traceback.print_exc()
         return jsonify({"success": False, "error": f"Server error: {str(e)}"}), 500
 
-@db_api.route('/test_large_upload', methods=['POST'])
-def test_large_upload():
-    """Test uploading a large file to identify the exact error"""
-    try:
-        import requests
-        import base64
-        import time
-        
-        # Download a large test file (40MB)
-        print("📥 Downloading large test file...")
-        test_url = "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"  # Large audio file
-        
-        # Alternative: Create a large dummy file
-        print("📝 Creating 40MB dummy audio file...")
-        dummy_data = b"RIFF" + b"WAVE" + b"data" + (b"0" * (40 * 1024 * 1024))  # 40MB dummy WAV
-        
-        # Convert to base64
-        audio_base64 = base64.b64encode(dummy_data).decode('utf-8')
-        audio_size_mb = len(audio_base64) / 1024 / 1024
-        
-        print(f"📊 Created test file: {audio_size_mb:.2f}MB")
-        
-        # Test the upload process step by step
-        from supabase import create_client
-        
-        # Get environment variables
-        supabase_url = os.environ.get('SUPABASE_URL')
-        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
-        
-        if not supabase_url or not supabase_key:
-            return jsonify({
-                "success": False,
-                "error": "Supabase environment variables not found",
-                "step": "environment_check"
-            }), 500
-        
-        print("🔗 Creating Supabase client...")
-        try:
-            supabase = create_client(supabase_url, supabase_key)
-        except Exception as client_error:
-            return jsonify({
-                "success": False,
-                "error": f"Failed to create Supabase client: {str(client_error)}",
-                "step": "client_creation"
-            }), 500
-        
-        print("🪣 Checking storage bucket...")
-        try:
-            buckets = supabase.storage.list_buckets()
-            audio_bucket = None
-            for bucket in buckets:
-                if bucket.name == 'audio-recordings':
-                    audio_bucket = bucket
-                    break
-            
-            if not audio_bucket:
-                return jsonify({
-                    "success": False,
-                    "error": "audio-recordings bucket not found",
-                    "available_buckets": [bucket.name for bucket in buckets],
-                    "step": "bucket_check"
-                }), 404
-        except Exception as bucket_error:
-            return jsonify({
-                "success": False,
-                "error": f"Failed to list buckets: {str(bucket_error)}",
-                "step": "bucket_listing"
-            }), 500
-        
-        print("🔄 Converting base64 to bytes...")
-        try:
-            audio_bytes = base64.b64decode(audio_base64)
-            print(f"✅ Converted to bytes: {len(audio_bytes) / 1024 / 1024:.2f}MB")
-        except Exception as decode_error:
-            return jsonify({
-                "success": False,
-                "error": f"Base64 decode failed: {str(decode_error)}",
-                "step": "base64_decode"
-            }), 500
-        
-        # Test upload with detailed logging
-        storage_path = f"test_audio/large_test_{int(time.time())}.wav"
-        print(f"📤 Attempting upload to: {storage_path}")
-        
-        try:
-            result = supabase.storage.from_("audio-recordings").upload(
-                storage_path,
-                audio_bytes,  # Pass bytes directly, not BytesIO
-                file_options={
-                    "content-type": "audio/wav",
-                    "cache-control": "public, max-age=3600"
-                }
-            )
-            
-            if result:
-                print("✅ Upload successful!")
-                try:
-                    audio_url = supabase.storage.from_("audio-recordings").get_public_url(storage_path)
-                    return jsonify({
-                        "success": True,
-                        "message": "Large file upload test successful",
-                        "file_size_mb": len(audio_bytes) / 1024 / 1024,
-                        "storage_path": storage_path,
-                        "audio_url": audio_url,
-                        "bucket_info": {
-                            "name": audio_bucket.name,
-                            "public": audio_bucket.public
-                        }
-                    })
-                except Exception as url_error:
-                    return jsonify({
-                        "success": False,
-                        "error": f"Upload successful but failed to get URL: {str(url_error)}",
-                        "step": "url_generation",
-                        "storage_path": storage_path
-                    }), 500
-            else:
-                return jsonify({
-                    "success": False,
-                    "error": "Upload returned no result",
-                    "step": "upload_result"
-                }), 500
-                
-        except Exception as upload_error:
-            print(f"❌ Upload failed: {upload_error}")
-            import traceback
-            traceback.print_exc()
-            
-            return jsonify({
-                "success": False,
-                "error": f"Upload failed: {str(upload_error)}",
-                "step": "upload_attempt",
-                "file_size_mb": len(audio_bytes) / 1024 / 1024,
-                "storage_path": storage_path,
-                "bucket_info": {
-                    "name": audio_bucket.name,
-                    "public": audio_bucket.public
-                },
-                "traceback": traceback.format_exc()
-            }), 500
-            
-    except Exception as e:
-        print(f"❌ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "success": False,
-            "error": f"Test failed: {str(e)}",
-            "step": "general_error",
-            "traceback": traceback.format_exc()
-        }), 500
+ 
 
-@db_api.route('/test_storage', methods=['GET'])
-def test_storage():
-    """Test Supabase Storage connection and permissions"""
-    try:
-        from supabase import create_client
-        
-        # Get environment variables
-        supabase_url = os.environ.get('SUPABASE_URL')
-        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
-        
-        if not supabase_url or not supabase_key:
-            return jsonify({
-                "success": False, 
-                "error": "Supabase environment variables not found",
-                "details": {
-                    "supabase_url": bool(supabase_url),
-                    "supabase_key": bool(supabase_key)
-                }
-            }), 500
-            
-        try:
-            supabase = create_client(supabase_url, supabase_key)
-        except Exception as client_error:
-            return jsonify({
-                "success": False, 
-                "error": f"Failed to create Supabase client: {str(client_error)}"
-            }), 500
-        
-        # Test bucket access
-        try:
-            buckets = supabase.storage.list_buckets()
-            audio_bucket = None
-            for bucket in buckets:
-                if bucket.name == 'audio-recordings':
-                    audio_bucket = bucket
-                    break
-            
-            if not audio_bucket:
-                return jsonify({
-                    "success": False,
-                    "error": "audio-recordings bucket not found",
-                    "available_buckets": [bucket.name for bucket in buckets]
-                }), 404
-            
-            # Test file listing (should work with public access)
-            try:
-                files = supabase.storage.from_("audio-recordings").list("conversation_audio")
-                return jsonify({
-                    "success": True,
-                    "message": "Storage connection successful",
-                    "bucket_info": {
-                        "name": audio_bucket.name,
-                        "id": audio_bucket.id,
-                        "public": audio_bucket.public,
-                        "created_at": str(audio_bucket.created_at)
-                    },
-                    "file_count": len(files) if files else 0
-                })
-            except Exception as list_error:
-                return jsonify({
-                    "success": False,
-                    "error": f"Failed to list files: {str(list_error)}",
-                    "bucket_info": {
-                        "name": audio_bucket.name,
-                        "id": audio_bucket.id,
-                        "public": audio_bucket.public
-                    }
-                }), 500
-                
-        except Exception as bucket_error:
-            return jsonify({
-                "success": False,
-                "error": f"Failed to access buckets: {str(bucket_error)}"
-            }), 500
-            
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"Storage test failed: {str(e)}"
-        }), 500
+ 
 
 @db_api.route('/save_conversation', methods=['POST'])
 def save_conversation():
@@ -679,34 +450,7 @@ def check_best_pitch_exists():
             "error_type": type(e).__name__
         }), 500
 
-@db_api.route('/delete_conversation/<conversation_id>', methods=['DELETE'])
-def delete_conversation(conversation_id):
-    """Delete a conversation and all related data"""
-    try:
-        # Get user from auth token
-        user_id = get_current_user_id()
-        if not user_id:
-            return jsonify({'error': 'Authentication required'}), 401
-        
-        # Delete conversation (will cascade to analysis and best_pitch)
-        result = db.delete_conversation(conversation_id, user_id)
-        
-        if result:
-            print(f"✅ Conversation deleted successfully: {conversation_id}")
-            return jsonify({
-                "success": True,
-                "message": "Conversation deleted successfully"
-            })
-        else:
-            print(f"❌ Failed to delete conversation: {conversation_id}")
-            return jsonify({
-                "success": False,
-                "error": "Failed to delete conversation"
-            }), 500
-        
-    except Exception as e:
-        print(f"Error deleting conversation: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+ 
 
 @db_api.route('/conversation_summary', methods=['GET'])
 def get_conversation_summary():
@@ -864,25 +608,7 @@ def get_conversation_analysis():
         print(f"Error getting conversation analysis: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@db_api.route('/debug/conversations', methods=['GET'])
-def debug_conversations():
-    """Debug endpoint to check all conversations in database"""
-    try:
-        # Get all conversations without user filter
-        response = db.supabase.table('conversations').select('*').execute()
-        
-        return jsonify({
-            "success": True,
-            "total_conversations": len(response.data) if response.data else 0,
-            "conversations": response.data if response.data else []
-        })
-        
-    except Exception as e:
-        print(f"Error in debug endpoint: {e}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+ 
 
 @db_api.route('/my-conversations', methods=['GET'])
 def get_my_conversations():
@@ -911,51 +637,9 @@ def get_my_conversations():
             "error": str(e)
         }), 500
 
-@db_api.route('/debug/users', methods=['GET'])
-def debug_users():
-    """Debug endpoint to check all users in database"""
-    try:
-        # Get all users
-        response = db.supabase.table('users').select('id,email,first_name,last_name,role,created_at').execute()
-        
-        return jsonify({
-            "success": True,
-            "total_users": len(response.data) if response.data else 0,
-            "users": response.data if response.data else []
-        })
-        
-    except Exception as e:
-        print(f"Error in debug users endpoint: {e}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+ 
 
-@db_api.route('/fix-user-ids', methods=['POST'])
-def fix_user_ids():
-    """Fix user IDs to match Supabase Auth UIDs"""
-    try:
-        # Update admin user ID
-        db.supabase.table('users').update({
-            'id': '80c86068-67ea-4e01-a4e2-d199c5ef48d5'
-        }).eq('email', 'admin@example.com').execute()
-        
-        # Update akash242018 user ID
-        db.supabase.table('users').update({
-            'id': '84fdf21e-9990-4c37-aba7-014a815e15a3'
-        }).eq('email', 'akash242018@gmail.com').execute()
-        
-        return jsonify({
-            "success": True,
-            "message": "User IDs updated to match Supabase Auth UIDs"
-        })
-        
-    except Exception as e:
-        print(f"Error fixing user IDs: {e}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+ 
 
 @db_api.route('/get_client_ip', methods=['GET'])
 def get_client_ip():
@@ -1065,33 +749,7 @@ def get_agents_by_type():
         print(f"Error getting agents by type: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@db_api.route('/get_agents_by_difficulty', methods=['POST'])
-def get_agents_by_difficulty():
-    """Get all agents of a specific difficulty level"""
-    try:
-        start_time = time.time()
-        
-        data = request.get_json()
-        difficulty = data.get('difficulty')
-        
-        if not difficulty:
-            return jsonify({'success': False, 'error': 'Difficulty level required'}), 400
-        
-        # Get agents by difficulty using database method
-        agents = db.get_agents_by_difficulty(difficulty)
-        
-        execution_time = (time.time() - start_time) * 1000
-        print(f"✅ API: {len(agents)} agents of difficulty {difficulty} retrieved in {execution_time:.2f}ms")
-        
-        return jsonify({
-            'success': True,
-            'agents': agents,
-            'execution_time_ms': round(execution_time, 2)
-        })
-        
-    except Exception as e:
-        print(f"Error getting agents by difficulty: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+ 
 
 # PROMPT MANAGEMENT API ENDPOINTS
 @db_api.route('/get_agent_prompt', methods=['POST'])

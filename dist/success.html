@@ -449,12 +449,22 @@ goToAnalysis();
                 const transcript = JSON.parse(transcriptData);
                 
                 // Start analysis
+                // Get agent information from localStorage
+                const selectedAgentId = localStorage.getItem('selectedAgentId');
+                const selectedAgentType = localStorage.getItem('selectedAgentType');
+                
+                const analysisRequestData = { 
+                    transcript: transcript,
+                    agent_id: selectedAgentId,
+                    agent_key: selectedAgentType
+                };
+                
                 const response = await fetch('/analyze_conversation', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ transcript: transcript })
+                    body: JSON.stringify(analysisRequestData)
                 });
                 
                 if (!response.ok) {
@@ -469,7 +479,6 @@ goToAnalysis();
                 
                 // Save analysis to database immediately
                 try {
-
 const conversationId = sessionStorage.getItem('conversationId');
                     const accessToken = getAccessToken();
                     

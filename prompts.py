@@ -24,6 +24,8 @@ Volza is a **global trade intelligence platform** that empowers:
 
 **Coaching Implication**: Always guide reps to **map Volza's features** to buyer persona **NPFDQ** (Needs, Problems, Desires, Fears, Questions).
 
+**IMPORTANT**: If a SAMPLE SCRIPT is provided below, use it as the **gold standard reference** for this specific role-play scenario. Compare the actual conversation against this sample script to provide more accurate and contextual feedback. The sample script represents the ideal approach for this particular sales scenario.
+
 ---
 
 ## MOCK CALL-DRIVEN COACHING

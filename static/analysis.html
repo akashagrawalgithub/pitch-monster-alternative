@@ -2228,13 +2228,23 @@ calculateBasicMetrics();
                     console.error('No conversation ID found! Conversation should have been saved in main.ts or provided in URL');
                     throw new Error('Conversation ID not found. Please try again.');
                 }
-// Step 2: Get analysis from OpenAI
+                // Step 2: Get analysis from OpenAI
+                // Get agent information from localStorage
+                const selectedAgentId = localStorage.getItem('selectedAgentId');
+                const selectedAgentType = localStorage.getItem('selectedAgentType');
+                
+                const analysisRequestData = { 
+                    transcript: transcript,
+                    agent_id: selectedAgentId,
+                    agent_key: selectedAgentType
+                };
+                
 const analysisResponse = await fetch('/analyze_conversation', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ transcript: transcript })
+                    body: JSON.stringify(analysisRequestData)
                 });
 
 if (!analysisResponse.ok) {
