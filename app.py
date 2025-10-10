@@ -651,14 +651,14 @@ INSTRUCTIONS:
             }
         ]
         
-        # Call OpenAI for perfect pitch generation with optimized settings
+       # Call OpenAI for perfect pitch generation with optimized settings
         response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-mini",
             messages=messages,
-            max_tokens=3000,  # Reduced for faster response
-            temperature=0.1,  # Lower for faster, more consistent output
+            max_tokens=30000,
+            temperature=0.1,
             response_format={"type": "json_object"},
-            timeout=60.0  # Increased to 60 seconds for complex requests
+            timeout=90.0
         )
         
         perfect_pitch_result = response.choices[0].message.content.strip()
