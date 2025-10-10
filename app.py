@@ -39,6 +39,7 @@ cartesia_client = Cartesia(api_key=CARTESIA_API_KEY)
 
 # Per-session conversation tracking - each session gets fresh history
 session_conversations = {}
+session_seeds = {}
 current_session_id = None
 current_user_id = None
 
@@ -73,6 +74,40 @@ def get_current_user_id():
         return "user_" + str(hash(token) % 10000)  # Simple user ID generation
     except Exception as e:
         # Removed logging for performance
+        return None
+
+def generate_conversation_seed(conversation_history):
+    """Ultra-lightweight: Track only questions asked to prevent repetition"""
+    if not conversation_history or len(conversation_history) < 3:
+        return None
+    
+    try:
+        total = len(conversation_history)
+        
+        # Extract only questions (ends with ?) from all assistant messages
+        questions_asked = []
+        for msg in conversation_history:
+            assistant_text = msg['assistant']
+            # Find sentences ending with ?
+            sentences = assistant_text.split('.')
+            for sentence in sentences:
+                if '?' in sentence:
+                    # Extract just the question part
+                    question = sentence.split('?')[0] + '?'
+                    question = question.strip()
+                    if len(question) > 10:  # Filter out too short
+                        questions_asked.append(question[:80])  # Truncate long questions
+        
+        if not questions_asked:
+            return None
+        
+        # Build ultra-compact seed
+        seed_text = f"{total} exchanges done. Questions already asked:\n"
+        seed_text += " | ".join(questions_asked)
+        seed_text += "\nNEVER repeat these questions."
+        
+        return seed_text
+    except:
         return None
 
 import os
@@ -314,7 +349,7 @@ def text_to_speech_stream():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global session_conversations
+    global session_conversations, session_seeds
     
     user_input = request.json.get('message', '').strip()
     agent_type = request.json.get('agent_type', 'discovery-call')
@@ -329,6 +364,10 @@ def chat():
     
     conversation_history = session_conversations[session_id]
     
+    # Generate/update conversation seed to maintain context beyond the truncated history
+    if len(conversation_history) >= 3:
+        session_seeds[session_id] = generate_conversation_seed(conversation_history)
+    
     # Use up to the last 10 turns for maximum speed
     max_history = 10
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
@@ -340,6 +379,9 @@ def chat():
         "role": "system",
         "content": dynamic_prompt
     }]
+    
+    if session_seeds.get(session_id):
+        messages.append({"role": "system", "content": f"IMPORTANT - DO NOT repeat earlier questions. {session_seeds[session_id]}"})
 
     # Add recent conversation history
     for msg in recent_history:
@@ -392,7 +434,7 @@ def chat():
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
-    global session_conversations
+    global session_conversations, session_seeds
     
     user_input = request.json.get('message', '').strip()
     agent_type = request.json.get('agent_type', 'discovery-call')
@@ -407,6 +449,10 @@ def chat_stream():
     
     conversation_history = session_conversations[session_id]
     
+    # Generate/update conversation seed to maintain context beyond the truncated history
+    if len(conversation_history) >= 3:
+        session_seeds[session_id] = generate_conversation_seed(conversation_history)
+    
     max_history = 5  # Reduced for maximum speed
     recent_history = conversation_history[-max_history:] if len(conversation_history) > max_history else conversation_history
 
@@ -417,6 +463,8 @@ def chat_stream():
         "role": "system",
         "content": dynamic_prompt
     }]
+    if session_seeds.get(session_id):
+        messages.append({"role": "system", "content": f"IMPORTANT - DO NOT repeat earlier questions. {session_seeds[session_id]}"})
     for msg in recent_history:
         messages.append({"role": "user", "content": msg["user"]})
         messages.append({"role": "assistant", "content": msg["assistant"]})
@@ -476,7 +524,7 @@ def chat_stream():
 @app.route('/clear_conversation_history', methods=['POST'])
 def clear_conversation_history():
     """Clear conversation history for a specific session"""
-    global session_conversations
+    global session_conversations, session_seeds
     
     try:
         data = request.json
@@ -490,6 +538,10 @@ def clear_conversation_history():
             # Initialize empty history for new session
             session_conversations[session_id] = []
             # Removed logging for performance
+        
+        # Clear the conversation seed for this session
+        if session_id in session_seeds:
+            del session_seeds[session_id]
         
         return jsonify({"success": True, "message": "Conversation history cleared"})
         
