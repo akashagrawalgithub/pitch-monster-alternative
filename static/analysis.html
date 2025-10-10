@@ -32,11 +32,13 @@
             <!-- Voice Recording Player -->
             <div class="recording-player" id="recordingPlayer" style="display: none;">
                 <div class="audio-controls">
-                    <button class="play-btn" id="playBtn">
-                        <span class="material-icons" id="playIcon">play_arrow</span>
-                    </button>
-                    <div class="audio-progress" id="audioProgress">
-                        <div class="audio-progress-fill" id="audioProgressFill"></div>
+                    <div class="audio-controls-row">
+                        <button class="play-btn" id="playBtn">
+                            <span class="material-icons" id="playIcon">play_arrow</span>
+                        </button>
+                        <div class="audio-progress" id="audioProgress">
+                            <div class="audio-progress-fill" id="audioProgressFill"></div>
+                        </div>
                     </div>
                     <div class="audio-time" id="audioTime">00:00</div>
                 </div>
@@ -618,11 +620,11 @@
                     let duration = audioPlayer.duration;
 
                     // Use stored duration if browser can't detect it
-                    if (!duration || isNaN(duration)) {
+                    if (!duration || isNaN(duration) || duration === Infinity) {
                         duration = storedDuration ? parseFloat(storedDuration) : 0;
                     }
 
-                    if (duration && duration > 0) {
+                    if (duration && duration > 0 && duration !== Infinity) {
                         const progress = (audioPlayer.currentTime / duration) * 100;
                         audioProgressFill.style.width = progress + '%';
 
@@ -653,11 +655,11 @@
                     let duration = audioPlayer.duration;
 
                     // Use stored duration if browser can't detect it
-                    if (!duration || isNaN(duration)) {
+                    if (!duration || isNaN(duration) || duration === Infinity) {
                         duration = storedDuration ? parseFloat(storedDuration) : 0;
                     }
 
-                    if (duration && duration > 0) {
+                    if (duration && duration > 0 && duration !== Infinity) {
                         const rect = audioProgress.getBoundingClientRect();
                         const clickX = e.clientX - rect.left;
                         const progress = clickX / rect.width;
@@ -875,11 +877,11 @@
                     let duration = audioPlayer.duration;
 
                     // Use database duration if browser can't detect it
-                    if (!duration || isNaN(duration)) {
+                    if (!duration || isNaN(duration) || duration === Infinity) {
                         duration = audioDuration ? parseFloat(audioDuration) : 0;
                     }
 
-                    if (duration && duration > 0) {
+                    if (duration && duration > 0 && duration !== Infinity) {
                         const progress = (audioPlayer.currentTime / duration) * 100;
                         audioProgressFill.style.width = progress + '%';
 
@@ -910,11 +912,11 @@
                     let duration = audioPlayer.duration;
 
                     // Use database duration if browser can't detect it
-                    if (!duration || isNaN(duration)) {
+                    if (!duration || isNaN(duration) || duration === Infinity) {
                         duration = audioDuration ? parseFloat(audioDuration) : 0;
                     }
 
-                    if (duration && duration > 0) {
+                    if (duration && duration > 0 && duration !== Infinity) {
                         const rect = audioProgress.getBoundingClientRect();
                         const clickX = e.clientX - rect.left;
                         const progress = clickX / rect.width;
