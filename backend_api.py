@@ -12,6 +12,7 @@ import json
 import uuid
 import time
 import os
+import re
 
 # Create Blueprint for database API routes
 db_api = Blueprint('db_api', __name__)
@@ -747,6 +748,78 @@ def get_agents_by_type():
         
     except Exception as e:
         print(f"Error getting agents by type: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/create_agent', methods=['POST'])
+def create_agent():
+    """Create a new agent"""
+    try:
+        start_time = time.time()
+        
+        # Get user ID from token
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Authentication required'}), 401
+        
+        # Check if user is admin
+        user_role = get_user_role()
+        if user_role != 'admin':
+            return jsonify({'success': False, 'error': 'Admin privileges required'}), 403
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['agent_key', 'title', 'icon', 'icon_class', 'type', 'guidelines', 'prompt', 'agent_name']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        # Validate agent_key format (lowercase, hyphens only)
+        agent_key = data.get('agent_key')
+        if not re.match(r'^[a-z0-9-]+$', agent_key):
+            return jsonify({'success': False, 'error': 'Agent key must contain only lowercase letters, numbers, and hyphens'}), 400
+        
+        # Check if agent_key already exists
+        existing_agent = db.get_agent_by_key(agent_key)
+        if existing_agent:
+            return jsonify({'success': False, 'error': 'Agent key already exists'}), 409
+        
+        # Prepare agent data
+        agent_data = {
+            'agent_key': agent_key,
+            'title': data.get('title'),
+            'icon': data.get('icon'),
+            'icon_class': data.get('icon_class'),
+            'type': data.get('type'),
+            'guidelines': data.get('guidelines'),
+            'difficulty': data.get('difficulty', 'medium'),
+            'is_active': data.get('is_active', True),
+            'prompt': data.get('prompt'),
+            'agent_name': data.get('agent_name'),
+            'sample_script': data.get('sample_script', '')
+        }
+        
+        # Create agent using database method
+        result = db.create_agent(agent_data)
+        
+        if result['success']:
+            execution_time = (time.time() - start_time) * 1000
+            print(f"✅ API: Agent {agent_key} created in {execution_time:.2f}ms")
+            
+            # Reload prompts to include the new agent
+            prompt_manager.reload_prompts()
+            
+            return jsonify({
+                'success': True,
+                'agent_id': result['agent_id'],
+                'message': 'Agent created successfully',
+                'execution_time_ms': round(execution_time, 2)
+            })
+        else:
+            return jsonify({'success': False, 'error': result.get('error', 'Failed to create agent')}), 500
+        
+    except Exception as e:
+        print(f"Error creating agent: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
  

@@ -810,6 +810,55 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting agents by type: {e}")
             return []
+
+    def create_agent(self, agent_data: Dict) -> Dict:
+        """Create a new agent"""
+        try:
+            start_time = time.time()
+            
+            # Prepare the agent data with all required fields
+            agent_record = {
+                'agent_key': agent_data.get('agent_key'),
+                'title': agent_data.get('title'),
+                'icon': agent_data.get('icon'),
+                'icon_class': agent_data.get('icon_class'),
+                'type': agent_data.get('type'),
+                'guidelines': agent_data.get('guidelines'),
+                'difficulty': agent_data.get('difficulty', 'medium'),
+                'is_active': agent_data.get('is_active', True),
+                'prompt': agent_data.get('prompt'),
+                'agent_name': agent_data.get('agent_name'),
+                'sample_script': agent_data.get('sample_script', '')
+            }
+            
+            # Use service role client for admin operations (bypasses RLS)
+            service_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+            
+            # Insert the agent into the database
+            result = service_client.table('agents').insert(agent_record).execute()
+            
+            execution_time = (time.time() - start_time) * 1000
+            
+            if result.data and len(result.data) > 0:
+                print(f"✅ Agent {agent_data.get('agent_key')} created in {execution_time:.2f}ms")
+                return {
+                    'success': True,
+                    'agent_id': result.data[0]['id'],
+                    'agent': result.data[0]
+                }
+            else:
+                print(f"❌ Failed to create agent - no data returned")
+                return {
+                    'success': False,
+                    'error': 'Failed to create agent - no data returned'
+                }
+                
+        except Exception as e:
+            print(f"Error creating agent: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     
 

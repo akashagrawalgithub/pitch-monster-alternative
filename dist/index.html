@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-  <link rel="stylesheet" crossorigin href="/assets/main-Bp5vUinf.css">
+  <link rel="stylesheet" crossorigin href="/assets/main-Dvdzg1Tu.css">
 </head>
 
 <body>
@@ -51,6 +51,10 @@
                     <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios
                         and
                         challenges.</p>
+                    <button class="create-agent-btn" id="createAgentBtn">
+                        <span class="material-icons">add</span>
+                        Create New Agent
+                    </button>
                 </div>
 
                 <div class="agents-grid" id="agentsGrid">
@@ -98,6 +102,210 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div class="modal-overlay my-5" id="createAgentModal">
+        <div class="modal-container">
+            
+            
+            <div class="modal-content">
+                <!-- Modal Header with Close Button -->
+                <div class="modal-header-inline">
+                    <h2>Create New Training Agent</h2>
+                    <button class="close-btn" id="closeModal">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                
+                <div class="step-indicator mt-5">
+                    <div class="step active" data-step="1">
+                        <span class="step-number">1</span>
+                        <span class="step-label">Basic Info</span>
+                    </div>
+                    <div class="step" data-step="2">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Details</span>
+                    </div>
+                    <div class="step" data-step="3">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Content</span>
+                    </div>
+                    <div class="step" data-step="4">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Review</span>
+                    </div>
+                </div>
+
+                <form id="createAgentForm">
+                    <!-- Step 1: Basic Information -->
+                    <div class="form-step active" data-step="1">
+                        <h3>Basic Information</h3>
+                        <div class="form-group">
+                            <label for="agentKey">Agent Key *</label>
+                            <input type="text" id="agentKey" name="agent_key" required 
+                                   placeholder="e.g., sales-discovery-call" maxlength="100"
+                                   pattern="[a-z0-9-]+" title="Only lowercase letters, numbers, and hyphens allowed">
+                            <small>Unique identifier for the agent (lowercase, hyphens only)</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="agentTitle">Agent Title *</label>
+                            <input type="text" id="agentTitle" name="title" required 
+                                   placeholder="e.g., Sales Discovery Call Expert" maxlength="255">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="agentName">Agent Name *</label>
+                            <input type="text" id="agentName" name="agent_name" required 
+                                   placeholder="e.g., Sarah Johnson" maxlength="255">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="agentIcon">Agent Icon *</label>
+                            <input type="text" id="agentIcon" name="icon" required 
+                                   placeholder="e.g., 💼" maxlength="10">
+                            <small>Choose an emoji or icon character (💼 🎯 🚀 💡 🎭 🔥 ⭐)</small>
+                        </div>
+                        
+                        <!-- Navigation for Step 1 -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn btn-primary" id="nextStep">
+                                Next
+                                <span class="material-icons">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Agent Details -->
+                    <div class="form-step" data-step="2">
+                        <h3>Agent Details</h3>
+                        
+                        <div class="form-group">
+                            <label for="agentType">Agent Type *</label>
+                            <select id="agentType" name="type" required>
+                                <option value="">Select agent type</option>
+                                <option value="sales">Sales</option>
+                                <option value="customer-service">Customer Service</option>
+                                <option value="technical-support">Technical Support</option>
+                                <option value="recruitment">Recruitment</option>
+                                <option value="consulting">Consulting</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Icon Class will be auto-generated based on agent type and icon -->
+                        <input type="hidden" id="agentIconClass" name="icon_class">
+                        
+                        <div class="form-group">
+                            <label for="difficulty">Difficulty Level *</label>
+                            <select id="difficulty" name="difficulty" required>
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="isActive">Status</label>
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="isActive" name="is_active" checked>
+                                <label for="isActive">Active (agent will be available for training)</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation for Step 2 -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn btn-secondary" id="prevStep">
+                                <span class="material-icons">arrow_back</span>
+                                Previous
+                            </button>
+                            <button type="button" class="btn btn-primary" id="nextStep">
+                                Next
+                                <span class="material-icons">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Content -->
+                    <div class="form-step" data-step="3">
+                        <h3>Agent Content</h3>
+                        
+                        <div class="form-group">
+                            <label for="guidelines">Guidelines *</label>
+                            <textarea id="guidelines" name="guidelines" required rows="4" 
+                                      placeholder="Example: This agent simulates a sales discovery call. It asks probing questions about business needs, challenges, and budget. It maintains a professional yet friendly tone and focuses on understanding the prospect's pain points before presenting solutions."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="prompt">Prompt *</label>
+                            <textarea id="prompt" name="prompt" required rows="6" 
+                                      placeholder="Example: You are a sales discovery specialist conducting a qualification call. Your goal is to understand the prospect's business challenges, decision-making process, timeline, and budget. Ask open-ended questions, listen actively, and take notes on key points. Keep responses concise (2-3 sentences max) and always end with a relevant follow-up question."></textarea>
+                            <small>This defines how the AI will behave during conversations</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="sampleScript">Sample Script</label>
+                            <textarea id="sampleScript" name="sample_script" rows="8" 
+                                      placeholder="Example:&#10;Agent: Hi [Name], thanks for taking the time to speak with me today. I understand you're looking for a solution to [pain point]. Can you tell me more about how this is currently affecting your team?&#10;&#10;Prospect: Well, we're spending about 3 hours daily on manual processes...&#10;&#10;Agent: That's a significant time investment. What would you say is the biggest frustration your team faces with the current approach?"></textarea>
+                            <small>Example conversation to help users understand the agent's style</small>
+                        </div>
+                        
+                        <!-- Navigation for Step 3 -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn btn-secondary" id="prevStep">
+                                <span class="material-icons">arrow_back</span>
+                                Previous
+                            </button>
+                            <button type="button" class="btn btn-primary" id="nextStep">
+                                Review
+                                <span class="material-icons">check</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Review -->
+                    <div class="form-step" data-step="4">
+                        <h3>Review & Create</h3>
+                        <div class="review-container">
+                            <div class="review-section">
+                                <h4>Basic Information</h4>
+                                <p><strong>Agent Key:</strong> <span id="reviewAgentKey"></span></p>
+                                <p><strong>Title:</strong> <span id="reviewAgentTitle"></span></p>
+                                <p><strong>Name:</strong> <span id="reviewAgentName"></span></p>
+                                <p><strong>Icon:</strong> <span id="reviewAgentIcon"></span></p>
+                            </div>
+                            
+                            <div class="review-section">
+                                <h4>Details</h4>
+                                <p><strong>Type:</strong> <span id="reviewAgentType"></span></p>
+                                <p><strong>Difficulty:</strong> <span id="reviewDifficulty"></span></p>
+                                <p><strong>Status:</strong> <span id="reviewIsActive"></span></p>
+                            </div>
+                            
+                            <div class="review-section">
+                                <h4>Content Preview</h4>
+                                <p><strong>Guidelines:</strong> <span id="reviewGuidelines"></span></p>
+                                <p><strong>Prompt:</strong> <span id="reviewPrompt"></span></p>
+                                <p><strong>Sample Script:</strong> <span id="reviewSampleScript"></span></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation for Step 4 -->
+                        <div class="step-navigation">
+                            <button type="button" class="btn btn-secondary" id="prevStep">
+                                <span class="material-icons">arrow_back</span>
+                                Previous
+                            </button>
+                            <button type="button" class="btn btn-success" id="createAgent">
+                                <span class="material-icons">save</span>
+                                Create Agent
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -167,6 +375,52 @@
                     window.location.href = '/past-conversations.html';
                 });
 
+                // Create Agent Modal Event Listeners
+                document.getElementById('createAgentBtn').addEventListener('click', () => {
+                    this.openCreateAgentModal();
+                });
+
+                // Add close button event listener if it exists
+                const closeBtn = document.getElementById('closeModal');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        this.closeCreateAgentModal();
+                    });
+                }
+
+                // Add event listeners to all navigation buttons using event delegation
+                document.addEventListener('click', (e) => {
+                    if (e.target.id === 'nextStep' || e.target.closest('#nextStep')) {
+                        e.preventDefault();
+                        this.nextStep();
+                    } else if (e.target.id === 'prevStep' || e.target.closest('#prevStep')) {
+                        e.preventDefault();
+                        this.previousStep();
+                    } else if (e.target.id === 'createAgent' || e.target.closest('#createAgent')) {
+                        e.preventDefault();
+                        this.createAgent();
+                    }
+                });
+
+                // Close modal when clicking outside
+                document.getElementById('createAgentModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'createAgentModal') {
+                        this.closeCreateAgentModal();
+                    }
+                });
+
+                // Initialize form step tracking
+                this.currentStep = 1;
+                this.totalSteps = 4;
+                
+                // Add event listeners for auto-generating icon class
+                document.getElementById('agentType').addEventListener('change', () => {
+                    this.generateIconClass();
+                });
+                
+                document.getElementById('agentIcon').addEventListener('input', () => {
+                    this.generateIconClass();
+                });
             }
 
             loadUserData(user) {
@@ -189,12 +443,14 @@
                     adminStatsSidebar.classList.add('show');
                     agentsGrid.classList.add('admin-layout');
                     mainContent.classList.add('admin-layout');
+                    document.getElementById('createAgentBtn').style.display = 'flex';
                     this.loadAdminStats();
                 } else {
                     usersBtn.style.display = 'none';
                     adminStatsSidebar.classList.remove('show');
                     agentsGrid.classList.remove('admin-layout');
                     mainContent.classList.remove('admin-layout');
+                    document.getElementById('createAgentBtn').style.display = 'none';
                 }
             }
 
@@ -443,6 +699,240 @@
                         <p style="font-size: 14px;">${message}</p>
                     </div>
                 `;
+            }
+
+            // Create Agent Modal Methods
+            openCreateAgentModal() {
+                document.getElementById('createAgentModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
+                this.resetForm();
+            }
+
+            closeCreateAgentModal() {
+                document.getElementById('createAgentModal').classList.remove('active');
+                document.body.style.overflow = 'auto';
+                this.resetForm();
+            }
+
+            resetForm() {
+                this.currentStep = 1;
+                this.updateStepDisplay();
+                document.getElementById('createAgentForm').reset();
+                document.getElementById('isActive').checked = true;
+                document.getElementById('difficulty').value = 'medium';
+                this.generateIconClass(); // Generate initial icon class
+            }
+
+            generateIconClass() {
+                const agentType = document.getElementById('agentType').value;
+                const agentIcon = document.getElementById('agentIcon').value;
+                
+                if (agentType && agentIcon) {
+                    // Create a clean CSS class name based on agent type and icon
+                    let iconClass = agentType.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                    
+                    // Add a suffix based on the icon (remove emoji and use first few chars)
+                    if (agentIcon) {
+                        const iconSuffix = agentIcon.replace(/[^\w]/g, '').toLowerCase().substring(0, 3);
+                        if (iconSuffix) {
+                            iconClass += `-${iconSuffix}`;
+                        }
+                    }
+                    
+                    // Ensure it starts with a letter and is valid CSS class
+                    if (!/^[a-z]/.test(iconClass)) {
+                        iconClass = 'agent-' + iconClass;
+                    }
+                    
+                    document.getElementById('agentIconClass').value = iconClass;
+                }
+            }
+
+            nextStep() {
+                if (this.validateCurrentStep()) {
+                    if (this.currentStep < this.totalSteps) {
+                        this.currentStep++;
+                        this.updateStepDisplay();
+                        
+                        // Update review step with current form data
+                        if (this.currentStep === 4) {
+                            this.updateReviewStep();
+                        }
+                    }
+                }
+            }
+
+            previousStep() {
+                if (this.currentStep > 1) {
+                    this.currentStep--;
+                    this.updateStepDisplay();
+                }
+            }
+
+            updateStepDisplay() {
+                // Update step indicators
+                document.querySelectorAll('.step').forEach((step, index) => {
+                    const stepNum = index + 1;
+                    step.classList.toggle('active', stepNum === this.currentStep);
+                    step.classList.toggle('completed', stepNum < this.currentStep);
+                });
+
+                // Update form steps
+                document.querySelectorAll('.form-step').forEach((step, index) => {
+                    const stepNum = index + 1;
+                    step.classList.toggle('active', stepNum === this.currentStep);
+                });
+
+                // Hide all navigation buttons first
+                document.querySelectorAll('.step-navigation').forEach(nav => {
+                    nav.style.display = 'none';
+                });
+
+                // Show navigation for current step
+                const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
+                const currentNavigation = currentStepElement.querySelector('.step-navigation');
+                if (currentNavigation) {
+                    currentNavigation.style.display = 'flex';
+                }
+            }
+
+            validateCurrentStep() {
+                const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
+                const requiredFields = currentStepElement.querySelectorAll('[required]');
+                let isValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('error');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('error');
+                    }
+                });
+
+                // Additional validation for specific fields
+                if (this.currentStep === 1) {
+                    const agentKey = document.getElementById('agentKey').value;
+                    if (agentKey && !/^[a-z0-9-]+$/.test(agentKey)) {
+                        document.getElementById('agentKey').classList.add('error');
+                        isValid = false;
+                    }
+                }
+
+                if (!isValid) {
+                    this.showNotification('Please fill in all required fields correctly.', 'error');
+                }
+
+                return isValid;
+            }
+
+            updateReviewStep() {
+                const formData = new FormData(document.getElementById('createAgentForm'));
+                const data = Object.fromEntries(formData.entries());
+                
+                // Handle checkbox
+                data.is_active = document.getElementById('isActive').checked;
+
+                // Update review fields
+                document.getElementById('reviewAgentKey').textContent = data.agent_key || '';
+                document.getElementById('reviewAgentTitle').textContent = data.title || '';
+                document.getElementById('reviewAgentName').textContent = data.agent_name || '';
+                document.getElementById('reviewAgentIcon').textContent = data.icon || '';
+                document.getElementById('reviewAgentType').textContent = data.type || '';
+                document.getElementById('reviewDifficulty').textContent = data.difficulty || '';
+                document.getElementById('reviewIsActive').textContent = data.is_active ? 'Active' : 'Inactive';
+                
+                // Truncate long text for display
+                document.getElementById('reviewGuidelines').textContent = 
+                    (data.guidelines || '').length > 100 ? 
+                    (data.guidelines || '').substring(0, 100) + '...' : 
+                    (data.guidelines || '');
+                
+                document.getElementById('reviewPrompt').textContent = 
+                    (data.prompt || '').length > 100 ? 
+                    (data.prompt || '').substring(0, 100) + '...' : 
+                    (data.prompt || '');
+                
+                document.getElementById('reviewSampleScript').textContent = 
+                    (data.sample_script || '').length > 100 ? 
+                    (data.sample_script || '').substring(0, 100) + '...' : 
+                    (data.sample_script || '');
+            }
+
+            async createAgent() {
+                if (!this.validateCurrentStep()) {
+                    return;
+                }
+
+                const formData = new FormData(document.getElementById('createAgentForm'));
+                const data = Object.fromEntries(formData.entries());
+                
+                // Handle checkbox
+                data.is_active = document.getElementById('isActive').checked;
+
+                try {
+                    const accessToken = localStorage.getItem('accessToken');
+                    if (!accessToken) {
+                        this.showNotification('Authentication required', 'error');
+                        return;
+                    }
+
+                    // Show loading state
+                    const createBtn = document.getElementById('createAgent');
+                    const originalText = createBtn.innerHTML;
+                    createBtn.innerHTML = '<span class="material-icons">hourglass_empty</span>Creating...';
+                    createBtn.disabled = true;
+
+                    const response = await fetch('/api/db/create_agent', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.showNotification('Agent created successfully!', 'success');
+                        this.closeCreateAgentModal();
+                        this.loadAgents(); // Reload agents list
+                    } else {
+                        this.showNotification(result.error || 'Failed to create agent', 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error creating agent:', error);
+                    this.showNotification('Failed to create agent. Please try again.', 'error');
+                } finally {
+                    // Reset button state
+                    const createBtn = document.getElementById('createAgent');
+                    createBtn.innerHTML = '<span class="material-icons">save</span>Create Agent';
+                    createBtn.disabled = false;
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <span class="material-icons">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
+                    <span>${message}</span>
+                `;
+
+                // Add to page
+                document.body.appendChild(notification);
+
+                // Show notification
+                setTimeout(() => notification.classList.add('show'), 100);
+
+                // Remove after 5 seconds
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
             }
 
         }
