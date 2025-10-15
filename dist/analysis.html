@@ -8,37 +8,44 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-  <link rel="stylesheet" crossorigin href="/assets/analysis-D1J18DMY.css">
+  <link rel="stylesheet" crossorigin href="/assets/analysis-BOuSZCnh.css">
 </head>
 
 <body>
     <div class="container">
         <!-- Left Sidebar - Chat Transcript -->
         <div class="transcript-sidebar">
-            <div class="transcript-header">
+            <!-- <div class="transcript-header">
                 <div class="session-info">
                     <div class="session-avatar">🎯</div>
                     <div class="session-details">
-                        <h3 id="sessionTitle">Sales Training Session</h3>
-                        <p id="sessionType">Conversation Analysis</p>
+                        <h3>Session Details</h3>
+                        <p>Analysis & Transcript</p>
                     </div>
                 </div>
                 <div class="session-stats">
                     <span id="sessionDuration">Duration: --</span>
                     <span id="sessionExchanges">Exchanges: --</span>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Voice Recording Player -->
             <div class="recording-player" id="recordingPlayer" style="display: none;">
                 <div class="audio-controls">
+                    <div class="audio-progress" id="audioProgress">
+                        <div class="audio-progress-fill" id="audioProgressFill"></div>
+                        <div class="audio-tooltip" id="audioTooltip">00:00</div>
+                    </div>
                     <div class="audio-controls-row">
+                        <button class="seek-btn" id="backwardBtn">
+                            <span class="material-icons">replay_5</span>
+                        </button>
                         <button class="play-btn" id="playBtn">
                             <span class="material-icons" id="playIcon">play_arrow</span>
                         </button>
-                        <div class="audio-progress" id="audioProgress">
-                            <div class="audio-progress-fill" id="audioProgressFill"></div>
-                        </div>
+                        <button class="seek-btn" id="forwardBtn">
+                            <span class="material-icons">forward_5</span>
+                        </button>
                     </div>
                     <div class="audio-time" id="audioTime">00:00</div>
                 </div>
@@ -52,11 +59,20 @@
         <!-- Main Content Area -->
         <div class="main-content">
             <div class="report-header">
-                <div>
-                    <div class="session-details-main">
-                        <span id="sessionDate">Session completed on --</span>
-                        <span>•</span>
-                        <span id="sessionConfidence" style="color: #10b981; font-weight: 500;">Confidence: --</span>
+                <div class="session-info-main">
+                    <div class="session-title-section">
+                        
+                        <div class="session-meta">
+                            
+                            <span id="sessionStage">Stage: --</span>
+                            <span>•</span>
+                            <span id="sessionRole">Role: --</span>
+                        </div>
+                        <div class="session-stats-main">
+                            <span id="sessionDate">Session completed on --</span>
+                            <span>•</span>
+                            <span id="sessionConfidence" style="color: #10b981; font-weight: 500;">Confidence: --</span>
+                        </div>
                     </div>
                 </div>
                 <div class="overall-score">
@@ -615,6 +631,21 @@
                     }
                 });
 
+                // 5-second backward button
+                const backwardBtn = document.getElementById('backwardBtn');
+                backwardBtn.addEventListener('click', () => {
+                    const newTime = Math.max(0, audioPlayer.currentTime - 5);
+                    audioPlayer.currentTime = newTime;
+                });
+
+                // 5-second forward button
+                const forwardBtn = document.getElementById('forwardBtn');
+                forwardBtn.addEventListener('click', () => {
+                    const duration = audioPlayer.duration || (storedDuration ? parseFloat(storedDuration) : 0);
+                    const newTime = Math.min(duration, audioPlayer.currentTime + 5);
+                    audioPlayer.currentTime = newTime;
+                });
+
                 // Update progress bar and time
                 audioPlayer.addEventListener('timeupdate', () => {
                     let duration = audioPlayer.duration;
@@ -650,20 +681,107 @@
                     }
                 });
 
-                // Click on progress bar to seek
-                audioProgress.addEventListener('click', (e) => {
-                    let duration = audioPlayer.duration;
+                // Scrubbing: click, drag and hover preview
+                const tooltip = document.getElementById('audioTooltip');
+                let isScrubbing = false;
 
-                    // Use stored duration if browser can't detect it
-                    if (!duration || isNaN(duration) || duration === Infinity) {
-                        duration = storedDuration ? parseFloat(storedDuration) : 0;
+                function getSeekTime(clientX, duration) {
+                    const rect = audioProgress.getBoundingClientRect();
+                    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+                    const ratio = x / rect.width;
+                    return { ratio, time: ratio * duration, x: rect.left + x };
+                }
+
+                function updateTooltip(clientX, duration) {
+                    const { time, x } = getSeekTime(clientX, duration);
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = clientX + 'px';
+                    tooltip.textContent = formatTime(time);
+                }
+
+                audioProgress.addEventListener('mousemove', (e) => {
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (storedDuration ? parseFloat(storedDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) updateTooltip(e.clientX, duration);
+                });
+
+                audioProgress.addEventListener('mouseleave', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                audioProgress.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    isScrubbing = true;
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (storedDuration ? parseFloat(storedDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(e.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
                     }
+                });
 
-                    if (duration && duration > 0 && duration !== Infinity) {
-                        const rect = audioProgress.getBoundingClientRect();
-                        const clickX = e.clientX - rect.left;
-                        const progress = clickX / rect.width;
-                        audioPlayer.currentTime = progress * duration;
+                window.addEventListener('mousemove', (e) => {
+                    if (!isScrubbing) return;
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (storedDuration ? parseFloat(storedDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(e.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(e.clientX, duration);
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isScrubbing = false;
+                });
+
+                // Touch support
+                audioProgress.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (storedDuration ? parseFloat(storedDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(touch.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(touch.clientX, duration);
+                    }
+                }, { passive: true });
+
+                audioProgress.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (storedDuration ? parseFloat(storedDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(touch.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(touch.clientX, duration);
+                    }
+                }, { passive: true });
+
+                audioProgress.addEventListener('touchend', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                // Simple click to seek (without dragging)
+                audioProgress.addEventListener('click', (e) => {
+                    if (!isScrubbing) { // Only if not currently dragging
+                        const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                            ? (storedDuration ? parseFloat(storedDuration) : 0)
+                            : audioPlayer.duration;
+                        if (duration > 0) {
+                            const { time, ratio } = getSeekTime(e.clientX, duration);
+                            audioPlayer.currentTime = time;
+                            audioProgressFill.style.width = (ratio * 100) + '%';
+                        }
                     }
                 });
             }
@@ -872,6 +990,21 @@
                     }
                 });
 
+                // 5-second backward button
+                const backwardBtn = document.getElementById('backwardBtn');
+                backwardBtn.addEventListener('click', () => {
+                    const newTime = Math.max(0, audioPlayer.currentTime - 5);
+                    audioPlayer.currentTime = newTime;
+                });
+
+                // 5-second forward button
+                const forwardBtn = document.getElementById('forwardBtn');
+                forwardBtn.addEventListener('click', () => {
+                    const duration = audioPlayer.duration || (audioDuration ? parseFloat(audioDuration) : 0);
+                    const newTime = Math.min(duration, audioPlayer.currentTime + 5);
+                    audioPlayer.currentTime = newTime;
+                });
+
                 // Update progress bar and time
                 audioPlayer.addEventListener('timeupdate', () => {
                     let duration = audioPlayer.duration;
@@ -907,20 +1040,107 @@
                     }
                 });
 
-                // Click on progress bar to seek
-                audioProgress.addEventListener('click', (e) => {
-                    let duration = audioPlayer.duration;
+                // Scrubbing: click, drag and hover preview
+                const tooltip = document.getElementById('audioTooltip');
+                let isScrubbing = false;
 
-                    // Use database duration if browser can't detect it
-                    if (!duration || isNaN(duration) || duration === Infinity) {
-                        duration = audioDuration ? parseFloat(audioDuration) : 0;
+                function getSeekTime(clientX, duration) {
+                    const rect = audioProgress.getBoundingClientRect();
+                    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+                    const ratio = x / rect.width;
+                    return { ratio, time: ratio * duration, x: rect.left + x };
+                }
+
+                function updateTooltip(clientX, duration) {
+                    const { time } = getSeekTime(clientX, duration);
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = clientX + 'px';
+                    tooltip.textContent = formatTime(time);
+                }
+
+                audioProgress.addEventListener('mousemove', (e) => {
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (audioDuration ? parseFloat(audioDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) updateTooltip(e.clientX, duration);
+                });
+
+                audioProgress.addEventListener('mouseleave', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                audioProgress.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    isScrubbing = true;
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (audioDuration ? parseFloat(audioDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(e.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
                     }
+                });
 
-                    if (duration && duration > 0 && duration !== Infinity) {
-                        const rect = audioProgress.getBoundingClientRect();
-                        const clickX = e.clientX - rect.left;
-                        const progress = clickX / rect.width;
-                        audioPlayer.currentTime = progress * duration;
+                window.addEventListener('mousemove', (e) => {
+                    if (!isScrubbing) return;
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (audioDuration ? parseFloat(audioDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(e.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(e.clientX, duration);
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    isScrubbing = false;
+                });
+
+                // Touch support
+                audioProgress.addEventListener('touchstart', (e) => {
+                    const touch = e.touches[0];
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (audioDuration ? parseFloat(audioDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(touch.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(touch.clientX, duration);
+                    }
+                }, { passive: true });
+
+                audioProgress.addEventListener('touchmove', (e) => {
+                    const touch = e.touches[0];
+                    const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                        ? (audioDuration ? parseFloat(audioDuration) : 0)
+                        : audioPlayer.duration;
+                    if (duration > 0) {
+                        const { time, ratio } = getSeekTime(touch.clientX, duration);
+                        audioPlayer.currentTime = time;
+                        audioProgressFill.style.width = (ratio * 100) + '%';
+                        updateTooltip(touch.clientX, duration);
+                    }
+                }, { passive: true });
+
+                audioProgress.addEventListener('touchend', () => {
+                    tooltip.style.display = 'none';
+                });
+
+                // Simple click to seek (without dragging)
+                audioProgress.addEventListener('click', (e) => {
+                    if (!isScrubbing) { // Only if not currently dragging
+                        const duration = (!audioPlayer.duration || isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity)
+                            ? (audioDuration ? parseFloat(audioDuration) : 0)
+                            : audioPlayer.duration;
+                        if (duration > 0) {
+                            const { time, ratio } = getSeekTime(e.clientX, duration);
+                            audioPlayer.currentTime = time;
+                            audioProgressFill.style.width = (ratio * 100) + '%';
+                        }
                     }
                 });
             }
@@ -1375,33 +1595,68 @@
         function updateSessionInfo(sessionInfo) {
             const sessionTitleEl = document.getElementById('sessionTitle');
             const sessionTypeEl = document.getElementById('sessionType');
+            const sessionStageEl = document.getElementById('sessionStage');
+            const sessionRoleEl = document.getElementById('sessionRole');
             const sessionConfidenceEl = document.getElementById('sessionConfidence');
+            const sessionDurationEl = document.getElementById('sessionDuration');
+            const sessionExchangesEl = document.getElementById('sessionExchanges');
+            
             // Check if sessionInfo is valid
             if (!sessionInfo || typeof sessionInfo !== 'object') {
                 return;
             }
 
+            // Update title in main content
             if (sessionTitleEl && sessionInfo.scenario_type) {
                 sessionTitleEl.textContent = `${sessionInfo.scenario_type} Training Session`;
             } else if (sessionTitleEl) {
                 sessionTitleEl.textContent = 'Sales Training Session';
             }
 
+            // Update type in main content
             if (sessionTypeEl && sessionInfo.prospect_role) {
                 sessionTypeEl.textContent = `${sessionInfo.prospect_role} Conversation`;
             } else if (sessionTypeEl) {
                 sessionTypeEl.textContent = 'Sales Conversation';
             }
 
+            // Update stage in main content
+            if (sessionStageEl && sessionInfo.conversation_stage) {
+                sessionStageEl.textContent = `Stage: ${sessionInfo.conversation_stage}`;
+            } else if (sessionStageEl) {
+                sessionStageEl.textContent = 'Stage: --';
+            }
+
+            // Update role in main content
+            if (sessionRoleEl && sessionInfo.prospect_role) {
+                sessionRoleEl.textContent = `Role: ${sessionInfo.prospect_role}`;
+            } else if (sessionRoleEl) {
+                sessionRoleEl.textContent = 'Role: --';
+            }
+
+            // Update confidence in main content
             if (sessionConfidenceEl && sessionInfo.confidence_level !== undefined) {
                 sessionConfidenceEl.textContent = `Confidence: ${sessionInfo.confidence_level}%`;
                 sessionConfidenceEl.style.color = sessionInfo.confidence_level >= 80 ? '#10b981' :
                     sessionInfo.confidence_level >= 60 ? '#f59e0b' : '#ef4444';
-            } else {
+            } else if (sessionConfidenceEl) {
+                sessionConfidenceEl.textContent = 'Confidence: --';
+            }
 
-                if (sessionConfidenceEl) {
-                    sessionConfidenceEl.textContent = 'Confidence: --';
-                }
+            // Update duration in sidebar
+            if (sessionDurationEl && sessionInfo.duration_minutes !== undefined) {
+                const minutes = Math.floor(sessionInfo.duration_minutes);
+                const seconds = Math.round((sessionInfo.duration_minutes - minutes) * 60);
+                sessionDurationEl.textContent = `Duration: ${minutes}m ${seconds}s`;
+            } else if (sessionDurationEl) {
+                sessionDurationEl.textContent = 'Duration: --';
+            }
+
+            // Update exchanges in sidebar
+            if (sessionExchangesEl && sessionInfo.total_exchanges !== undefined) {
+                sessionExchangesEl.textContent = `Exchanges: ${sessionInfo.total_exchanges}`;
+            } else if (sessionExchangesEl) {
+                sessionExchangesEl.textContent = 'Exchanges: --';
             }
         }
 

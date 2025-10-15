@@ -140,170 +140,71 @@
             background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
         }
 
-        /* Conversations Grid */
-        .conversations-grid {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 24px;
-            margin-bottom: 32px;
-            width: 100%;
-            max-width: 100%;
-        }
-
-        .conversation-card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        /* Table Styles */
+        .table-container {
+            background: #ffffff;
             border: 1px solid #e2e8f0;
-            position: relative;
-            overflow: hidden;
-            width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
-        }
-
-        .conversation-card:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .card-icon {
-            width: 30px;
-            height: 30px;
             border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            color: white;
-            font-weight: 600;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        .card-date {
-            font-size: 12px;
-            color: #64748b;
-            font-weight: 500;
-            background: #f1f5f9;
-            padding: 4px 8px;
-            border-radius: 6px;
+        table.conversations-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-
-        .user-info-display {
-            margin-bottom: 12px;
-        }
-
-        .user-badge {
-            display: inline-flex;
-            align-items: center;
-            
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            
-        }
-
-        .card-meta {
-            
-            margin-bottom: 20px;
-        }
-
-        .meta-item {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .conversation-preview {
+        .conversations-table thead th {
             background: #f8fafc;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 13px;
-            color: #64748b;
-            border-left: 3px solid #3b82f6;
+            color: #475569;
+            font-weight: 600;
+            text-align: center;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .conversation-status {
-            margin-bottom: 16px;
+        .conversations-table tbody td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1f2937;
+            font-size: 14px;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .conversations-table tbody tr:hover {
+            background: #f8fafc;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 12px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
-        .status-short {
-            background: #fef3c7;
-            color: #92400e;
-        }
+        .status-short { background: #fef3c7; color: #92400e; }
+        .status-standard { background: #dbeafe; color: #1e40af; }
+        .status-detailed { background: #d1fae5; color: #065f46; }
+        .status-completed { background: #e0e7ff; color: #3730a3; }
 
-        .status-standard {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-detailed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .status-completed {
-            background: #e0e7ff;
-            color: #3730a3;
-        }
-
-        .card-id {
-            font-size: 12px;
-            color: #94a3b8;
-            font-family: 'Courier New', monospace;
-            background: #f8fafc;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-
-        .view-analysis-btn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        .action-btn {
+            background: #3b82f6;
             color: white;
             border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
             cursor: pointer;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
         }
 
-        .view-analysis-btn:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        .action-btn:hover {
+            background: #2563eb;
         }
 
         /* Loading and Empty States */
@@ -448,16 +349,9 @@
 
         /* Responsive Design */
         @media (max-width: 1200px) {
-            .conversations-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
         
         @media (max-width: 768px) {
-            .conversations-grid {
-                grid-template-columns: 1fr;
-            }
-            
             .pagination-container {
                 flex-wrap: wrap;
                 gap: 4px;
@@ -526,12 +420,30 @@
                 </a>
             </div>
 
-            <!-- Conversations Grid -->
-            <div class="conversations-grid" id="conversationsGrid">
-                <div class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <p>Loading your conversations...</p>
-                </div>
+            <!-- Conversations Table -->
+            <div class="table-container" id="tableContainer">
+                <table class="conversations-table" id="conversationsTable">
+                    <thead id="conversationsThead">
+                        <tr>
+                            <th>Title</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="conversationsTbody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="loading-state">
+                                    <div class="loading-spinner"></div>
+                                    <p>Loading your conversations...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <!-- Pagination -->
@@ -655,8 +567,26 @@ console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRol
                     `;
 }
                 
-                // Load conversations AFTER setting isAdmin flag
+                // Build table header and load conversations AFTER setting isAdmin flag
+                this.renderTableHeader();
                 this.loadConversations();
+            }
+
+            renderTableHeader() {
+                const thead = document.getElementById('conversationsThead');
+                if (!thead) return;
+                const adminColumn = this.isAdmin ? '<th>User</th>' : '';
+                thead.innerHTML = `
+                    <tr>
+                        <th>Title</th>
+                        ${adminColumn}
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                `;
             }
 
             async handleLogout() {
@@ -709,15 +639,20 @@ const response = await fetch(endpoint, {
             }
 
             displayConversations() {
-                const conversationsGrid = document.getElementById('conversationsGrid');
-                
+                const tbody = document.getElementById('conversationsTbody');
+                const columns = 6 + (this.isAdmin ? 1 : 0);
+
                 if (!this.conversations || this.conversations.length === 0) {
-                    conversationsGrid.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">📊</div>
-                            <h3>No Conversations Found</h3>
-                            <p>Start your first training session to see your analysis here.</p>
-                        </div>
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="${columns}">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📊</div>
+                                    <h3>No Conversations Found</h3>
+                                    <p>Start your first training session to see your analysis here.</p>
+                                </div>
+                            </td>
+                        </tr>
                     `;
                     document.getElementById('paginationContainer').style.display = 'none';
                     return;
@@ -729,7 +664,7 @@ const response = await fetch(endpoint, {
                 const endIndex = startIndex + this.itemsPerPage;
                 const paginatedConversations = this.conversations.slice(startIndex, endIndex);
                 
-                conversationsGrid.innerHTML = paginatedConversations.map(conversation => {
+                tbody.innerHTML = paginatedConversations.map(conversation => {
                     const date = new Date(conversation.created_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
@@ -746,42 +681,23 @@ const response = await fetch(endpoint, {
                         'Unknown';
                     
                     const agentType = conversation.title || 'Sales Training Session';
-                    const agentIcon = this.getAgentIcon(agentType);
                     
                     const conversationStatus = this.getConversationStatus(conversation);
                     
                     return `
-                        <div class="conversation-card">
-                            <div class="card-header">
-                                <div class="card-icon" style="background: ${this.getAgentColor(agentType)}">${agentIcon}</div>
-                                <div class="card-date">${date} at ${time}</div>
-                            </div>
-                            
-                            <div class="card-title">${agentType}</div>
-                            
-                            ${this.isAdmin && conversation.user_name ? `
-                                <div class="user-info-display">
-                                    <span class="user-badge">
-                                        ${conversation.user_name}
-                                    </span>
-                                </div>
-                            ` : ''}
-                            
-                            <div class="card-meta">
-                                <div class="meta-item">
-                                    <span><strong>Call Duration:</strong> ${duration}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="conversation-status">
-                                <span class="status-badge ${conversationStatus.class}">${conversationStatus.text}</span>
-                            </div>
-                            
-                            <button class="view-analysis-btn" onclick="pastConversationsPage.viewFullAnalysis('${conversation.id}')">
-                                <span class="material-icons">visibility</span>
-                                View Full Analysis
-                            </button>
-                        </div>
+                        <tr>
+                            <td>${this.getAgentIcon(agentType)} ${agentType}</td>
+                            ${this.isAdmin && conversation.user_name ? `<td>${conversation.user_name}</td>` : ''}
+                            <td>${date}</td>
+                            <td>${time}</td>
+                            <td>${duration}</td>
+                            <td><span class="status-badge ${conversationStatus.class}">${conversationStatus.text}</span></td>
+                            <td>
+                                <button class="action-btn" onclick="pastConversationsPage.viewFullAnalysis('${conversation.id}')">
+                                    View
+                                </button>
+                            </td>
+                        </tr>
                     `;
                 }).join('');
                 
@@ -803,19 +719,7 @@ const response = await fetch(endpoint, {
                 return iconMap[agentType] || '🎯';
             }
 
-            getAgentColor(agentType) {
-                const colorMap = {
-                    'Payment Follow-up': 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    'Competitor Objection': 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    'Lead to Demo': 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                    'Closing Skills': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                    'Cold Calling': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    'Discovery Call': 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                    'Sales Training Session': 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
-                };
-                
-                return colorMap[agentType] || 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
-            }
+            // Removed card color mapping as UI is now table-based
 
             getConversationStatus(conversation) {
                 const duration = conversation.duration_seconds || 0;
@@ -899,13 +803,18 @@ const response = await fetch(endpoint, {
             }
 
             showError(message) {
-                const conversationsGrid = document.getElementById('conversationsGrid');
-                conversationsGrid.innerHTML = `
-                    <div class="error-state">
-                        <div class="error-icon">⚠️</div>
-                        <h3>Error Loading Conversations</h3>
-                        <p>${message}</p>
-                    </div>
+                const tbody = document.getElementById('conversationsTbody');
+                const theadCols = document.querySelectorAll('#conversationsThead th').length || 6;
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="${theadCols}">
+                            <div class="error-state">
+                                <div class="error-icon">⚠️</div>
+                                <h3>Error Loading Conversations</h3>
+                                <p>${message}</p>
+                            </div>
+                        </td>
+                    </tr>
                 `;
             }
 
