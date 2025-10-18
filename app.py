@@ -249,8 +249,11 @@ def get_openai_realtime_token():
 
 @app.route('/conversation.html')
 def conversation_page():
-    # Render template without API key (now using secure proxy)
-    return render_template('conversation.html')
+    if IS_DEVELOPMENT:
+        return send_from_directory('static', 'conversation.html')
+    else:
+        # In production, serve from dist folder
+        return send_from_directory('dist', 'conversation.html')
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
