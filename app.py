@@ -1,5 +1,6 @@
 from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
 from flask_cors import CORS
+from flask_sock import Sock
 from openai import OpenAI
 import os
 from datetime import datetime
@@ -13,8 +14,12 @@ import numpy as np
 import json
 from backend_api import db_api
 from supabase import create_client, Client
+import websockets
+import asyncio
+from threading import Thread
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='static')
+sock = Sock(app)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -133,6 +138,7 @@ def analysis():
         # In production, serve from dist folder
         return send_from_directory('dist', 'analysis.html')
 
+
 @app.route('/success.html')
 def success():
     if IS_DEVELOPMENT:
@@ -232,14 +238,63 @@ def agent_info_page():
         # In production, serve from dist folder
         return send_from_directory('dist', 'agent-info.html')
 
+@sock.route('/ws/openai-realtime')
+def openai_realtime_proxy(ws):
+    """Secure WebSocket proxy for OpenAI Realtime API"""
+    try:
+        # OpenAI Realtime API WebSocket URL
+        openai_ws_url = f"wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+        
+        # Headers for OpenAI connection (with API key)
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "OpenAI-Beta": "realtime=v1"
+        }
+        
+        # Create async function to handle the proxy
+        async def proxy_messages():
+            async with websockets.connect(openai_ws_url, extra_headers=headers) as openai_ws:
+                # Create tasks for bidirectional communication
+                async def forward_to_openai():
+                    """Forward messages from client to OpenAI"""
+                    try:
+                        while True:
+                            # Receive from client
+                            message = ws.receive()
+                            if message is None:
+                                break
+                            # Forward to OpenAI
+                            await openai_ws.send(message)
+                    except Exception as e:
+                        print(f"Error forwarding to OpenAI: {e}")
+                
+                async def forward_to_client():
+                    """Forward messages from OpenAI to client"""
+                    try:
+                        async for message in openai_ws:
+                            # Forward to client
+                            ws.send(message)
+                    except Exception as e:
+                        print(f"Error forwarding to client: {e}")
+                
+                # Run both directions concurrently
+                await asyncio.gather(
+                    forward_to_openai(),
+                    forward_to_client(),
+                    return_exceptions=True
+                )
+        
+        # Run the async proxy in a new event loop
+        asyncio.run(proxy_messages())
+        
+    except Exception as e:
+        print(f"WebSocket proxy error: {e}")
+        ws.close()
+
 @app.route('/conversation.html')
 def conversation_page():
-    if IS_DEVELOPMENT:
-        # In development, serve from static folder
-        return send_from_directory('static', 'conversation.html')
-    else:
-        # In production, serve from dist folder
-        return send_from_directory('dist', 'conversation.html')
+    # Render template without API key (now using secure proxy)
+    return render_template('conversation.html')
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():
@@ -431,6 +486,29 @@ def chat():
         else:
             # Removed logging for performance
             return jsonify({"reply": "Sorry, I'm having trouble. Please try again."}), 500
+
+@app.route('/api/get_agent_prompt', methods=['GET'])
+def get_agent_prompt():
+    """Get the prompt for a specific agent type"""
+    try:
+        agent_type = request.args.get('agent_type', 'discovery-call')
+        print(f"📥 Getting prompt for agent type: {agent_type}")
+        prompt = prompt_manager.get_prompt(agent_type)
+        print(f"✅ Prompt fetched successfully, length: {len(prompt)}")
+        return jsonify({
+            'success': True,
+            'prompt': prompt,
+            'agent_type': agent_type
+        })
+    except Exception as e:
+        print(f"❌ Error in get_agent_prompt: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'prompt': 'You are a helpful sales training coach.'
+        }), 500
 
 @app.route('/chat_stream', methods=['POST'])
 def chat_stream():
@@ -889,6 +967,34 @@ def serve_static(filename):
         return send_from_directory('static', filename)
     else:
         return send_from_directory('dist', filename)
+
+@app.route('/api/transcribe_audio', methods=['POST'])
+def transcribe_audio():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        audio_file = request.files['file']
+        if audio_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Use OpenAI Whisper API to transcribe
+        audio_file.seek(0)  # Reset file pointer
+        transcript = openai_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            language="en"
+        )
+        
+        return jsonify({
+            'success': True,
+            'text': transcript.text,
+            'transcript': transcript.text
+        })
+        
+    except Exception as e:
+        print(f"Error transcribing audio: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)

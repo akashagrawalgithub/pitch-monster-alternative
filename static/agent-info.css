@@ -45,7 +45,7 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #8b5cf6 0%, #1d4ed8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -75,12 +75,12 @@
 
         .menu-item:hover {
             background: #f1f5f9;
-            color: #3b82f6;
+            color: #8b5cf6;
         }
 
         .menu-item.active {
             background: #eff6ff;
-            color: #3b82f6;
+            color: #8b5cf6;
             font-weight: 500;
         }
 
@@ -102,7 +102,7 @@
         }
 
         .breadcrumb a {
-            color: #3b82f6;
+            color: #8b5cf6;
             text-decoration: none;
         }
 
@@ -364,5 +364,5 @@
 .icon-competitor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
 .icon-lead { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 .icon-closing { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
-.icon-cold-calling { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.icon-cold-calling { background: linear-gradient(135deg, #8b5cf6 0%, #2563eb 100%); }
 .icon-discovery { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }

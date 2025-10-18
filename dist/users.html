@@ -8,9 +8,9 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-  <script type="module" crossorigin src="/assets/users-DvZrRZOl.js"></script>
+  <script type="module" crossorigin src="/assets/users-FFYtJvfE.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/modulepreload-polyfill-B5Qt9EMX.js">
-  <link rel="stylesheet" crossorigin href="/assets/users-DxZjRfZ0.css">
+  <link rel="stylesheet" crossorigin href="/assets/users-94XSs7_B.css">
 </head>
 
 <body>
@@ -57,37 +57,73 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">User Management</h1>
-                    <p style="color: #64748b; font-size: 16px;">Manage users, roles, and permissions</p>
+                    <p class="page-subtitle">Manage users, roles, and permissions</p>
                 </div>
             </div>
+            
             <!-- Stats Section -->
             <div class="stats-grid" id="statsGrid">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalUsers">-</div>
-                    <div class="stat-label">Total Users</div>
+                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1);">
+                        <span class="material-icons" style="color: #8b5cf6;">people</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="totalUsers">-</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="activeUsers">-</div>
-                    <div class="stat-label">Active Users</div>
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1);">
+                        <span class="material-icons" style="color: #10b981;">check_circle</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="activeUsers">-</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="adminUsers">-</div>
-                    <div class="stat-label">Admin Users</div>
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1);">
+                        <span class="material-icons" style="color: #f59e0b;">admin_panel_settings</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="adminUsers">-</div>
+                        <div class="stat-label">Admin Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="regularUsers">-</div>
-                    <div class="stat-label">Regular Users</div>
+                    <div class="stat-icon" style="background: rgba(6, 182, 212, 0.1);">
+                        <span class="material-icons" style="color: #06b6d4;">person</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="regularUsers">-</div>
+                        <div class="stat-label">Regular Users</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Users Section -->
             <div class="users-section">
                 <div class="section-header">
-                    <h2 class="section-title">All Users</h2>
-                    <button class="btn btn-primary" id="createUserBtn">
-                        <span class="material-icons" style="font-size: 16px; margin-right: 8px;">add</span>
-                        Create User
-                    </button>
+                    <div class="table-header-title">
+                        <h2 class="section-title">All Users</h2>
+                        <span class="users-count" id="usersCount">0</span>
+                    </div>
+                    <div class="header-actions">
+                        <div class="filter-group">
+                            <span class="material-icons filter-icon">filter_list</span>
+                            <select id="dateFilter" class="filter-select">
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="createUserBtn">
+                            <span class="material-icons">add</span>
+                            Create User
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-container">

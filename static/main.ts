@@ -400,64 +400,28 @@ function createUI() {
     ocean.style.width = '160px';
     ocean.style.height = '160px';
 
-    // Mic button with SVG icon (single button for start/stop)
+    // Mic button with text and icon combined
     const micBtn = document.createElement('button');
     micBtn.className = 'voice-btn mic-btn';
     micBtn.id = 'micBtn';
-    micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;">mic</span>';
-    micBtn.style.width = '50px';
+    micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">mic</span><span style="font-size:15px;font-weight:600;">Start Recording</span>';
+    micBtn.style.minWidth = '180px';
     micBtn.style.height = '50px';
-    micBtn.style.borderRadius = '50%';
-    micBtn.style.background = 'rgba(37,99,235,0.95)';
+    micBtn.style.borderRadius = '25px';
+    micBtn.style.background = '#8b5cf6';
     micBtn.style.color = '#fff';
     micBtn.style.border = 'none';
     micBtn.style.boxShadow = '0 8px 32px rgba(37,99,235,0.18), 0 2px 8px rgba(44,62,80,0.08)';
     micBtn.style.display = 'flex';
     micBtn.style.alignItems = 'center';
     micBtn.style.justifyContent = 'center';
-    micBtn.style.fontWeight = '700';
-    micBtn.style.fontSize = '1.3rem';
+    micBtn.style.padding = '0 24px';
     micBtn.style.cursor = 'pointer';
     micBtn.style.transition = 'background 0.2s, box-shadow 0.2s, transform 0.2s';
     micBtn.style.position = 'relative';
     micBtn.style.outline = 'none';
     micBtn.style.visibility = 'visible';
 
-    // Create text element above the button
-    const buttonText = document.createElement('div');
-    buttonText.id = 'buttonText';
-    buttonText.textContent = 'Start Recording';
-    buttonText.style.position = 'absolute';
-    buttonText.style.top = '-40px';
-    buttonText.style.left = '50%';
-    buttonText.style.transform = 'translateX(-50%)';
-    buttonText.style.color = '#1e293b';
-    buttonText.style.fontSize = '14px';
-    buttonText.style.fontWeight = '600';
-    buttonText.style.whiteSpace = 'nowrap';
-    buttonText.style.pointerEvents = 'auto';
-    buttonText.style.transition = 'color 0.2s';
-
-    // Add click handler to buttonText for manual restart
-    buttonText.onclick = () => {
-        if (isListening && !isRecognitionActive) {
-            console.log('🔧 Manual restart triggered by user');
-            buttonText.style.color = '#f59e0b';
-            buttonText.textContent = 'Restarting...';
-            
-            try {
-                recognition?.start();
-            } catch (e) {
-                console.error('Manual restart failed:', e);
-                // Force fresh start
-                startListening();
-            }
-        }
-    };
-    buttonText.style.cursor = 'pointer';
-    buttonText.style.userSelect = 'none';
-
-    micWrap.appendChild(buttonText);
     micWrap.appendChild(micBtn);
     micWrap.appendChild(ocean);
     document.body.appendChild(micWrap);
@@ -631,6 +595,13 @@ let currentSource: AudioBufferSourceNode | null = null;
 let textChunks: string[] = [];
 let isBuffering = false;
 let finalTranscript = '';
+let lastRequestSentAt: number | null = null;
+let loggedFirstDelta: boolean = false;
+let loggedFirstAudio: boolean = false;
+let processingStartTime: number | null = null;
+let audioGenerationStartTime: number | null = null;
+let isAIResponding = false;
+let hasRealtimeAudio = false;
 
 // Audio recording variables
 let mediaRecorder: MediaRecorder | null = null;
@@ -705,11 +676,17 @@ function startListening() {
     recognition.maxAlternatives = 1;
     recognition.continuous = true;
     
-    // Configure for better speech capture
+    // Configure for better speech capture and sensitivity
     if ('webkitSpeechRecognition' in window) {
         (recognition as any).continuous = true;
         (recognition as any).interimResults = true;
         (recognition as any).maxAlternatives = 1;
+        // Try to make it more sensitive to speech
+        try {
+            (recognition as any).serviceURI = 'https://www.google.com/speech-api/v2/recognize';
+        } catch (e) {
+            // Ignore if not supported
+        }
     }
     
     isListening = true;
@@ -722,11 +699,9 @@ function startListening() {
     let speechPauseTimeout: number | null = null;
 
     recognition.onresult = (event: any) => {
-        // Clear audio playback immediately when user starts speaking
-        clearAudioPlaybackOnly();
-        
-        // Handle user interruption (recording continues)
-        handleUserInterruption();
+        if (isAIResponding || isAudioPlaying || isPlayingQueue) {
+            clearAudioPlaybackOnly();
+        }
 
         let interim = '';
         let hasFinal = false;
@@ -743,18 +718,15 @@ function startListening() {
             }
         }
 
-        // Show interim transcript in real time
         if (interim && !hasFinal) {
             if (!interimBubble) {
                 interimBubble = addStreamingTranscript('You');
             }
-            // Combine accumulated speech with current interim for better display
             const combinedInterim = (accumulatedSpeech + ' ' + interim).trim();
             interimBubble.update(combinedInterim);
             setVoiceWaveActive(true);
             isUserSpeaking = true;
             
-            // Clear any existing timeout when new speech is detected
             if (speechTimeout) {
                 clearTimeout(speechTimeout);
                 speechTimeout = null;
@@ -765,33 +737,31 @@ function startListening() {
             }
         }
 
-        // Handle final transcript - accumulate but don't process immediately
         if (hasFinal && finalTranscript.trim()) {
-            // Clear any existing timeout
             if (speechTimeout) {
                 clearTimeout(speechTimeout);
             }
             
-            // Set a 1000ms pause detection timeout for conversational flow (increased for longer thinking time)
             speechPauseTimeout = window.setTimeout(() => {
                 if (finalTranscript.trim().length > 0) {
-                    // Use the most complete speech available
                     const speechToProcess = finalTranscript.trim();
                     finalTranscript = '';
                     
-                    if (speechToProcess.length > 0) {
+                    if (speechToProcess.length >= 3) {
+                        processingStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                         processUserInput(speechToProcess);
                         accumulatedSpeech = '';
-                        // Clear any interim bubble to prevent duplicate processing
                         const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
                         if (interimBubbleElement) {
                             interimBubbleElement.textContent = '';
                         }
+                    } else {
+                        accumulatedSpeech += ' ' + speechToProcess;
                     }
                 }
                 speechPauseTimeout = null;
                 isUserSpeaking = false;
-            }, 300); // Wait 1000ms of silence before processing
+            }, 700);
         }
     };
 
@@ -840,27 +810,11 @@ function startListening() {
     };
 
     recognition.onstart = () => { 
-        isRecognitionActive = true; 
-        console.log('🎤 Microphone is listening and ready for speech input');
-        
-        // Update UI to show recognition is active
-        const buttonText = document.getElementById('buttonText');
-        if (buttonText && isListening) {
-            buttonText.style.color = '#10b981'; // Green when actively listening
-            buttonText.textContent = 'Listening...';
-        }
+        isRecognitionActive = true;
     };
 
     recognition.onend = () => {
         isRecognitionActive = false;
-        console.log('🎤 Speech recognition ended');
-        
-        // Update UI to show recognition stopped
-        const buttonText = document.getElementById('buttonText');
-        if (buttonText && isListening) {
-            buttonText.style.color = '#f59e0b'; // Orange when restarting
-            buttonText.textContent = 'Restarting...';
-        }
         
         if (isListening && !isProcessing) {
             // Restart recognition immediately if we're still supposed to be listening
@@ -894,115 +848,109 @@ function startListening() {
     };
 
     recognition.start();
-    recognition.startTime = Date.now(); // Track when recognition started
+    recognition.startTime = Date.now();
     
-    // Single health monitor for long conversations
     const healthMonitorInterval = setInterval(() => {
         if (!isListening) {
             clearInterval(healthMonitorInterval);
             return;
         }
         
-        // Health check every 10 seconds
-        if (isListening && !isRecognitionActive && !isProcessing && !isRestartingRecognition) {
-            console.log('🏥 Health check: Recognition not active, restarting...');
-            restartRecognitionSafely('health-check');
+        const now = Date.now();
+        
+        if (recognition && recognition.startTime && (now - recognition.startTime) > 2 * 60 * 1000) {
+            recognition.startTime = now;
+            restartRecognitionSafely('mandatory-2min-restart');
+            return;
         }
         
-        // Proactive restart every 3 minutes to prevent browser timeout
-        const now = Date.now();
-        if (recognition && recognition.startTime && (now - recognition.startTime) > 3 * 60 * 1000) {
-            console.log('🔄 Proactive restart to prevent browser timeout');
-            recognition.startTime = now; // Reset timer
-            restartRecognitionSafely('proactive-timeout');
+        if (isListening && !isRecognitionActive && !isProcessing && !isRestartingRecognition) {
+            restartRecognitionSafely('critical-restart');
+            return;
         }
-    }, 10 * 1000); // Check every 10 seconds
+        
+        if (isListening && !isRecognitionActive && (now - (recognition?.startTime || 0)) > 30000) {
+            restartRecognitionSafely('long-inactive-restart');
+            return;
+        }
+        
+        if (isListening && !realtimeConnected && !realtimeConnecting) {
+            ensureRealtimeConnection().catch(e => {
+                console.error('Reconnection failed:', e);
+                setTimeout(() => {
+                    if (isListening) ensureRealtimeConnection();
+                }, 1000);
+            });
+            return;
+        }
+    }, 1000);
 }
 
-// Function to clear only audio playback (not speech recognition)
 function clearAudioPlaybackOnly() {
-    // Stop any ongoing AI speech
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
 
-    // Stop current audio source if playing
     if (currentSource) {
         try {
             currentSource.stop();
             currentSource.disconnect();
-        } catch (e) {
-}
+        } catch (e) {}
         currentSource = null;
     }
 
-    // Clear audio buffer queue
     audioBufferQueue = [];
     audioPlaybackQueue = [];
-
-    // Reset audio playing state
+    realtimeAudioChunks = [];
     isAudioPlaying = false;
     isPlayingQueue = false;
-}
-
-// Function to handle user interruption (no longer stops recording)
-function handleUserInterruption() {
-}
-
-
-// Function to clear all outstanding audio
-function clearAllOutstandingAudio() {
-    // Stop any ongoing AI speech
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-
-    // Stop current audio source if playing
-    if (currentSource) {
-        try {
-            currentSource.stop();
-            currentSource.disconnect();
-        } catch (e) {
-}
-        currentSource = null;
-    }
-
-    // Clear audio buffer queue
-    audioBufferQueue = [];
-    audioPlaybackQueue = [];
-
-    // Reset audio playing state
-    isAudioPlaying = false;
-    isPlayingQueue = false;
-
-    // Clear any remaining text chunks
+    isBuffering = false;
     textChunks = [];
+    isAIResponding = false;
+    
+    if (speechTimeout) {
+        clearTimeout(speechTimeout);
+        speechTimeout = null;
+    }
+}
 
-    // Stop buffering
+function clearAllOutstandingAudio() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    if (currentSource) {
+        try {
+            currentSource.stop();
+            currentSource.disconnect();
+        } catch (e) {}
+        currentSource = null;
+    }
+
+    audioBufferQueue = [];
+    audioPlaybackQueue = [];
+    isAudioPlaying = false;
+    isPlayingQueue = false;
+    textChunks = [];
     isBuffering = false;
 }
 
-// Centralized restart function to prevent conflicts
 function restartRecognitionSafely(reason: string = 'manual') {
     if (isRestartingRecognition || !isListening) {
-        console.log(`⏭️ Skipping restart (${reason}) - already restarting or not listening`);
         return;
     }
     
     isRestartingRecognition = true;
-    console.log(`🔄 Safe restart triggered: ${reason}`);
     
     try {
-        // Stop current recognition if active
         if (recognition && isRecognitionActive) {
             recognition.stop();
         }
         
-        // Wait a moment then start fresh
         setTimeout(() => {
             if (isListening && !isRecognitionActive) {
                 try {
                     recognition?.start();
-                    console.log('✅ Recognition restarted successfully');
                 } catch (e) {
-                    console.error('Restart failed, creating new recognition:', e);
-                    // Create completely new recognition instance
+                    console.error('Restart failed:', e);
                     startListening();
                 }
             }
@@ -1196,6 +1144,95 @@ async function playBase64Audio(base64: string, _format: string = 'pcm_f32le', sa
     await playAudioBuffer(audioData.buffer, sampleRate);
 }
 
+async function convertAIAudioToText(audioBuffer: AudioBuffer) {
+    try {
+        const wavBlob = audioBufferToWav(audioBuffer);
+        const formData = new FormData();
+        formData.append('file', wavBlob, 'ai_response.wav');
+        formData.append('model', 'whisper-1');
+        formData.append('language', 'en');
+        
+        const accessToken = await getAccessToken();
+        const response = await fetch('/api/db/transcribe_audio', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            const aiText = result.text || result.transcript || 'AI response transcribed';
+            addTranscript('AI', aiText);
+        } else {
+            const errorText = await response.text();
+            console.error('Audio transcription failed:', response.status, errorText);
+            
+            const lastUserMessage = transcriptHistory.filter(t => t.sender === 'You').pop();
+            let fallbackResponse = '[AI provided audio response]';
+            
+            if (lastUserMessage) {
+                const userText = lastUserMessage.text.toLowerCase();
+                if (userText.includes('sales skill') || userText.includes('practice')) {
+                    fallbackResponse = 'I\'d be happy to help you practice your sales skills! What specific area would you like to work on?';
+                } else if (userText.includes('close') || userText.includes('deal')) {
+                    fallbackResponse = 'Great! Let\'s work on your closing techniques. What type of deals are you looking to close?';
+                } else if (userText.includes('name')) {
+                    fallbackResponse = 'I\'m your AI sales training coach. I\'m here to help you improve your sales skills!';
+                } else {
+                    fallbackResponse = 'I understand. Let me help you with that. Can you tell me more about what you\'d like to work on?';
+                }
+            }
+            
+            addTranscript('AI', fallbackResponse);
+        }
+    } catch (error) {
+        console.error('Error transcribing AI audio:', error);
+        addTranscript('AI', '[AI Response - Audio Only]');
+    }
+}
+
+// Helper function to convert AudioBuffer to WAV
+function audioBufferToWav(buffer: AudioBuffer): Blob {
+    const length = buffer.length;
+    const sampleRate = buffer.sampleRate;
+    const arrayBuffer = new ArrayBuffer(44 + length * 2);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    };
+    
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * 2, true);
+    
+    // Convert float32 to int16
+    const channelData = buffer.getChannelData(0);
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+        const sample = Math.max(-1, Math.min(1, channelData[i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
 async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
     if (!audioContext) {
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -1228,12 +1265,14 @@ async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
         currentSource = audioContext.createBufferSource();
         currentSource.buffer = audioBuffer;
         
-        // Connect to both speakers and recording destination
         currentSource.connect(audioContext.destination);
         if (audioDestination && isRecording) {
             currentSource.connect(audioDestination);
         }
         
+        if (!loggedFirstAudio && lastRequestSentAt != null) {
+            loggedFirstAudio = true;
+        }
         currentSource.start();
 } catch (error) {
         console.error('Error playing raw PCM audio:', error);
@@ -1241,20 +1280,34 @@ async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
 }
 
 function processUserInput(text: string) {
-    if (isProcessing) return;
+    if (isProcessing || isAIResponding) {
+        return;
+    }
     isProcessing = true;
+    isAIResponding = true;
     addTranscript('You', text);
     
-    // Streaming version using /chat_stream and SSE
     const aiTranscript = addStreamingTranscript('AI');
     let fullReply = '';
     let textBuffer = '';
+    lastRequestSentAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    loggedFirstDelta = false;
+    loggedFirstAudio = false;
+    hasRealtimeAudio = false;
+    
+    const responseTimeout = setTimeout(() => {
+        if (isProcessing) {
+            isProcessing = false;
+            isAIResponding = false;
+        }
+    }, 15000);
 
-    fetchStreamedAIReply(text, (delta) => {
+    realtimeSendUserText(text, (delta) => {
+        if (!loggedFirstDelta && lastRequestSentAt != null) {
+            loggedFirstDelta = true;
+        }
         fullReply += delta;
         aiTranscript.update(fullReply);
-
-        // Add delta to text buffer
         textBuffer += delta;
 
         // Create chunks only at natural sentence boundaries
@@ -1266,53 +1319,51 @@ function processUserInput(text: string) {
 
                 // Start buffering if not already
                 if (!isBuffering) {
+                    audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                     startPreBuffering();
                 }
             }
         }
     }).then(() => {
-        // Handle any remaining text
         if (textBuffer.trim()) {
             const remainingChunks = splitIntoNaturalChunks(textBuffer.trim());
             textChunks.push(...remainingChunks);
             if (!isBuffering) {
+                audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                 startPreBuffering();
             }
         }
         
-        // Note: AI response is already added to transcript via streaming, no need to add again
         if (fullReply.trim()) {
             addTranscript('AI', fullReply.trim());
         }
         
-        // Clear memory to prevent accumulation
         fullReply = '';
         textBuffer = '';
         isProcessing = false;
+        isAIResponding = false;
+        clearTimeout(responseTimeout);
         
-        // Ensure speech recognition is actively listening after AI response
         setTimeout(() => {
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-response');
             }
-        }, 500); // Small delay to ensure AI audio starts playing first
+        }, 500);
         
-        // Monitor memory usage and cleanup if needed
         monitorMemoryUsage();
         
-        // Force garbage collection if available
         if (window.gc) {
             window.gc();
         }
     }).catch(err => {
-        aiTranscript.update('Error: ' + err.message);
+        console.error('AI response error:', err.message);
         
-        // Clear memory even on error
         fullReply = '';
         textBuffer = '';
         isProcessing = false;
+        isAIResponding = false;
+        clearTimeout(responseTimeout);
         
-        // Restart speech recognition after error too
         setTimeout(() => {
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-error');
@@ -1397,30 +1448,24 @@ async function playNextInQueue() {
     }, 500);
 }
 
-// Update the pre-buffering system to use Cartesia with proper queuing
 async function startPreBuffering() {
     if (isBuffering) return;
     isBuffering = true;
 
     while (textChunks.length > 0) {
-        // Take up to 2 chunks for buffering (reduced from 3 for faster processing)
         const chunksToBuffer = textChunks.splice(0, 2);
 
-        // Process chunks and add to audio queue
         for (let i = 0; i < chunksToBuffer.length; i++) {
             const chunk = chunksToBuffer[i];
             try {
-                // Get audio data and add to queue instead of playing immediately
                 const audioBuffer = await getAudioBuffer(chunk);
                 audioPlaybackQueue.push(audioBuffer);
                 
-                // Start playing queue if not already playing
                 if (!isPlayingQueue) {
                     playNextInQueue();
                 }
             } catch (err) {
                 console.error('Cartesia TTS error:', err);
-                // Fallback to simple speak function
                 try {
                     await speak(chunk);
                 } catch (fallbackErr) {
@@ -1541,77 +1586,292 @@ function addStreamingTranscript(sender: 'AI' | 'You') {
     };
 }
 
-// Fetch streaming AI reply from /chat_stream using SSE
-function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void): Promise<void> {
+// Realtime OpenAI WebSocket client (direct browser connection)
+let realtimeWS: WebSocket | null = null;
+let realtimeConnected = false;
+let realtimeConnecting = false;
+let realtimeTextBufferCallback: ((delta: string) => void) | null = null;
+let realtimeAudioChunks: Int16Array[] = [];
+let realtimeSampleRate = 24000; // default PCM16 sample rate used by Realtime API
+let currentAIResponse = ''; // Store complete AI response for logging
+let nextAudioStartTime = 0; // Track when next audio chunk should start for seamless streaming
+let agentSystemPrompt = ''; // Store the agent's system prompt (fetched once at startup)
+
+// Removed getOpenAIKey function - API key now handled securely on backend
+
+async function fetchAgentPrompt(): Promise<void> {
+    const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
+    
+    try {
+        const response = await fetch(`/api/get_agent_prompt?agent_type=${agentType}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.prompt) {
+                agentSystemPrompt = data.prompt;
+            } else {
+                console.error('Invalid response format:', data);
+                agentSystemPrompt = 'You are a helpful sales training coach. Speak naturally and concisely.';
+            }
+        } else {
+            const errorText = await response.text();
+            console.error('Failed to fetch agent prompt:', response.status, errorText);
+            agentSystemPrompt = 'You are a helpful sales training coach. Speak naturally and concisely.';
+        }
+    } catch (error) {
+        console.error('Error fetching agent prompt:', error);
+        agentSystemPrompt = 'You are a helpful sales training coach. Speak naturally and concisely.';
+    }
+}
+
+function ensureRealtimeConnection(onDelta?: (delta: string) => void): Promise<void> {
     return new Promise((resolve, reject) => {
-        const controller = new AbortController();
+        if (realtimeConnected && realtimeWS) {
+            realtimeTextBufferCallback = onDelta || null;
+            resolve();
+            return;
+        }
+        if (realtimeConnecting) {
+            const check = setInterval(() => {
+                if (realtimeConnected) {
+                    clearInterval(check);
+                    realtimeTextBufferCallback = onDelta || null;
+                    resolve();
+                }
+            }, 100);
+            return;
+        }
+
+        // Connect to secure backend proxy instead of directly to OpenAI
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const url = `${protocol}//${host}/ws/openai-realtime`;
+
+        realtimeConnecting = true;
+        realtimeTextBufferCallback = onDelta || null;
         
-        // Add timeout to prevent hanging connections that block isProcessing
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            reject(new Error('Request timeout after 60 seconds'));
-        }, 60000); // 60 second timeout
+        // No API key needed - backend proxy handles authentication securely
+        const ws = new WebSocket(url);
+        realtimeWS = ws;
+
+        ws.onopen = () => {
+            realtimeConnected = true;
+            realtimeConnecting = false;
+            
+            const instructions = agentSystemPrompt || 'You are a helpful sales training coach.';
         
-        // Get the selected agent type from localStorage
-        const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
+            const sessionUpdate = {
+                type: 'session.update',
+                session: {
+                    type: 'realtime',
+                    model: 'gpt-4o-realtime-preview', 
+                    instructions: instructions,
+                    voice: 'alloy',
+                    tools: [],
+                    tool_choice: 'none',
+                }
+            };
         
-        // Generate a unique session ID for this conversation
-        const sessionId = localStorage.getItem('currentSessionId') || generateSessionId();
-        localStorage.setItem('currentSessionId', sessionId);
+            ws.send(JSON.stringify(sessionUpdate));
         
-        // Debug: Log session ID to ensure it's consistent
-        console.log('🔍 Using session ID:', sessionId);
-        console.log('🔍 User input:', userText);
-        console.log('🔍 Agent type:', agentType);
+            setTimeout(() => {
+                const responseCreate = {
+                    type: 'response.create',
+                    response: {
+                        instructions: "Start the conversation by saying: 'Hey, who's this?'"
+                    }
+                };
+                ws.send(JSON.stringify(responseCreate));
+            }, 500);
         
-        fetch('/chat_stream', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                message: userText,
-                agent_type: agentType,
-                session_id: sessionId
-            }),
-            signal: controller.signal
-        }).then(response => {
-            if (!response.body) throw new Error('No response body');
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-            function read() {
-                reader.read().then(({ done, value }) => {
-                    if (done) {
-                        clearTimeout(timeoutId);
-                        resolve();
+            resolve();
+        };
+        
+        ws.onerror = (ev) => {
+            realtimeConnecting = false;
+            console.error('Realtime WebSocket error:', ev);
+            reject(new Error('Realtime WebSocket error'));
+        };
+        ws.onclose = (event) => {
+            realtimeConnected = false;
+            realtimeConnecting = false;
+            realtimeWS = null;
+            realtimeTextBufferCallback = null;
+            realtimeAudioChunks = [];
+            
+            if (isListening) {
+                setTimeout(() => {
+                    if (isListening && !realtimeConnected && !realtimeConnecting) {
+                        ensureRealtimeConnection();
+                    }
+                }, 2000);
+            }
+        };
+        ws.onmessage = async (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                const type = msg.type as string;
+                
+                if (type === 'response.output_text.delta') {
+                    const deltaText = msg.delta as string;
+                    if (deltaText && deltaText.includes('tool_uses')) {
                         return;
                     }
-                    buffer += decoder.decode(value, { stream: true });
-                    let lines = buffer.split(/\r?\n/);
-                    buffer = lines.pop() || '';
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const payload = JSON.parse(line.slice(6));
-                                if (payload.reply) {
-                                    onDelta(payload.reply);
-                                }
-                            } catch (e) {
-                                // Ignore JSON parse errors
-                            }
+                    
+                    if (msg.delta) {
+                        currentAIResponse += msg.delta;
+                    }
+                    
+                    if (realtimeTextBufferCallback && msg.delta) {
+                        realtimeTextBufferCallback(msg.delta as string);
+                    }
+                } else if (type === 'response.output_text.done') {
+                } else if (type === 'response.output_audio.delta') {
+                    hasRealtimeAudio = true;
+                    const b64 = msg.delta as string;
+                    if (b64) {
+                        const raw = atob(b64);
+                        const bytes = new Int16Array(raw.length / 2);
+                        for (let i = 0; i < raw.length; i += 2) {
+                            bytes[i / 2] = (raw.charCodeAt(i) | (raw.charCodeAt(i + 1) << 8));
+                        }
+                        
+                        // STREAM: Play this chunk immediately, don't wait for complete response
+                        realtimeAudioChunks.push(bytes);
+                        
+                        // Convert to Float32 for immediate playback
+                        const floatBuf = new Float32Array(bytes.length);
+                        for (let i = 0; i < bytes.length; i++) {
+                            floatBuf[i] = Math.max(-1, Math.min(1, bytes[i] / 32768));
+                        }
+                        
+                        if (!audioContext) {
+                            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                        }
+                        
+                        // Resume audio context if suspended
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        
+                        // Create buffer for this chunk
+                        const chunkBuffer = audioContext.createBuffer(1, floatBuf.length, realtimeSampleRate);
+                        chunkBuffer.copyToChannel(floatBuf, 0);
+                        
+                        // Create source and play immediately
+                        const src = audioContext.createBufferSource();
+                        src.buffer = chunkBuffer;
+                        
+                        // Connect to speakers AND recording
+                        src.connect(audioContext.destination);
+                        if (audioDestination && isRecording) {
+                            src.connect(audioDestination);
+                        }
+                        
+                        // Schedule playback: queue chunks to play sequentially without gaps
+                        const chunkDuration = chunkBuffer.duration;
+                        
+                        if (nextAudioStartTime === 0 || nextAudioStartTime < audioContext.currentTime) {
+                            nextAudioStartTime = audioContext.currentTime;
+                            src.start(nextAudioStartTime);
+                        } else {
+                            src.start(nextAudioStartTime);
+                        }
+                        
+                        nextAudioStartTime += chunkDuration;
+                        currentSource = src;
+                    }
+                } else if (type === 'response.output_audio.done') {
+                    
+                    // Concatenate chunks for transcription storage (audio already played via streaming)
+                    const totalSamples = realtimeAudioChunks.reduce((a, arr) => a + arr.length, 0);
+                    const pcm = new Int16Array(totalSamples);
+                    let offset = 0;
+                    for (const chunk of realtimeAudioChunks) {
+                        pcm.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+                    
+                    // Convert to Float32 for storage
+                    const floatBuf = new Float32Array(pcm.length);
+                    for (let i = 0; i < pcm.length; i++) {
+                        floatBuf[i] = Math.max(-1, Math.min(1, pcm[i] / 32768));
+                    }
+                    
+                    if (!audioContext) {
+                        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    }
+                    
+                    // Create buffer for transcription (not for playback - already played)
+                    const audioBuffer = audioContext.createBuffer(1, floatBuf.length, realtimeSampleRate);
+                    audioBuffer.copyToChannel(floatBuf, 0);
+                    
+                    // Store AI audio for transcript generation
+                    (window as any).lastAIAudioBuffer = audioBuffer;
+                    (window as any).lastAIAudioTime = Date.now();
+                    
+                    realtimeAudioChunks = [];
+                    nextAudioStartTime = 0;
+                } else if (type === 'response.created') {
+                    currentAIResponse = '';
+                    nextAudioStartTime = 0;
+                } else if (type === 'response.done') {
+                    let cleanedResponse = currentAIResponse.trim();
+                    if (cleanedResponse.includes('tool_uses')) {
+                        cleanedResponse = cleanedResponse.replace(/\{"tool_uses":\[.*?\]\}/g, '').trim();
+                    }
+                    
+                    if (cleanedResponse) {
+                        addTranscript('AI', cleanedResponse);
+                    } else {
+                        if ((window as any).lastAIAudioBuffer) {
+                            convertAIAudioToText((window as any).lastAIAudioBuffer);
+                        } else {
+                            addTranscript('AI', '[AI provided audio response]');
                         }
                     }
-                    read();
-                }).catch((error) => {
-                    clearTimeout(timeoutId);
-                    reject(error);
-                });
-            }
-            read();
-        }).catch((error) => {
-            clearTimeout(timeoutId);
-            reject(error);
-        });
+                    
+                    currentAIResponse = '';
+                } else if (type === 'session.updated') {
+                } else if (type === 'error') {
+                    console.error('Realtime error:', msg);
+                    console.error('Error details:', JSON.stringify(msg.error, null, 2));
+                }
+            } catch (e) {}
+        };
     });
+}
+
+async function realtimeSendUserText(userText: string, onDelta?: (delta: string) => void): Promise<void> {
+    await ensureRealtimeConnection(onDelta);
+    if (!realtimeWS) return;
+    
+    const conversationItem = {
+        type: 'conversation.item.create',
+        item: {
+            type: 'message',
+            role: 'user',
+            content: [
+                {
+                    type: 'input_text',
+                    text: userText
+                }
+            ]
+        }
+    } as const;
+    
+    realtimeWS.send(JSON.stringify(conversationItem));
+    
+    const responseCreate = {
+        type: 'response.create'
+    };
+    
+    realtimeWS.send(JSON.stringify(responseCreate));
+}
+
+// Fetch streaming AI reply from /chat_stream using SSE
+function fetchStreamedAIReply(userText: string, onDelta: (delta: string) => void): Promise<void> {
+    return realtimeSendUserText(userText, onDelta);
 }
 
 function setRecordingIndicator(active: boolean) {
@@ -1691,27 +1951,16 @@ async function startAudioRecording() {
         isRecording = true;
         recordingStartTime = Date.now();
         
-        // Update text above button to show "Stop Recording"
-        const buttonText = document.getElementById('buttonText');
-        if (buttonText) {
-            buttonText.textContent = 'Stop Recording';
-            buttonText.style.color = '#ef4444'; // Red color for stop
-        }
         
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
                 audioChunks.push(event.data);
-                // Removed logging for performance
             }
         };
         
         mediaRecorder.onstop = () => {
-            // Removed logging for performance
-            
             if (audioChunks.length > 0) {
-                // Create single blob from all chunks - this is the correct way
                 const audioBlob = new Blob(audioChunks, { type: mimeType });
-                // Removed logging for performance
                 
                 // Convert to base64 and save
                 const reader = new FileReader();
@@ -1725,8 +1974,6 @@ async function startAudioRecording() {
                     // Store final recording duration
                     const recordingDuration = (Date.now() - recordingStartTime) / 1000;
                     sessionStorage.setItem('recordingDuration', recordingDuration.toString());
-                    
-                    // Removed logging for performance
                 };
                 reader.readAsDataURL(audioBlob);
             }
@@ -1772,30 +2019,22 @@ async function stopAudioRecording(): Promise<void> {
         // Override the onstop callback to ensure proper sequencing
         mediaRecorder.onstop = () => {
             clearTimeout(timeout);
-if (audioChunks.length > 0) {
-                // Create single blob from all chunks
+            if (audioChunks.length > 0) {
                 const audioBlob = new Blob(audioChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
-                // Removed logging for performance
-                
-                // Convert to base64 and save
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64Data = reader.result as string;
-                    // Store audio data in memory instead of storage to avoid quota exceeded
                     (window as any).conversationRecordingData = base64Data;
                     sessionStorage.setItem('hasRecording', 'true');
                     sessionStorage.setItem('recordingTimestamp', Date.now().toString());
-                    
-                    // Store final recording duration
                     const recordingDuration = (Date.now() - recordingStartTime) / 1000;
                     sessionStorage.setItem('recordingDuration', recordingDuration.toString());
-// Clean up and resolve
                     cleanupAudioRecording();
                     resolve();
                 };
                 reader.readAsDataURL(audioBlob);
             } else {
-cleanupAudioRecording();
+                cleanupAudioRecording();
                 resolve();
             }
         };
@@ -1803,7 +2042,6 @@ cleanupAudioRecording();
         // Stop the recording
         try {
             mediaRecorder.stop();
-            // Removed logging for performance
         } catch (error) {
             clearTimeout(timeout);
             console.error('Error stopping media recorder:', error);
@@ -1829,28 +2067,14 @@ function cleanupAudioRecording() {
     }
     mediaRecorder = null;
     audioChunks = [];
-    
-    // Reset text above button to "Start Recording"
-    const buttonText = document.getElementById('buttonText');
-    if (buttonText) {
-        buttonText.textContent = 'Start Recording';
-        buttonText.style.color = '#1e293b'; // Dark color for start
-    }
 }
 
 // Save conversation and navigate to success page
 async function navigateToAnalysis() {
     try {
         // Update button to show saving progress
-        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">save</span>';
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">save</span><span style="font-size:15px;font-weight:600;">Saving...</span>';
         micBtn.style.background = 'rgba(34,197,94,0.95)';
-        
-        // Update text above button
-        const savingText = document.getElementById('buttonText');
-        if (savingText) {
-            savingText.textContent = 'Saving...';
-            savingText.style.color = '#059669'; // Green color for saving
-        }
         
         // Wait a moment to ensure audio processing is complete
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1862,18 +2086,15 @@ async function navigateToAnalysis() {
         const recordingTimestamp = sessionStorage.getItem('recordingTimestamp');
 
 if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
-            // Wait a bit more and check again
             await new Promise(resolve => setTimeout(resolve, 500));
             
             const retryHasRecording = sessionStorage.getItem('hasRecording');
             const retryRecordedAudio = (window as any).conversationRecordingData;
             
             if (!retryHasRecording || retryHasRecording !== 'true' || !retryRecordedAudio) {
-                console.error('❌ Still no audio recording after retry - proceeding with placeholder');
-            } else {
-}
-        } else {
-}
+                console.error('Still no audio recording after retry');
+            }
+        }
 // Store transcript in sessionStorage
         sessionStorage.setItem('chatTranscript', JSON.stringify(transcriptHistory));
         
@@ -1888,9 +2109,7 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
         let audioUrl = null;
         let finalAudioData = audioData;
         
-        // If audio is larger than 5MB, upload to Supabase Storage
         if (audioSizeMB > 5) {
-            console.log(`📤 Uploading large audio file (${audioSizeMB.toFixed(2)}MB) to storage...`);
             try {
                 const uploadResponse = await authenticatedFetch('/api/db/upload_audio', {
                     method: 'POST',
@@ -1904,9 +2123,7 @@ if (!hasRecording || hasRecording !== 'true' || !recordedAudio) {
                     const uploadResult = await uploadResponse.json();
                     audioUrl = uploadResult.audio_url;
                     finalAudioData = btoa(`stored_in_supabase_storage:${audioUrl}`);
-                    console.log(`✅ Audio uploaded to storage: ${audioUrl}`);
                 } else {
-                    console.warn('⚠️ Audio upload failed, using truncated data');
                     finalAudioData = btoa(`upload_failed_${audioSizeMB.toFixed(2)}MB`);
                 }
             } catch (error) {
@@ -1962,15 +2179,8 @@ if (!conversationResult.success) {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Show final loading state before navigation
-        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">check_circle</span>';
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">check_circle</span><span style="font-size:15px;font-weight:600;">Success!</span>';
         micBtn.style.background = 'rgba(34,197,94,0.95)';
-        
-        // Update text above button
-        const successText = document.getElementById('buttonText');
-        if (successText) {
-            successText.textContent = 'Success!';
-            successText.style.color = '#059669'; // Green color for success
-        }
         
         // Navigate to success page
         window.location.href = '/success.html';
@@ -1997,7 +2207,7 @@ if (!conversationResult.success) {
         } else {
             alert('Failed to save conversation. Please try again.');
             // Reset button state for retry
-            micBtn.innerHTML = micOffIcon;
+            micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">mic_off</span><span style="font-size:15px;font-weight:600;">Stop Recording</span>';
             micBtn.style.background = 'rgba(229,39,76,0.92)';
             micBtn.disabled = false;
             micBtn.style.cursor = 'pointer';
@@ -2027,60 +2237,35 @@ async function clearConversationHistory() {
     }
 }
 
-// Function to clear accumulated data and prevent memory buildup
 function clearAccumulatedData() {
-    // Clear text chunks
     textChunks = [];
-    
-    // Clear accumulated speech
     accumulatedSpeech = '';
     finalTranscript = '';
-    
-    // Clear audio chunks
     audioChunks = [];
     
-    // DON'T clear conversation recording data during active conversation
-    // This was breaking the recording system during conversations
-    // (window as any).conversationRecordingData = null;
-    
-    // Force garbage collection if available
     if (window.gc) {
         window.gc();
     }
-    
-    console.log('🧹 Cleared accumulated data to prevent memory buildup');
 }
 
-// Function to monitor memory usage and prevent 15MB limit
 function monitorMemoryUsage() {
-    // Check if we're approaching memory limits
     const audioDataSize = (window as any).conversationRecordingData ? 
         (window as any).conversationRecordingData.length : 0;
     const textChunksSize = textChunks.join('').length;
     const totalEstimatedSize = audioDataSize + textChunksSize;
     
-    // If we're approaching 10MB, clear accumulated data
     if (totalEstimatedSize > 10 * 1024 * 1024) {
-        console.warn('⚠️ Approaching memory limit, clearing accumulated data');
         clearAccumulatedData();
     }
-    
-    // Log memory usage for debugging
-    console.log(`📊 Memory usage: Audio: ${(audioDataSize / 1024 / 1024).toFixed(2)}MB, Text: ${(textChunksSize / 1024).toFixed(2)}KB`);
 }
 
 function clearPreviousAnalysisData() {
-    // Note: Don't clear conversation history automatically - let it persist for context
-    // await clearConversationHistory();
-    
-    // Clear analysis-related data from sessionStorage
     const keysToClear = [
         'analysisData',
         'currentAnalysisData', 
         'analysisId',
         'conversationId',
         'chatTranscript',
-        // 'conversationRecording', // Now stored in memory, not storage
         'recordingDuration',
         'hasRecording',
         'recordingTimestamp',
@@ -2090,23 +2275,15 @@ function clearPreviousAnalysisData() {
     keysToClear.forEach(key => {
         if (sessionStorage.getItem(key)) {
             sessionStorage.removeItem(key);
-}
+        }
     });
     
-    // Also clear any in-memory recording state
     if (audioChunks.length > 0) {
         audioChunks = [];
     }
     
-    // Clear audio data from memory to prevent memory leaks
     (window as any).conversationRecordingData = null;
-    
-    // Clear all accumulated data to prevent memory buildup
     clearAccumulatedData();
-    
-    // Note: Don't generate new session ID - keep existing session for conversation continuity
-    // const newSessionId = generateSessionId();
-    // localStorage.setItem('currentSessionId', newSessionId);
 }
 
 // Helper functions for conversation data
@@ -2142,8 +2319,6 @@ function getBase64Audio(): string {
             const isRecent = (now - timestamp) < 2 * 60 * 60 * 1000;
             
             if (isRecent) {
-                const audioSizeMB = recordedAudio.length / 1024 / 1024;
-                console.log(`📊 Audio size: ${audioSizeMB.toFixed(2)}MB`);
                 return recordedAudio;
             }
         }
@@ -2161,16 +2336,13 @@ function getAudioDuration(): number {
 
 if (recordedDuration && hasRecording === 'true' && recordedAudio) {
         const duration = parseFloat(recordedDuration);
-        // Verify the duration is reasonable (between 1 second and 2 hours)
         if (duration > 0 && duration < 7200) {
-return duration;
-        } else {
-}
+            return duration;
+        }
     }
     
-    // Fallback to call duration if no recording duration exists
     const callDuration = getCallDuration();
-return callDuration;
+    return callDuration;
 }
 
 async function getClientIP(): Promise<string> {
@@ -2230,11 +2402,10 @@ function isTokenExpired(): boolean {
 }
 
 async function getAccessToken(): Promise<string> {
-    // Check if token is expired
     if (isTokenExpired()) {
-const newToken = await refreshAccessToken();
+        const newToken = await refreshAccessToken();
         if (!newToken) {
-            console.error('Failed to refresh token, redirecting to login');
+            console.error('Failed to refresh token');
             localStorage.clear();
             window.location.href = '/login.html';
             return '';
@@ -2242,16 +2413,12 @@ const newToken = await refreshAccessToken();
         return newToken;
     }
     
-    // Check both possible key names for the access token
     const token = localStorage.getItem('accessToken');
     if (!token) {
-        console.error('No access token found! User must be logged in.');
-        // Removed logging for performance
-        // Redirect to login if no token
+        console.error('No access token found');
         window.location.href = '/login.html';
         return '';
     }
-    // Removed logging for performance
     return token;
 }
 
@@ -2268,11 +2435,10 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
         }
     });
     
-    // If we get a 401, try to refresh the token and retry once
     if (response.status === 401) {
-const newToken = await refreshAccessToken();
+        const newToken = await refreshAccessToken();
         if (newToken) {
-return fetch(url, {
+            return fetch(url, {
                 ...options,
                 headers: {
                     ...options.headers,
@@ -2281,7 +2447,6 @@ return fetch(url, {
                 }
             });
         } else {
-            // Refresh failed, redirect to login
             localStorage.clear();
             window.location.href = '/login.html';
             throw new Error('Authentication failed');
@@ -2325,96 +2490,91 @@ function calculateConfidence(transcript: { sender: 'AI' | 'You', text: string, t
 }
 
 let isChatActive = false;
-const micIcon = '<span class="material-icons" style="font-size:1.3em;color:#fff;">mic</span>';
-const micOffIcon = '<span class="material-icons" style="font-size:1.3em;color:#fff;">mic_off</span>';
 
 micBtn.onclick = async () => {
     if (!isChatActive) {
-        // Clear any previous analysis data to ensure fresh analysis for new conversation
         await clearPreviousAnalysisData();
         
-        // Start chat
+        if (!agentSystemPrompt) {
+            await fetchAgentPrompt();
+        }
+        
         resetTranscript();
         startTimer();
-        setVoiceWaveActive(true); // Activate voice wave animation
+        setVoiceWaveActive(true);
         
-        // Start audio recording
+        // API key is now handled securely on the backend
+        try {
+            await ensureRealtimeConnection();
+        } catch (e) {
+            alert('Failed to establish realtime connection. Please check your network connection and try again.');
+            setVoiceWaveActive(false);
+            stopTimer();
+            return;
+        }
+        
         startAudioRecording();
-        
-        const welcome ="Hey, who's this?"
-        addTranscript('AI', welcome);
-        speak(welcome);
         startListening();
-        micBtn.innerHTML = micOffIcon;
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">mic_off</span><span style="font-size:15px;font-weight:600;">Stop Recording</span>';
         micBtn.style.background = 'rgba(229,39,76,0.92)';
         isChatActive = true;
     } else {
-        // IMMEDIATE FEEDBACK: Show loading state right away
-        micBtn.innerHTML = '<span class="material-icons" style="font-size:1.3em;color:#fff;">hourglass_empty</span>';
+        micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">hourglass_empty</span><span style="font-size:15px;font-weight:600;">Processing...</span>';
         micBtn.style.background = 'rgba(107,114,128,0.95)';
         micBtn.disabled = true;
         micBtn.style.cursor = 'not-allowed';
         
-        // Stop chat operations
-        clearAllOutstandingAudio(); // Clear all outstanding voice/audio
+        clearAllOutstandingAudio();
         stopListening();
         stopTimer();
-        setVoiceWaveActive(false); // Deactivate voice wave animation
+        setVoiceWaveActive(false);
         
         try {
-            // Stop audio recording only when user clicks mic_off
             if (isRecording) {
                 await stopAudioRecording();
             }
             
-            // Save conversation first, then navigate after successful save
             if (transcriptHistory.length > 0) {
-                // Save conversation and navigate
                 await navigateToAnalysis();
             } else {
                 window.location.href = '/success.html';
             }
         } catch (error) {
-            console.error('❌ Error during disconnect process:', error);
-            // Reset button state on error
-            micBtn.innerHTML = micOffIcon;
+            console.error('Error during disconnect process:', error);
+            micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">mic_off</span><span style="font-size:15px;font-weight:600;">Stop Recording</span>';
             micBtn.style.background = 'rgba(229,39,76,0.92)';
             micBtn.disabled = false;
             micBtn.style.cursor = 'pointer';
-            isChatActive = true; // Keep chat active so user can try again
+            isChatActive = true;
             alert('Error disconnecting. Please try again.');
         }
     }
 };
 
 // Initial state
-micBtn.innerHTML = micIcon;
-micBtn.style.background = 'rgba(37,99,235,0.95)';
+micBtn.innerHTML = '<span class="material-icons" style="font-size:20px;color:#fff;margin-right:8px;">mic</span><span style="font-size:15px;font-weight:600;">Start Recording</span>';
+micBtn.style.background = '#8b5cf6';
 isChatActive = false;
 setRecordingIndicator(false);
 
-// Set up periodic check for AI speaking status and stuck processing
 let lastProcessingTime = 0;
 setInterval(() => {
     if (!isBuffering && audioPlaybackQueue.length === 0 && !isPlayingQueue) {
-        // Double-check that we're not in the middle of processing
         if (!isProcessing) {
-            // Reset processing time tracker
             lastProcessingTime = 0;
         }
     }
     
-    // Check if isProcessing is stuck (longer than 2 minutes)
     if (isProcessing) {
         if (lastProcessingTime === 0) {
             lastProcessingTime = Date.now();
-        } else if (Date.now() - lastProcessingTime > 120000) { // 2 minutes
-            console.error('⚠️ isProcessing stuck for 2+ minutes, forcing reset');
+        } else if (Date.now() - lastProcessingTime > 120000) {
+            console.error('isProcessing stuck for 2+ minutes');
             isProcessing = false;
             lastProcessingTime = 0;
         }
     }
-}, 3000); // Check every 3 seconds
+}, 3000);
 
 // Add user interaction handler to resume AudioContext
 document.addEventListener('click', async () => {

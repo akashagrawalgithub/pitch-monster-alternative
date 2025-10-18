@@ -32,7 +32,8 @@ export default defineConfig({
       '/test-perfect-pitch': 'http://localhost:8000',
       '/login': 'http://localhost:8000',
       '/auth': 'http://localhost:8000',
-      '/api/db': 'http://localhost:8000'
+      '/api/db': 'http://localhost:8000',
+      '/api/get_agent_prompt': 'http://localhost:8000'
     }
   }
 }) 

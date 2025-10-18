@@ -13,12 +13,24 @@ import uuid
 import time
 import os
 import re
+from openai import OpenAI
+import httpx
 
 # Create Blueprint for database API routes
 db_api = Blueprint('db_api', __name__)
 
 # Initialize Database Manager
 db = DatabaseManager()
+
+# Initialize OpenAI client for transcription
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+openai_client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    http_client=httpx.Client(
+        limits=httpx.Limits(max_keepalive_connections=5, max_connections=20),
+        timeout=httpx.Timeout(60.0, connect=10.0)
+    )
+)
 
 def get_current_user_id():
     """Get current user ID from request headers using custom JWT auth"""
@@ -100,8 +112,8 @@ def upload_audio():
         from supabase import create_client
         
         # Get environment variables
-        supabase_url = os.environ.get('SUPABASE_URL')
-        supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+        supabase_url = os.environ.get("SUPABASE_URL")
+        supabase_key = os.environ.get("SUPABASE_ANON_KEY")
         
         if not supabase_url or not supabase_key:
             print("❌ Supabase environment variables missing")
@@ -578,8 +590,8 @@ def get_conversation_analysis():
                 print(f"🔍 DEBUG: Conversation user IDs: {[c.get('user_id') for c in all_conversations.data]}")
             return jsonify({'success': False, 'error': 'Conversation not found'}), 404
         
-        print(f"🔍 DEBUG: Conversation found: {conversation.get('id')}")
-        print(f"🔍 DEBUG: Conversation keys: {list(conversation.keys())}")
+        # print(f"🔍 DEBUG: Conversation found: {conversation.get('id')}")
+        # print(f"🔍 DEBUG: Conversation keys: {list(conversation.keys())}")
         
         # For admin users, get analysis without user_id filter
         if is_admin:
@@ -1297,3 +1309,40 @@ def get_conversation_stats():
     except Exception as e:
         print(f"Error getting conversation stats: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@db_api.route('/transcribe_audio', methods=['POST'])
+def transcribe_audio():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+        
+        audio_file = request.files['file']
+        if audio_file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        audio_file.seek(0)
+        
+        # OpenAI expects a tuple: (filename, file_stream, content_type)
+        file_tuple = (
+            audio_file.filename or 'audio.wav',
+            audio_file.stream,
+            audio_file.content_type or 'audio/wav'
+        )
+        
+        transcript = openai_client.audio.transcriptions.create(
+            model="whisper-1",
+            file=file_tuple,
+            language="en"
+        )
+        
+        return jsonify({
+            'success': True,
+            'text': transcript.text,
+            'transcript': transcript.text
+        })
+        
+    except Exception as e:
+        print(f"Error transcribing audio: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500

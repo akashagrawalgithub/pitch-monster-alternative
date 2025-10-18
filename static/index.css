@@ -50,7 +50,7 @@ body {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #1d4ed8 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,12 +92,12 @@ body {
 
 .menu-item:hover {
     background: #f1f5f9;
-    color: #3b82f6;
+    color: #8b5cf6;
 }
 
 .menu-item.active {
     background: #eff6ff;
-    color: #3b82f6;
+    color: #8b5cf6;
     font-weight: 500;
 }
 
@@ -114,14 +114,26 @@ body {
 }
 
 .page-header {
-    text-align: left;
     margin-bottom: 20px;
+}
+
+.page-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.page-header-text {
+    flex: 1;
+    text-align: left;
 }
 
 .page-title {
     font-size: 22px;
     font-weight: 600;
     color: #1e293b;
+    margin-bottom: 4px;
 }
 
 .page-subtitle {
@@ -250,7 +262,7 @@ body {
 }
 
 .start-button {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: #8b5cf6;
     color: white;
     border: none;
     padding: 12px 16px;
@@ -267,14 +279,6 @@ body {
     margin-top: auto;
 }
 
-.start-button:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    transform: translateY(-1px);
-}
-
-.start-button:active {
-    transform: translateY(0);
-}
 
 /* Loading Animation */
 .loading-container {
@@ -290,7 +294,7 @@ body {
     width: 40px;
     height: 40px;
     border: 3px solid #e2e8f0;
-    border-top: 3px solid #3b82f6;
+    border-top: 3px solid #8b5cf6;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
@@ -436,7 +440,7 @@ body {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: conic-gradient(#3b82f6 0deg 72deg,
+    background: conic-gradient(#8b5cf6 0deg 72deg,
             #8b5cf6 72deg 144deg,
             #06b6d4 144deg 216deg,
             #10b981 216deg 288deg,
@@ -475,7 +479,7 @@ body {
 }
 
 .legend-color.color-1 {
-    background: #3b82f6;
+    background: #8b5cf6;
 }
 
 .legend-color.color-2 {
@@ -496,7 +500,7 @@ body {
 
 /* Create Agent Button */
 .create-agent-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: #8b5cf6;
     color: white;
     border: none;
     padding: 12px 20px;
@@ -508,12 +512,14 @@ body {
     display: none; /* Hidden by default, shown only for admin users */
     align-items: center;
     gap: 8px;
-    margin-top: 16px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .create-agent-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    transform: translateY(-1px);
+    background: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 /* Modal Styles */
@@ -679,7 +685,7 @@ body {
 .step.active {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     color: #1d4ed8;
-    border-color: #3b82f6;
+    border-color: #8b5cf6;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
@@ -708,7 +714,7 @@ body {
 }
 
 .step.active .step-number {
-    background: #3b82f6;
+    background: #8b5cf6;
     color: white;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
@@ -775,7 +781,7 @@ body {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: #8b5cf6;
     background: white;
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
     transform: translateY(-1px);
@@ -817,7 +823,7 @@ body {
     width: 20px;
     height: 20px;
     margin: 0;
-    accent-color: #3b82f6;
+    accent-color: #8b5cf6;
 }
 
 .checkbox-group label {
@@ -906,7 +912,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #1d4ed8 100%);
     color: white;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
@@ -944,7 +950,7 @@ body {
     z-index: 1001;
     transform: translateX(100%);
     transition: transform 0.3s ease;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #8b5cf6;
 }
 
 .notification.show {
@@ -972,11 +978,22 @@ body {
 }
 
 .notification.info .material-icons {
-    color: #3b82f6;
+    color: #8b5cf6;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .page-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .create-agent-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
     .modal-container {
         width: 98%;
         margin: 10px;

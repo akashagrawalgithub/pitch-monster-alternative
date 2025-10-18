@@ -1,381 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Past Conversations - Sales Training</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            color: #1e293b;
-            line-height: 1.6;
-            min-height: 100vh;
-        }
-
-        .container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Left Sidebar - User Details */
-        .user-sidebar {
-            width: 250px;
-            background: #ffffff;
-            border-right: 1px solid #e2e8f0;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            padding: 24px;
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .user-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 18px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 500;
-            color: white;
-        }
-
-        .user-info h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #1e293b;
-        }
-
-        .user-info p {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-
-        .menu-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px;
-            border-radius: 8px;
-            color: #64748b;
-            text-decoration: none;
-            margin-bottom: 8px;
-        }
-
-        .menu-item:hover {
-            background: #f1f5f9;
-            color: #3b82f6;
-        }
-
-        .menu-item.active {
-            color: #3b82f6;
-            font-weight: 500;
-        }
-
-        /* Main Content */
-        .main-content {
-            margin-left: 250px;
-            flex: 1;
-            padding: 32px;
-        }
-
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-
-        .page-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .back-button {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            border: none;
-            padding: 12px 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .back-button:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-        }
-
-        /* Table Styles */
-        .table-container {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        table.conversations-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .conversations-table thead th {
-            background: #f8fafc;
-            color: #475569;
-            font-weight: 600;
-            text-align: center;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .conversations-table tbody td {
-            padding: 14px 16px;
-            border-bottom: 1px solid #f1f5f9;
-            color: #1f2937;
-            font-size: 14px;
-            vertical-align: middle;
-            text-align: center;
-        }
-
-        .conversations-table tbody tr:hover {
-            background: #f8fafc;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-short { background: #fef3c7; color: #92400e; }
-        .status-standard { background: #dbeafe; color: #1e40af; }
-        .status-detailed { background: #d1fae5; color: #065f46; }
-        .status-completed { background: #e0e7ff; color: #3730a3; }
-
-        .action-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .action-btn:hover {
-            background: #2563eb;
-        }
-
-        /* Loading and Empty States */
-        .loading-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            margin: 0 auto 16px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #64748b;
-        }
-
-        .empty-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        .error-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #ef4444;
-        }
-
-        .error-icon {
-            font-size: 64px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        /* Pagination Styles */
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 32px;
-            gap: 8px;
-        }
-
-        .pagination-btn {
-            background: white;
-            border: 1px solid #e2e8f0;
-            color: #64748b;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 40px;
-            text-align: center;
-        }
-
-        .pagination-btn:hover:not(:disabled) {
-            background: #f1f5f9;
-            border-color: #3b82f6;
-            color: #3b82f6;
-        }
-
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .pagination-btn.active {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            border-color: #3b82f6;
-        }
-
-        .pagination-info {
-            color: #64748b;
-            font-size: 14px;
-            margin: 0 16px;
-        }
-
-        /* Loader Overlay */
-        .loader-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(4px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loader-overlay.show {
-            display: flex;
-        }
-
-        .loader-content {
-            text-align: center;
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e2e8f0;
-        }
-
-        .loader-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #10b981;
-            border-radius: 50%;
-            margin: 0 auto 20px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loader-text {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 8px;
-        }
-
-        .loader-subtext {
-            font-size: 14px;
-            color: #64748b;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-        }
-        
-        @media (max-width: 768px) {
-            .pagination-container {
-                flex-wrap: wrap;
-                gap: 4px;
-            }
-            
-            .pagination-btn {
-                padding: 6px 10px;
-                font-size: 12px;
-                min-width: 36px;
-            }
-
-            .loader-content {
-                padding: 30px 20px;
-                margin: 20px;
-            }
-
-            .loader-spinner {
-                width: 40px;
-                height: 40px;
-            }
-        }
-
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+  <link rel="stylesheet" crossorigin href="/assets/past-conversations-EHOG-JBv.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Left Sidebar - User Details -->
@@ -412,53 +47,99 @@
             <div class="page-header">
                 <h1 class="page-title" id="pageTitle">
                     <span class="material-icons">history</span>
-                    Past Conversations
+                    All Conversations
                 </h1>
-                <a href="/index.html" class="back-button">
-                    <span class="material-icons">arrow_back</span>
-                    Back to Dashboard
-                </a>
             </div>
 
-            <!-- Conversations Table -->
-            <div class="table-container" id="tableContainer">
-                <table class="conversations-table" id="conversationsTable">
-                    <thead id="conversationsThead">
-                        <tr>
-                            <th>Title</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Duration</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="conversationsTbody">
-                        <tr>
-                            <td colspan="6">
-                                <div class="loading-state">
-                                    <div class="loading-spinner"></div>
-                                    <p>Loading your conversations...</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Stats Section -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1);">
+                        <span class="material-icons" style="color: #8b5cf6;">chat</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="totalConversations">0</div>
+                        <div class="stat-label">Total Conversations</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1);">
+                        <span class="material-icons" style="color: #10b981;">schedule</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="totalDuration">0m</div>
+                        <div class="stat-label">Total Practice Time</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1);">
+                        <span class="material-icons" style="color: #f59e0b;">trending_up</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="avgDuration">0m</div>
+                        <div class="stat-label">Avg Call Duration</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Pagination -->
-            <div class="pagination-container" id="paginationContainer" style="display: none;">
-                <button class="pagination-btn" id="prevBtn" onclick="pastConversationsPage.previousPage()">
-                    <span class="material-icons">chevron_left</span>
-                </button>
-                
-                <div id="pageNumbers"></div>
-                
-                <button class="pagination-btn" id="nextBtn" onclick="pastConversationsPage.nextPage()">
-                    <span class="material-icons">chevron_right</span>
-                </button>
-                
-                <div class="pagination-info" id="paginationInfo"></div>
+            <!-- Conversations Section -->
+            <div class="conversations-section">
+                <div class="section-header">
+                    <div class="section-title-group">
+                        <h2 class="section-title">All Conversations</h2>
+                        <span class="conversations-count" id="conversationsCount">0</span>
+                    </div>
+                    <div class="filter-group">
+                        <span class="material-icons filter-icon">filter_list</span>
+                        <select id="dateFilter" class="filter-select">
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Conversations Table -->
+                <div class="table-container" id="tableContainer">
+                    <table class="conversations-table" id="conversationsTable">
+                        <thead id="conversationsThead">
+                            <tr>
+                                <th>Title</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conversationsTbody">
+                            <tr>
+                                <td colspan="6">
+                                    <div class="loading-state">
+                                        <div class="loading-spinner"></div>
+                                        <p>Loading your conversations...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-container" id="paginationContainer" style="display: none;">
+                    <button class="pagination-btn" id="prevBtn" onclick="pastConversationsPage.previousPage()">
+                        <span class="material-icons">chevron_left</span>
+                    </button>
+
+                    <div id="pageNumbers"></div>
+
+                    <button class="pagination-btn" id="nextBtn" onclick="pastConversationsPage.nextPage()">
+                        <span class="material-icons">chevron_right</span>
+                    </button>
+
+                    <div class="pagination-info" id="paginationInfo"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -476,81 +157,87 @@
         class PastConversationsPage {
             constructor() {
                 this.conversations = [];
+                this.filteredConversations = [];
                 this.isAdmin = false;
                 this.currentPage = 1;
                 this.itemsPerPage = 15;
                 this.totalPages = 0;
-                
+
                 // Ensure loader is hidden on page initialization (fixes back button issue)
                 this.hideLoader();
-                
+
                 this.initializeAuth();
                 this.initializeEventListeners();
                 // loadConversations() is now called from loadUserData() after isAdmin is set
             }
-            
+
             async initializeAuth() {
                 try {
                     // Check if user is authenticated via local storage
                     const isAuthenticated = localStorage.getItem('authenticated');
                     const accessToken = localStorage.getItem('accessToken');
-                    
+
                     //
-//
-if (!isAuthenticated || !accessToken) {
-window.location.href = '/login.html';
+                    //
+                    if (!isAuthenticated || !accessToken) {
+                        window.location.href = '/login.html';
                         return;
                     }
-                    
+
                     // Verify token with backend
                     //
-const response = await fetch('/auth/check', {
+                    const response = await fetch('/auth/check', {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
                         }
                     });
-                    
+
                     //
-if (!response.ok) {
+                    if (!response.ok) {
                         // Token is invalid, redirect to login
                         //
-localStorage.clear();
+                        localStorage.clear();
                         window.location.href = '/login.html';
                         return;
                     }
-                    
+
                     const data = await response.json();
                     //
-this.loadUserData(data.user);
+                    this.loadUserData(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     localStorage.clear();
                     window.location.href = '/login.html';
                 }
             }
-            
+
             initializeEventListeners() {
                 document.getElementById('logoutBtn').addEventListener('click', (e) => {
                     e.preventDefault();
                     this.handleLogout();
                 });
+
+                // Date filter event listener
+                document.getElementById('dateFilter').addEventListener('change', (e) => {
+                    this.filterByDate(e.target.value);
+                });
             }
-            
+
             loadUserData(user) {
                 const email = user.email || 'User';
                 const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || email.split('@')[0];
                 const avatar = name.substring(0, 2).toUpperCase();
-                
+
                 document.getElementById('userName').textContent = name;
                 document.getElementById('userAvatar').textContent = avatar;
-                
+
                 // Check if user is admin and show/hide admin features
                 const userRole = user.role || localStorage.getItem('userRole');
                 const usersBtn = document.getElementById('usersBtn');
 
-console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRole'));
-                
+                console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRole'));
+
                 if (userRole === 'admin') {
                     this.isAdmin = true;
                     usersBtn.style.display = 'flex';
@@ -558,15 +245,15 @@ console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRol
                         <span class="material-icons">history</span>
                         All Conversations
                     `;
-} else {
+                } else {
                     this.isAdmin = false;
                     usersBtn.style.display = 'none';
                     document.getElementById('pageTitle').innerHTML = `
                         <span class="material-icons">history</span>
-                        Past Conversations
+                        All Conversations
                     `;
-}
-                
+                }
+
                 // Build table header and load conversations AFTER setting isAdmin flag
                 this.renderTableHeader();
                 this.loadConversations();
@@ -596,7 +283,7 @@ console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRol
                     localStorage.removeItem('userEmail');
                     localStorage.removeItem('userName');
                     localStorage.removeItem('accessToken');
-                    
+
                     window.location.href = '/login.html';
                 } catch (error) {
                     console.error('Logout failed:', error);
@@ -611,45 +298,104 @@ console.log('🔍 DEBUG: localStorage userRole =', localStorage.getItem('userRol
                     const accessToken = localStorage.getItem('accessToken');
                     const endpoint = this.isAdmin ? '/api/db/get_all_conversations_admin' : '/api/db/get_all_conversations';
 
-const response = await fetch(endpoint, {
+                    const response = await fetch(endpoint, {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
                         }
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
+
                     const data = await response.json();
-                    
+
                     if (data.success && data.conversations) {
                         this.conversations = data.conversations;
+                        this.filteredConversations = [...this.conversations];
                         this.currentPage = 1; // Reset to first page when loading new data
+                        this.updateStats();
                         this.displayConversations();
                     } else {
                         throw new Error(data.error || 'Failed to fetch conversations');
                     }
-                    
+
                 } catch (error) {
                     console.error('Error fetching conversations:', error);
                     this.showError(error.message);
                 }
             }
 
+            updateStats() {
+                const totalConversations = this.filteredConversations.length;
+                const totalDurationSeconds = this.filteredConversations.reduce((sum, conv) => sum + (conv.duration_seconds || 0), 0);
+                const avgDurationSeconds = totalConversations > 0 ? totalDurationSeconds / totalConversations : 0;
+
+                document.getElementById('totalConversations').textContent = totalConversations;
+                document.getElementById('totalDuration').textContent = this.formatDuration(totalDurationSeconds);
+                document.getElementById('avgDuration').textContent = this.formatDuration(Math.round(avgDurationSeconds));
+            }
+
+            formatDuration(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                if (minutes === 0) {
+                    return `${remainingSeconds}s`;
+                }
+                return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+            }
+
+            filterByDate(filter) {
+                const now = new Date();
+
+                switch (filter) {
+                    case 'today':
+                        this.filteredConversations = this.conversations.filter(conv => {
+                            const convDate = new Date(conv.created_at);
+                            return convDate.toDateString() === now.toDateString();
+                        });
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        this.filteredConversations = this.conversations.filter(conv => {
+                            const convDate = new Date(conv.created_at);
+                            return convDate >= weekAgo;
+                        });
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        this.filteredConversations = this.conversations.filter(conv => {
+                            const convDate = new Date(conv.created_at);
+                            return convDate >= monthAgo;
+                        });
+                        break;
+                    case 'all':
+                    default:
+                        this.filteredConversations = [...this.conversations];
+                        break;
+                }
+
+                this.currentPage = 1;
+                this.updateStats();
+                this.displayConversations();
+            }
+
             displayConversations() {
                 const tbody = document.getElementById('conversationsTbody');
                 const columns = 6 + (this.isAdmin ? 1 : 0);
 
-                if (!this.conversations || this.conversations.length === 0) {
+                // Update conversations count badge
+                document.getElementById('conversationsCount').textContent = this.filteredConversations.length;
+
+                if (!this.filteredConversations || this.filteredConversations.length === 0) {
                     tbody.innerHTML = `
                         <tr>
                             <td colspan="${columns}">
                                 <div class="empty-state">
-                                    <div class="empty-icon">📊</div>
+                                    <span class="material-icons">inbox</span>
                                     <h3>No Conversations Found</h3>
-                                    <p>Start your first training session to see your analysis here.</p>
+                                    <p>Start your first training session or adjust your filters.</p>
                                 </div>
                             </td>
                         </tr>
@@ -657,40 +403,45 @@ const response = await fetch(endpoint, {
                     document.getElementById('paginationContainer').style.display = 'none';
                     return;
                 }
-                
+
                 // Calculate pagination
-                this.totalPages = Math.ceil(this.conversations.length / this.itemsPerPage);
+                this.totalPages = Math.ceil(this.filteredConversations.length / this.itemsPerPage);
                 const startIndex = (this.currentPage - 1) * this.itemsPerPage;
                 const endIndex = startIndex + this.itemsPerPage;
-                const paginatedConversations = this.conversations.slice(startIndex, endIndex);
-                
+                const paginatedConversations = this.filteredConversations.slice(startIndex, endIndex);
+
                 tbody.innerHTML = paginatedConversations.map(conversation => {
                     const date = new Date(conversation.created_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric'
                     });
-                    
+
                     const time = new Date(conversation.created_at).toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-                    
-                    const duration = conversation.duration_seconds ? 
-                        `${Math.floor(conversation.duration_seconds / 60)}m ${conversation.duration_seconds % 60}s` : 
+
+                    const duration = conversation.duration_seconds ?
+                        `${Math.floor(conversation.duration_seconds / 60)}m ${conversation.duration_seconds % 60}s` :
                         'Unknown';
-                    
+
                     const agentType = conversation.title || 'Sales Training Session';
-                    
+
                     const conversationStatus = this.getConversationStatus(conversation);
-                    
+
                     return `
                         <tr>
-                            <td>${this.getAgentIcon(agentType)} ${agentType}</td>
-                            ${this.isAdmin && conversation.user_name ? `<td>${conversation.user_name}</td>` : ''}
-                            <td>${date}</td>
-                            <td>${time}</td>
-                            <td>${duration}</td>
+                            <td>
+                                <div class="conversation-title">
+                                    <span class="title-icon">${this.getAgentIcon(agentType)}</span>
+                                    <span>${agentType}</span>
+                                </div>
+                            </td>
+                            ${this.isAdmin && conversation.user_name ? `<td style="color: #64748b;">${conversation.user_name}</td>` : ''}
+                            <td style="color: #64748b;">${date}</td>
+                            <td style="color: #64748b;">${time}</td>
+                            <td style="color: #64748b;">${duration}</td>
                             <td><span class="status-badge ${conversationStatus.class}">${conversationStatus.text}</span></td>
                             <td>
                                 <button class="action-btn" onclick="pastConversationsPage.viewFullAnalysis('${conversation.id}')">
@@ -700,7 +451,7 @@ const response = await fetch(endpoint, {
                         </tr>
                     `;
                 }).join('');
-                
+
                 // Update pagination controls
                 this.updatePaginationControls();
             }
@@ -715,7 +466,7 @@ const response = await fetch(endpoint, {
                     'Discovery Call': '🔍',
                     'Sales Training Session': '🎯'
                 };
-                
+
                 return iconMap[agentType] || '🎯';
             }
 
@@ -724,7 +475,7 @@ const response = await fetch(endpoint, {
             getConversationStatus(conversation) {
                 const duration = conversation.duration_seconds || 0;
                 const exchanges = conversation.transcript?.length || 0;
-                
+
                 if (duration < 30) {
                     return { text: 'Short Call', class: 'status-short' };
                 } else if (duration < 120) {
@@ -742,28 +493,28 @@ const response = await fetch(endpoint, {
                 const paginationInfo = document.getElementById('paginationInfo');
                 const prevBtn = document.getElementById('prevBtn');
                 const nextBtn = document.getElementById('nextBtn');
-                
+
                 if (this.totalPages <= 1) {
                     paginationContainer.style.display = 'none';
                     return;
                 }
-                
+
                 paginationContainer.style.display = 'flex';
-                
+
                 // Update prev/next buttons
                 prevBtn.disabled = this.currentPage === 1;
                 nextBtn.disabled = this.currentPage === this.totalPages;
-                
+
                 // Generate page numbers
                 let pageNumbersHTML = '';
                 const maxVisiblePages = 5;
                 let startPage = Math.max(1, this.currentPage - Math.floor(maxVisiblePages / 2));
                 let endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
-                
+
                 if (endPage - startPage + 1 < maxVisiblePages) {
                     startPage = Math.max(1, endPage - maxVisiblePages + 1);
                 }
-                
+
                 for (let i = startPage; i <= endPage; i++) {
                     pageNumbersHTML += `
                         <button class="pagination-btn ${i === this.currentPage ? 'active' : ''}" 
@@ -772,13 +523,13 @@ const response = await fetch(endpoint, {
                         </button>
                     `;
                 }
-                
+
                 pageNumbers.innerHTML = pageNumbersHTML;
-                
+
                 // Update pagination info
                 const startItem = (this.currentPage - 1) * this.itemsPerPage + 1;
-                const endItem = Math.min(this.currentPage * this.itemsPerPage, this.conversations.length);
-                paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${this.conversations.length} conversations`;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, this.filteredConversations.length);
+                paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${this.filteredConversations.length}`;
             }
 
             goToPage(page) {
@@ -809,7 +560,7 @@ const response = await fetch(endpoint, {
                     <tr>
                         <td colspan="${theadCols}">
                             <div class="error-state">
-                                <div class="error-icon">⚠️</div>
+                                <span class="material-icons">error_outline</span>
                                 <h3>Error Loading Conversations</h3>
                                 <p>${message}</p>
                             </div>
@@ -832,7 +583,7 @@ const response = await fetch(endpoint, {
                 try {
                     // Show loader immediately when button is clicked
                     this.showLoader();
-                    
+
                     // Fetch the analysis data
                     const accessToken = localStorage.getItem('accessToken');
                     const response = await fetch('/api/db/get_conversation_analysis', {
@@ -843,11 +594,11 @@ const response = await fetch(endpoint, {
                         },
                         body: JSON.stringify({ conversation_id: conversationId })
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
+
                     const data = await response.json();
                     if (data.success) {
                         // Debug the data structure
@@ -855,15 +606,15 @@ const response = await fetch(endpoint, {
                         if (!data.conversation) {
                             throw new Error('No conversation data received');
                         }
-                        
+
                         if (!data.analysis) {
                             throw new Error('No analysis data received');
                         }
-                        
+
                         if (!data.conversation.transcript) {
                             // Handle case where transcript is missing
                         }
-                        
+
                         // Store the data in sessionStorage for the analysis page
                         sessionStorage.setItem('chatTranscript', JSON.stringify(data.conversation.transcript || []));
                         sessionStorage.setItem('conversationId', conversationId);
@@ -871,14 +622,14 @@ const response = await fetch(endpoint, {
                         sessionStorage.setItem('currentAnalysisData', JSON.stringify(data.analysis));
                         console.log('chatTranscript:', sessionStorage.getItem('chatTranscript'));
                         console.log('currentAnalysisData:', sessionStorage.getItem('currentAnalysisData'));
-                        
+
                         // Keep loader visible until navigation completes
                         // Navigate to analysis page with conversation ID
                         window.location.href = `/analysis.html?conversation_id=${conversationId}`;
                     } else {
                         throw new Error(data.error || 'Failed to load analysis');
                     }
-                    
+
                 } catch (error) {
                     console.error('Error loading full analysis:', error);
                     // Hide loader on error
@@ -889,13 +640,13 @@ const response = await fetch(endpoint, {
         }
 
         let pastConversationsPage;
-        
+
         document.addEventListener('DOMContentLoaded', function () {
             pastConversationsPage = new PastConversationsPage();
         });
 
         // Hide loader when page becomes visible (handles browser back button)
-        document.addEventListener('visibilitychange', function() {
+        document.addEventListener('visibilitychange', function () {
             if (!document.hidden) {
                 // Page became visible, hide any lingering loader
                 const loaderOverlay = document.getElementById('loaderOverlay');
@@ -906,7 +657,7 @@ const response = await fetch(endpoint, {
         });
 
         // Also hide loader on page focus (additional safety net)
-        window.addEventListener('focus', function() {
+        window.addEventListener('focus', function () {
             const loaderOverlay = document.getElementById('loaderOverlay');
             if (loaderOverlay) {
                 loaderOverlay.classList.remove('show');
@@ -914,7 +665,7 @@ const response = await fetch(endpoint, {
         });
 
         // Hide loader immediately when page loads (handles browser back button)
-        window.addEventListener('pageshow', function(event) {
+        window.addEventListener('pageshow', function (event) {
             // This event fires when page is loaded from cache (back button)
             const loaderOverlay = document.getElementById('loaderOverlay');
             if (loaderOverlay) {
@@ -923,4 +674,5 @@ const response = await fetch(endpoint, {
         });
     </script>
 </body>
-</html> 
+
+</html>

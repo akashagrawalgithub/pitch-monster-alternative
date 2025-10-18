@@ -55,37 +55,73 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">User Management</h1>
-                    <p style="color: #64748b; font-size: 16px;">Manage users, roles, and permissions</p>
+                    <p class="page-subtitle">Manage users, roles, and permissions</p>
                 </div>
             </div>
+            
             <!-- Stats Section -->
             <div class="stats-grid" id="statsGrid">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalUsers">-</div>
-                    <div class="stat-label">Total Users</div>
+                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1);">
+                        <span class="material-icons" style="color: #8b5cf6;">people</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="totalUsers">-</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="activeUsers">-</div>
-                    <div class="stat-label">Active Users</div>
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1);">
+                        <span class="material-icons" style="color: #10b981;">check_circle</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="activeUsers">-</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="adminUsers">-</div>
-                    <div class="stat-label">Admin Users</div>
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1);">
+                        <span class="material-icons" style="color: #f59e0b;">admin_panel_settings</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="adminUsers">-</div>
+                        <div class="stat-label">Admin Users</div>
+                    </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="regularUsers">-</div>
-                    <div class="stat-label">Regular Users</div>
+                    <div class="stat-icon" style="background: rgba(6, 182, 212, 0.1);">
+                        <span class="material-icons" style="color: #06b6d4;">person</span>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-number" id="regularUsers">-</div>
+                        <div class="stat-label">Regular Users</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Users Section -->
             <div class="users-section">
                 <div class="section-header">
-                    <h2 class="section-title">All Users</h2>
-                    <button class="btn btn-primary" id="createUserBtn">
-                        <span class="material-icons" style="font-size: 16px; margin-right: 8px;">add</span>
-                        Create User
-                    </button>
+                    <div class="table-header-title">
+                        <h2 class="section-title">All Users</h2>
+                        <span class="users-count" id="usersCount">0</span>
+                    </div>
+                    <div class="header-actions">
+                        <div class="filter-group">
+                            <span class="material-icons filter-icon">filter_list</span>
+                            <select id="dateFilter" class="filter-select">
+                                <option value="all">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="createUserBtn">
+                            <span class="material-icons">add</span>
+                            Create User
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -163,6 +199,7 @@
     <script type="module">
         class UsersPage {
             constructor() {
+                this.allUsers = [];
                 this.initializeAuth();
                 this.initializeEventListeners();
                 this.loadStats();
@@ -215,6 +252,11 @@
                 document.getElementById('pastAnalysisBtn').addEventListener('click', (e) => {
                     e.preventDefault();
                     window.location.href = '/past-conversations.html';
+                });
+
+                // Date filter listener
+                document.getElementById('dateFilter').addEventListener('change', (e) => {
+                    this.filterUsersByDate(e.target.value);
                 });
 
                 // Modal event listeners
@@ -318,7 +360,8 @@
 
                     const data = await response.json();
                     if (data.success) {
-                        this.renderUsersTable(data.users);
+                        this.allUsers = data.users;
+                        this.renderUsersTable(this.allUsers);
                     } else {
                         throw new Error(data.error || 'Failed to load users');
                     }
@@ -328,15 +371,63 @@
                 }
             }
 
+            // Filter users by date
+            filterUsersByDate(filter) {
+                if (!this.allUsers || this.allUsers.length === 0) {
+                    return;
+                }
+
+                let filteredUsers = [...this.allUsers];
+                const now = new Date();
+                
+                switch(filter) {
+                    case 'today':
+                        filteredUsers = filteredUsers.filter(user => {
+                            const createdDate = new Date(user.created_at);
+                            return createdDate.toDateString() === now.toDateString();
+                        });
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        filteredUsers = filteredUsers.filter(user => {
+                            const createdDate = new Date(user.created_at);
+                            return createdDate >= weekAgo;
+                        });
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        filteredUsers = filteredUsers.filter(user => {
+                            const createdDate = new Date(user.created_at);
+                            return createdDate >= monthAgo;
+                        });
+                        break;
+                    case 'all':
+                    default:
+                        break;
+                }
+
+                // Sort by created_at (newest first)
+                filteredUsers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                
+                this.renderUsersTable(filteredUsers);
+            }
+
             // Render users table
             renderUsersTable(users) {
                 const tbody = document.getElementById('usersTableBody');
+                
+                // Update user count badge
+                document.getElementById('usersCount').textContent = users.length;
 
                 if (users.length === 0) {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px;">
-                                No users found
+                            <td colspan="6" style="text-align: center; padding: 60px 20px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                                    <span class="material-icons" style="font-size: 48px; color: #cbd5e1;">person_off</span>
+                                    <div style="color: #64748b; font-size: 16px; font-weight: 500;">No users found</div>
+                                    <div style="color: #94a3b8; font-size: 14px;">Try adjusting your filters or create a new user</div>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -346,8 +437,13 @@
                 tbody.innerHTML = users.map(user => `
                     <tr>
                         <td>
-                            <strong>${user.first_name || ''} ${user.last_name || ''}</strong>
-                            ${!user.first_name && !user.last_name ? '<em>No name</em>' : ''}
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                
+                                <div>
+                                    <strong>${user.first_name || ''} ${user.last_name || ''}</strong>
+                                    ${!user.first_name && !user.last_name ? '<em style="color: #94a3b8;">No name</em>' : ''}
+                                </div>
+                            </div>
                         </td>
                         <td>${user.email}</td>
                         <td>
@@ -360,13 +456,12 @@
                                 ${user.is_active ? 'Active' : 'Inactive'}
                             </span>
                         </td>
-                        <td>
-                            ${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}
+                        <td style="color: #64748b;">
+                            ${user.last_login ? new Date(user.last_login).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never'}
                         </td>
-                        <td>
-                            ${new Date(user.created_at).toLocaleDateString()}
+                        <td style="color: #64748b;">
+                            ${new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
-
                     </tr>
                 `).join('');
             }

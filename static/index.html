@@ -47,14 +47,16 @@
             <!-- Main Content -->
             <div class="main-content">
                 <div class="page-header">
-                    <h1 class="page-title">Choose Your AI Training Persona</h1>
-                    <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios
-                        and
-                        challenges.</p>
-                    <button class="create-agent-btn" id="createAgentBtn">
-                        <span class="material-icons">add</span>
-                        Create New Agent
-                    </button>
+                    <div class="page-header-content">
+                        <div class="page-header-text">
+                            <h1 class="page-title">Choose Your AI Training Persona</h1>
+                            <p class="page-subtitle">Select an AI persona to practice with. Each persona offers unique scenarios and challenges.</p>
+                        </div>
+                        <button class="create-agent-btn" id="createAgentBtn">
+                            <span class="material-icons">add</span>
+                            Create New Agent
+                        </button>
+                    </div>
                 </div>
 
                 <div class="agents-grid" id="agentsGrid">
@@ -576,7 +578,7 @@
                         <div class="material-icons" style="font-size: 48px; margin-bottom: 16px;">error_outline</div>
                         <p style="font-size: 16px; margin-bottom: 8px;">Error Loading Agents</p>
                         <p style="font-size: 14px; color: #64748b;">${message}</p>
-                        <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        <button onclick="location.reload()" style="margin-top: 16px; padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer;">
                             Try Again
                         </button>
                     </div>
@@ -640,7 +642,7 @@
 
                     // Generate dynamic conic-gradient based on data
                     let currentAngle = 0;
-                    const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'];
+                    const colors = ['#8b5cf6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'];
                     const gradientParts = [];
 
                     stats.top_role_plays.forEach(([, count], index) => {
