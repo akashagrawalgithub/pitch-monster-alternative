@@ -1624,8 +1624,8 @@ async function fetchAgentPrompt(): Promise<void> {
     }
 }
 
-function ensureRealtimeConnection(onDelta?: (delta: string) => void): Promise<void> {
-    return new Promise((resolve, reject) => {
+async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Promise<void> {
+    return new Promise(async (resolve, reject) => {
         if (realtimeConnected && realtimeWS) {
             realtimeTextBufferCallback = onDelta || null;
             resolve();
@@ -1642,17 +1642,37 @@ function ensureRealtimeConnection(onDelta?: (delta: string) => void): Promise<vo
             return;
         }
 
-        // Connect to secure backend proxy instead of directly to OpenAI
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const url = `${protocol}//${host}/ws/openai-realtime`;
-
-        realtimeConnecting = true;
-        realtimeTextBufferCallback = onDelta || null;
+        let ws: WebSocket;
         
-        // No API key needed - backend proxy handles authentication securely
-        const ws = new WebSocket(url);
-        realtimeWS = ws;
+        try {
+            const response = await fetch('/api/openai-realtime-token', {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get OpenAI token');
+            }
+
+            const data = await response.json();
+            const apiKey = data.token;
+
+            const model = 'gpt-4o-realtime-preview-2024-12-17';
+            const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`;
+
+            realtimeConnecting = true;
+            realtimeTextBufferCallback = onDelta || null;
+            
+            // Use subprotocol to pass API key
+            const protocols = [
+                'realtime',
+                `openai-insecure-api-key.${apiKey}`
+            ];
+            ws = new WebSocket(url, protocols);
+            realtimeWS = ws;
+        } catch (error) {
+            reject(new Error('Failed to establish connection: ' + error.message));
+            return;
+        }
 
         ws.onopen = () => {
             realtimeConnected = true;

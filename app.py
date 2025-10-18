@@ -1,6 +1,5 @@
 from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
 from flask_cors import CORS
-from flask_sock import Sock
 from openai import OpenAI
 import os
 from datetime import datetime
@@ -14,12 +13,8 @@ import numpy as np
 import json
 from backend_api import db_api
 from supabase import create_client, Client
-import websockets
-import asyncio
-from threading import Thread
 
 app = Flask(__name__, template_folder='static')
-sock = Sock(app)
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -238,58 +233,19 @@ def agent_info_page():
         # In production, serve from dist folder
         return send_from_directory('dist', 'agent-info.html')
 
-@sock.route('/ws/openai-realtime')
-def openai_realtime_proxy(ws):
-    """Secure WebSocket proxy for OpenAI Realtime API"""
+@app.route('/api/openai-realtime-token', methods=['GET'])
+def get_openai_realtime_token():
+    """Get OpenAI API key for Realtime API"""
     try:
-        # OpenAI Realtime API WebSocket URL
-        openai_ws_url = f"wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+        # Simple check - just verify we have the API key
+        if not OPENAI_API_KEY:
+            return jsonify({"error": "OpenAI API key not configured"}), 500
         
-        # Headers for OpenAI connection (with API key)
-        headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "OpenAI-Beta": "realtime=v1"
-        }
-        
-        # Create async function to handle the proxy
-        async def proxy_messages():
-            async with websockets.connect(openai_ws_url, extra_headers=headers) as openai_ws:
-                # Create tasks for bidirectional communication
-                async def forward_to_openai():
-                    """Forward messages from client to OpenAI"""
-                    try:
-                        while True:
-                            # Receive from client
-                            message = ws.receive()
-                            if message is None:
-                                break
-                            # Forward to OpenAI
-                            await openai_ws.send(message)
-                    except Exception as e:
-                        print(f"Error forwarding to OpenAI: {e}")
-                
-                async def forward_to_client():
-                    """Forward messages from OpenAI to client"""
-                    try:
-                        async for message in openai_ws:
-                            # Forward to client
-                            ws.send(message)
-                    except Exception as e:
-                        print(f"Error forwarding to client: {e}")
-                
-                # Run both directions concurrently
-                await asyncio.gather(
-                    forward_to_openai(),
-                    forward_to_client(),
-                    return_exceptions=True
-                )
-        
-        # Run the async proxy in a new event loop
-        asyncio.run(proxy_messages())
-        
+        return jsonify({
+            "token": OPENAI_API_KEY
+        })
     except Exception as e:
-        print(f"WebSocket proxy error: {e}")
-        ws.close()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/conversation.html')
 def conversation_page():
