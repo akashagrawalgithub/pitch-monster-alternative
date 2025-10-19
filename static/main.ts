@@ -602,6 +602,7 @@ let processingStartTime: number | null = null;
 let audioGenerationStartTime: number | null = null;
 let isAIResponding = false;
 let hasRealtimeAudio = false;
+let isUserSpeaking = false;
 
 // Audio recording variables
 let mediaRecorder: MediaRecorder | null = null;
@@ -695,11 +696,11 @@ function startListening() {
     accumulatedSpeech = '';
     lastSpeechTime = 0;
     let interimBubble: { update: (text: string) => void, remove: () => void, getText: () => string } | null = null;
-    let isUserSpeaking = false;
     let speechPauseTimeout: number | null = null;
 
     recognition.onresult = (event: any) => {
-        if (isAIResponding || isAudioPlaying || isPlayingQueue) {
+        // Immediately stop AI audio when human speech is detected
+        if (isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio) {
             clearAudioPlaybackOnly();
         }
 
@@ -719,6 +720,11 @@ function startListening() {
         }
 
         if (interim && !hasFinal) {
+            // Immediately stop any AI audio when user starts speaking
+            if (isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio) {
+                clearAudioPlaybackOnly();
+            }
+            
             if (!interimBubble) {
                 interimBubble = addStreamingTranscript('You');
             }
@@ -759,7 +765,7 @@ function startListening() {
                         accumulatedSpeech += ' ' + speechToProcess;
                     }
                 }
-                speechPauseTimeout = null;
+speechPauseTimeout = null;
                 isUserSpeaking = false;
             }, 700);
         }
@@ -887,31 +893,57 @@ function startListening() {
 }
 
 function clearAudioPlaybackOnly() {
+    // Immediately stop all speech synthesis
     if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
     }
 
+    // Stop and disconnect current audio source immediately
     if (currentSource) {
         try {
             currentSource.stop();
             currentSource.disconnect();
-        } catch (e) {}
+        } catch (e) {
+            console.log('Error stopping current source:', e);
+        }
         currentSource = null;
     }
 
+    // Stop any ongoing audio context sources
+    if (audioContext && audioContext.state !== 'closed') {
+        try {
+            // Force stop any scheduled audio
+            const now = audioContext.currentTime;
+            // This will immediately stop any scheduled audio
+            audioContext.suspend().then(() => {
+                audioContext.resume();
+            }).catch(e => console.log('Audio context suspend/resume error:', e));
+        } catch (e) {
+            console.log('Audio context error:', e);
+        }
+    }
+
+    // Clear all audio buffers and queues
     audioBufferQueue = [];
     audioPlaybackQueue = [];
     realtimeAudioChunks = [];
+    
+    // Reset all audio state flags
     isAudioPlaying = false;
     isPlayingQueue = false;
     isBuffering = false;
     textChunks = [];
     isAIResponding = false;
     
+    // Clear any pending timeouts
     if (speechTimeout) {
         clearTimeout(speechTimeout);
         speechTimeout = null;
     }
+    
+    // Reset realtime audio state
+    nextAudioStartTime = 0;
+    hasRealtimeAudio = false;
 }
 
 function clearAllOutstandingAudio() {
@@ -1234,6 +1266,12 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
 }
 
 async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
+    // Don't play audio if user is speaking
+    if (isUserSpeaking) {
+        console.log('User is speaking, skipping audio playback');
+        return;
+    }
+    
     if (!audioContext) {
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -1264,6 +1302,13 @@ async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
 
         currentSource = audioContext.createBufferSource();
         currentSource.buffer = audioBuffer;
+        
+        // Add event listener to detect when audio is interrupted
+        currentSource.addEventListener('ended', () => {
+            if (isUserSpeaking) {
+                console.log('Audio playback ended due to user speech');
+            }
+        });
         
         currentSource.connect(audioContext.destination);
         if (audioDestination && isRecording) {
@@ -1424,50 +1469,75 @@ async function playNextInQueue() {
     
     isPlayingQueue = true;
     
-    while (audioPlaybackQueue.length > 0) {
+    while (audioPlaybackQueue.length > 0 && !isUserSpeaking) {
         const audioBuffer = audioPlaybackQueue.shift()!;
         try {
             await playAudioBuffer(audioBuffer, 44100);
             
-            // Wait for audio to finish before playing next
-            if (currentSource) {
+            // Wait for audio to finish before playing next, but break if user starts speaking
+            if (currentSource && !isUserSpeaking) {
                 await new Promise<void>((resolve) => {
-                    currentSource!.onended = () => resolve();
+                    const onEnded = () => {
+                        if (!isUserSpeaking) {
+                            resolve();
+                        } else {
+                            console.log('Queue playback stopped due to user speech');
+                            resolve();
+                        }
+                    };
+                    currentSource!.onended = onEnded;
                 });
             }
         } catch (error) {
             console.error('Error playing audio from queue:', error);
+        }
+        
+        // Break out of loop if user started speaking
+        if (isUserSpeaking) {
+            console.log('Stopping queue playback due to user speech');
+            break;
         }
     }
     
     isPlayingQueue = false;
     
     // Check if AI has finished speaking after queue is empty
-    setTimeout(() => {
-        checkAIFinishedSpeaking();
-    }, 500);
+    if (!isUserSpeaking) {
+        setTimeout(() => {
+            checkAIFinishedSpeaking();
+        }, 500);
+    }
 }
 
 async function startPreBuffering() {
     if (isBuffering) return;
     isBuffering = true;
 
-    while (textChunks.length > 0) {
+    while (textChunks.length > 0 && !isUserSpeaking) {
         const chunksToBuffer = textChunks.splice(0, 2);
 
         for (let i = 0; i < chunksToBuffer.length; i++) {
             const chunk = chunksToBuffer[i];
+            
+            // Stop buffering if user starts speaking
+            if (isUserSpeaking) {
+                console.log('Stopping audio buffering due to user speech');
+                break;
+            }
+            
             try {
                 const audioBuffer = await getAudioBuffer(chunk);
                 audioPlaybackQueue.push(audioBuffer);
                 
-                if (!isPlayingQueue) {
+                if (!isPlayingQueue && !isUserSpeaking) {
                     playNextInQueue();
                 }
             } catch (err) {
                 console.error('Cartesia TTS error:', err);
                 try {
-                    await speak(chunk);
+                    if (!isUserSpeaking) {
+                        await speak(chunk);
+                    }
                 } catch (fallbackErr) {
                     console.error('Fallback TTS error:', fallbackErr);
                 }
@@ -1747,6 +1817,12 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                     }
                 } else if (type === 'response.output_text.done') {
                 } else if (type === 'response.output_audio.delta') {
+                    // Check if user is speaking - if so, don't play AI audio
+                    if (isUserSpeaking || accumulatedSpeech.trim()) {
+                        console.log('User is speaking, skipping AI audio chunk');
+                        return;
+                    }
+                    
                     hasRealtimeAudio = true;
                     const b64 = msg.delta as string;
                     if (b64) {
