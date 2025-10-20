@@ -768,11 +768,14 @@ function startListening() {
                     if (speechToProcess.length >= 3) {
                         processingStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                         
-                        // Ensure we have the complete conversation history before processing
-                        const currentTranscript = transcriptHistory.slice(); // Copy current history
-                        
-                        // Process the new user input with full session context
-                        processUserInputWithHistory(speechToProcess, currentTranscript);
+                        // 200ms delay before AI responds
+                        setTimeout(() => {
+                            // Ensure we have the complete conversation history before processing
+                            const currentTranscript = transcriptHistory.slice(); // Copy current history
+                            
+                            // Process the new user input with full session context
+                            processUserInputWithHistory(speechToProcess, currentTranscript);
+                        }, 200); // 200ms delay before AI response
                         
                         accumulatedSpeech = '';
                         const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
@@ -785,7 +788,7 @@ function startListening() {
                 }
                 speechPauseTimeout = null;
                 isUserSpeaking = false;
-            }, 700);
+            }, 500); // 500ms delay after user pause before processing
         }
     };
 
@@ -1426,6 +1429,7 @@ function processUserInput(text: string) {
                 // Start buffering if not already
                 if (!isBuffering) {
                     audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+                    // No delay - start audio generation immediately
                     startPreBuffering();
                 }
             }
@@ -1454,7 +1458,7 @@ function processUserInput(text: string) {
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-response');
             }
-        }, 500);
+        }, 0); // No delay after AI finishes speaking
         
         monitorMemoryUsage();
         
@@ -1514,10 +1518,15 @@ function processUserInputWithHistory(text: string, sessionHistory: { sender: 'AI
     realtimeSendUserText(text, (delta) => {
         if (!loggedFirstDelta && lastRequestSentAt != null) {
             loggedFirstDelta = true;
+            // No delay - show first word immediately
+            fullReply += delta;
+            aiTranscript.update(fullReply);
+            textBuffer += delta;
+        } else {
+            fullReply += delta;
+            aiTranscript.update(fullReply);
+            textBuffer += delta;
         }
-        fullReply += delta;
-        aiTranscript.update(fullReply);
-        textBuffer += delta;
 
         // Create chunks only at natural sentence boundaries
         if (shouldCreateChunk(textBuffer)) {
@@ -1529,6 +1538,7 @@ function processUserInputWithHistory(text: string, sessionHistory: { sender: 'AI
                 // Start buffering if not already
                 if (!isBuffering) {
                     audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+                    // No delay - start audio generation immediately
                     startPreBuffering();
                 }
             }
@@ -1557,7 +1567,7 @@ function processUserInputWithHistory(text: string, sessionHistory: { sender: 'AI
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-response');
             }
-        }, 500);
+        }, 0); // No delay after AI finishes speaking
         
         monitorMemoryUsage();
         
@@ -1598,6 +1608,7 @@ function shouldCreateChunk(text: string): boolean {
 
     return false;
 }
+
 
 // Split text into natural chunks (only at sentence boundaries)
 function splitIntoNaturalChunks(text: string): string[] {
@@ -1669,7 +1680,7 @@ async function playNextInQueue() {
     if (!isUserSpeaking) {
         setTimeout(() => {
             checkAIFinishedSpeaking();
-        }, 500);
+        }, 0); // No delay after AI finishes speaking
     }
 }
 
@@ -1950,7 +1961,7 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                     }
                 };
                 ws.send(JSON.stringify(responseCreate));
-            }, 500);
+            }, 200); // 200ms delay before AI starts initial conversation
         
             resolve();
         };
