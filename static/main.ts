@@ -702,6 +702,12 @@ function startListening() {
         // Immediately stop AI audio when human speech is detected
         if (isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio) {
             clearAudioPlaybackOnly();
+            // Force stop all audio sources immediately
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.suspend().then(() => {
+                    audioContext.resume();
+                }).catch(e => console.log('Audio context suspend/resume error:', e));
+            }
         }
 
         let interim = '';
@@ -723,6 +729,12 @@ function startListening() {
             // Immediately stop any AI audio when user starts speaking
             if (isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio) {
                 clearAudioPlaybackOnly();
+                // Force stop all audio sources immediately
+                if (audioContext && audioContext.state !== 'closed') {
+                    audioContext.suspend().then(() => {
+                        audioContext.resume();
+                    }).catch(e => console.log('Audio context suspend/resume error:', e));
+                }
             }
             
             if (!interimBubble) {
@@ -755,7 +767,13 @@ function startListening() {
                     
                     if (speechToProcess.length >= 3) {
                         processingStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-                        processUserInput(speechToProcess);
+                        
+                        // Ensure we have the complete conversation history before processing
+                        const currentTranscript = transcriptHistory.slice(); // Copy current history
+                        
+                        // Process the new user input with full session context
+                        processUserInputWithHistory(speechToProcess, currentTranscript);
+                        
                         accumulatedSpeech = '';
                         const interimBubbleElement = document.querySelector('.transcript-item.you .transcript-content') as HTMLDivElement;
                         if (interimBubbleElement) {
@@ -765,7 +783,7 @@ function startListening() {
                         accumulatedSpeech += ' ' + speechToProcess;
                     }
                 }
-speechPauseTimeout = null;
+                speechPauseTimeout = null;
                 isUserSpeaking = false;
             }, 700);
         }
@@ -944,6 +962,19 @@ function clearAudioPlaybackOnly() {
     // Reset realtime audio state
     nextAudioStartTime = 0;
     hasRealtimeAudio = false;
+    
+    // Force stop any realtime WebSocket audio streaming
+    if (realtimeWS && realtimeConnected) {
+        try {
+            // Send a message to stop current response
+            const stopResponse = {
+                type: 'response.cancel'
+            };
+            realtimeWS.send(JSON.stringify(stopResponse));
+        } catch (e) {
+            console.log('Error stopping realtime response:', e);
+        }
+    }
 }
 
 function clearAllOutstandingAudio() {
@@ -1310,6 +1341,32 @@ async function playAudioBuffer(buffer: ArrayBuffer, sampleRate: number) {
             }
         });
         
+        // Add event listener to stop audio immediately if user starts speaking
+        const stopAudioOnUserSpeech = () => {
+            if (isUserSpeaking && currentSource) {
+                try {
+                    currentSource.stop();
+                    currentSource.disconnect();
+                    currentSource = null;
+                } catch (e) {
+                    console.log('Error stopping audio on user speech:', e);
+                }
+            }
+        };
+        
+        // Check for user speech every 50ms during playback
+        const speechCheckInterval = setInterval(() => {
+            if (isUserSpeaking) {
+                stopAudioOnUserSpeech();
+                clearInterval(speechCheckInterval);
+            }
+        }, 50);
+        
+        // Clear interval when audio ends
+        currentSource.addEventListener('ended', () => {
+            clearInterval(speechCheckInterval);
+        });
+        
         currentSource.connect(audioContext.destination);
         if (audioDestination && isRecording) {
             currentSource.connect(audioDestination);
@@ -1328,6 +1385,10 @@ function processUserInput(text: string) {
     if (isProcessing || isAIResponding) {
         return;
     }
+    
+    // Clear any existing audio before processing new input
+    clearAudioPlaybackOnly();
+    
     isProcessing = true;
     isAIResponding = true;
     addTranscript('You', text);
@@ -1347,6 +1408,109 @@ function processUserInput(text: string) {
         }
     }, 15000);
 
+    realtimeSendUserText(text, (delta) => {
+        if (!loggedFirstDelta && lastRequestSentAt != null) {
+            loggedFirstDelta = true;
+        }
+        fullReply += delta;
+        aiTranscript.update(fullReply);
+        textBuffer += delta;
+
+        // Create chunks only at natural sentence boundaries
+        if (shouldCreateChunk(textBuffer)) {
+            const newChunks = splitIntoNaturalChunks(textBuffer);
+            if (newChunks.length > 0) {
+                textChunks.push(...newChunks);
+                textBuffer = ''; // Clear buffer after splitting
+
+                // Start buffering if not already
+                if (!isBuffering) {
+                    audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+                    startPreBuffering();
+                }
+            }
+        }
+    }).then(() => {
+        if (textBuffer.trim()) {
+            const remainingChunks = splitIntoNaturalChunks(textBuffer.trim());
+            textChunks.push(...remainingChunks);
+            if (!isBuffering) {
+                audioGenerationStartTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+                startPreBuffering();
+            }
+        }
+        
+        if (fullReply.trim()) {
+            addTranscript('AI', fullReply.trim());
+        }
+        
+        fullReply = '';
+        textBuffer = '';
+        isProcessing = false;
+        isAIResponding = false;
+        clearTimeout(responseTimeout);
+        
+        setTimeout(() => {
+            if (isListening && !isRecognitionActive && !isProcessing) {
+                restartRecognitionSafely('after-ai-response');
+            }
+        }, 500);
+        
+        monitorMemoryUsage();
+        
+        if (window.gc) {
+            window.gc();
+        }
+    }).catch(err => {
+        console.error('AI response error:', err.message);
+        
+        fullReply = '';
+        textBuffer = '';
+        isProcessing = false;
+        isAIResponding = false;
+        clearTimeout(responseTimeout);
+        
+        setTimeout(() => {
+            if (isListening && !isRecognitionActive && !isProcessing) {
+                restartRecognitionSafely('after-ai-error');
+            }
+        }, 1000);
+        
+        if (window.gc) {
+            window.gc();
+        }
+    });
+}
+
+// New function to process user input with full session history
+function processUserInputWithHistory(text: string, sessionHistory: { sender: 'AI' | 'You', text: string, time: string }[]) {
+    if (isProcessing || isAIResponding) {
+        return;
+    }
+    
+    // Clear any existing audio before processing new input
+    clearAudioPlaybackOnly();
+    
+    isProcessing = true;
+    isAIResponding = true;
+    addTranscript('You', text);
+    
+    const aiTranscript = addStreamingTranscript('AI');
+    let fullReply = '';
+    let textBuffer = '';
+    lastRequestSentAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    loggedFirstDelta = false;
+    loggedFirstAudio = false;
+    hasRealtimeAudio = false;
+    
+    const responseTimeout = setTimeout(() => {
+        if (isProcessing) {
+            isProcessing = false;
+            isAIResponding = false;
+        }
+    }, 15000);
+
+    // Send user text with full session context
     realtimeSendUserText(text, (delta) => {
         if (!loggedFirstDelta && lastRequestSentAt != null) {
             loggedFirstDelta = true;
@@ -1739,7 +1903,21 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
             ];
             ws = new WebSocket(url, protocols);
             realtimeWS = ws;
+            
+            // Add connection timeout
+            const connectionTimeout = setTimeout(() => {
+                if (ws.readyState === WebSocket.CONNECTING) {
+                    console.error('WebSocket connection timeout');
+                    ws.close();
+                    reject(new Error('WebSocket connection timeout after 10 seconds'));
+                }
+            }, 10000);
+            
+            ws.addEventListener('open', () => {
+                clearTimeout(connectionTimeout);
+            });
         } catch (error) {
+            console.error('Connection establishment error:', error);
             reject(new Error('Failed to establish connection: ' + error.message));
             return;
         }
@@ -1780,7 +1958,9 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
         ws.onerror = (ev) => {
             realtimeConnecting = false;
             console.error('Realtime WebSocket error:', ev);
-            reject(new Error('Realtime WebSocket error'));
+            console.error('WebSocket readyState:', ws.readyState);
+            console.error('WebSocket URL:', ws.url);
+            reject(new Error('Realtime WebSocket error: ' + JSON.stringify(ev)));
         };
         ws.onclose = (event) => {
             realtimeConnected = false;
@@ -1788,6 +1968,9 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
             realtimeWS = null;
             realtimeTextBufferCallback = null;
             realtimeAudioChunks = [];
+            
+            console.error('WebSocket closed:', event.code, event.reason);
+            console.error('Close event details:', event);
             
             if (isListening) {
                 setTimeout(() => {
@@ -1876,6 +2059,13 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                         
                         nextAudioStartTime += chunkDuration;
                         currentSource = src;
+                        
+                        // Add event listener to detect when audio is interrupted
+                        src.addEventListener('ended', () => {
+                            if (isUserSpeaking) {
+                                console.log('AI audio chunk ended due to user speech');
+                            }
+                        });
                     }
                 } else if (type === 'response.output_audio.done') {
                     
