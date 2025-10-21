@@ -661,6 +661,7 @@ function addTranscript(sender: 'AI' | 'You', text: string) {
 
 function resetTranscript() {
     transcriptHistory = [];
+    lastSentTranscriptIndex = -1; // Reset tracking for new conversation
     hiddenTranscript.innerHTML = '';
 }
 
@@ -1841,6 +1842,7 @@ let realtimeSampleRate = 24000; // default PCM16 sample rate used by Realtime AP
 let currentAIResponse = ''; // Store complete AI response for logging
 let nextAudioStartTime = 0; // Track when next audio chunk should start for seamless streaming
 let agentSystemPrompt = ''; // Store the agent's system prompt (fetched once at startup)
+let lastSentTranscriptIndex = -1; // Track the last transcript index sent to AI
 
 // Removed getOpenAIKey function - API key now handled securely on backend
 
@@ -2143,7 +2145,31 @@ async function realtimeSendUserText(userText: string, onDelta?: (delta: string) 
     await ensureRealtimeConnection(onDelta);
     if (!realtimeWS) return;
     
-    const conversationItem = {
+    // Send only new conversation history (not already sent)
+    for (let i = lastSentTranscriptIndex + 1; i < transcriptHistory.length; i++) {
+        const transcript = transcriptHistory[i];
+        const conversationItem = {
+            type: 'conversation.item.create',
+            item: {
+                type: 'message',
+                role: transcript.sender === 'You' ? 'user' : 'assistant',
+                content: [
+                    {
+                        type: 'input_text',
+                        text: transcript.text
+                    }
+                ]
+            }
+        } as const;
+        
+        realtimeWS.send(JSON.stringify(conversationItem));
+    }
+    
+    // Update the last sent index to current transcript length
+    lastSentTranscriptIndex = transcriptHistory.length - 1;
+    
+    // Then send the current user message
+    const currentConversationItem = {
         type: 'conversation.item.create',
         item: {
             type: 'message',
@@ -2157,7 +2183,7 @@ async function realtimeSendUserText(userText: string, onDelta?: (delta: string) 
         }
     } as const;
     
-    realtimeWS.send(JSON.stringify(conversationItem));
+    realtimeWS.send(JSON.stringify(currentConversationItem));
     
     const responseCreate = {
         type: 'response.create'
