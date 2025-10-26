@@ -663,6 +663,7 @@ function resetTranscript() {
     transcriptHistory = [];
     lastSentTranscriptIndex = -1; // Reset tracking for new conversation
     hiddenTranscript.innerHTML = '';
+    clearIdleTimer(); // Clear any existing idle timer
 }
 
 function startListening() {
@@ -700,6 +701,9 @@ function startListening() {
     let speechPauseTimeout: number | null = null;
 
     recognition.onresult = (event: any) => {
+        // Clear idle timer when user starts speaking
+        clearIdleTimer();
+        
         // Immediately stop AI audio when human speech is detected
         if (isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio) {
             clearAudioPlaybackOnly();
@@ -877,6 +881,7 @@ function startListening() {
 
     recognition.start();
     recognition.startTime = Date.now();
+    startIdleTimer(); // Start idle detection when listening begins
     
     const healthMonitorInterval = setInterval(() => {
         if (!isListening) {
@@ -1035,6 +1040,7 @@ isListening = false;
     isProcessing = false;
     isRecognitionActive = false;
     isRestartingRecognition = false;
+    clearIdleTimer(); // Clear idle timer when stopping
     
     if (recognition) {
         try {
@@ -1458,6 +1464,7 @@ function processUserInput(text: string) {
         setTimeout(() => {
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-response');
+                startIdleTimer(); // Restart idle timer after AI finishes
             }
         }, 0); // No delay after AI finishes speaking
         
@@ -1567,6 +1574,7 @@ function processUserInputWithHistory(text: string, sessionHistory: { sender: 'AI
         setTimeout(() => {
             if (isListening && !isRecognitionActive && !isProcessing) {
                 restartRecognitionSafely('after-ai-response');
+                startIdleTimer(); // Restart idle timer after AI finishes
             }
         }, 0); // No delay after AI finishes speaking
         
@@ -1843,8 +1851,69 @@ let currentAIResponse = ''; // Store complete AI response for logging
 let nextAudioStartTime = 0; // Track when next audio chunk should start for seamless streaming
 let agentSystemPrompt = ''; // Store the agent's system prompt (fetched once at startup)
 let lastSentTranscriptIndex = -1; // Track the last transcript index sent to AI
+let idleTimer: number | null = null; // Timer to track system idle state
+let isSystemIdle = false; // Track if system is currently idle
 
 // Removed getOpenAIKey function - API key now handled securely on backend
+
+// Idle detection functions
+function clearIdleTimer() {
+    if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+    }
+    isSystemIdle = false;
+}
+
+function startIdleTimer() {
+    clearIdleTimer(); // Clear any existing timer
+    
+    idleTimer = window.setTimeout(() => {
+        // Check if system is still idle (no AI speaking, no user speaking, listening)
+        if (isListening && !isAIResponding && !isAudioPlaying && !isPlayingQueue && !hasRealtimeAudio && !isUserSpeaking && !isProcessing) {
+            isSystemIdle = true;
+            console.log('System idle for 5 seconds, prompting user...');
+            sendIdlePrompt();
+        }
+    }, 5000); // 5 seconds
+}
+
+function sendIdlePrompt() {
+    if (!isListening || isAIResponding || isAudioPlaying || isPlayingQueue || hasRealtimeAudio || isUserSpeaking || isProcessing) {
+        return; // Don't send if system is busy
+    }
+    
+    console.log('Sending idle prompt: "are you there"');
+    
+    // Add the AI message to transcript
+    addTranscript('AI', 'are you there');
+    
+    // Send the message through the realtime connection
+    if (realtimeWS && realtimeConnected) {
+        try {
+            const conversationItem = {
+                type: 'conversation.item.create',
+                item: {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [
+                        {
+                            type: 'input_text',
+                            text: 'are you there'
+                        }
+                    ]
+                }
+            } as const;
+            
+            realtimeWS.send(JSON.stringify(conversationItem));
+        } catch (e) {
+            console.log('Error sending idle prompt:', e);
+        }
+    }
+    
+    // Reset the idle timer after sending prompt
+    startIdleTimer();
+}
 
 async function fetchAgentPrompt(): Promise<void> {
     const agentType = localStorage.getItem('selectedAgentType') || 'discovery-call';
