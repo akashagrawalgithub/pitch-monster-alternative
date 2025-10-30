@@ -1,4 +1,5 @@
 from flask import Flask, request, send_from_directory, jsonify, Response, stream_with_context
+from flask_compress import Compress
 from flask_cors import CORS
 from openai import OpenAI
 import os
@@ -16,6 +17,7 @@ from supabase import create_client, Client
 
 app = Flask(__name__, template_folder='static')
 CORS(app, origins=['http://localhost:3000', 'http://localhost:8000', 'https://pitch-monster-alternative.onrender.com'])
+Compress(app)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 CARTESIA_API_KEY = os.environ.get("CARTESIA_API_KEY")
@@ -123,6 +125,21 @@ def index():
     else:
         # In production, serve from dist folder
         return send_from_directory('dist', 'index.html')
+
+@app.after_request
+def add_caching_headers(response):
+    try:
+        request_path = request.path or ''
+        # Aggressive caching for fingerprinted assets in dist
+        if request_path.startswith('/') and (request_path.startswith('/assets/') or request_path.endswith(('.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico'))):
+            # 1 year immutable for hashed assets
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        # More conservative caching for HTML documents
+        elif request_path.endswith('.html') or request_path == '/':
+            response.headers['Cache-Control'] = 'public, max-age=60'
+    except Exception:
+        pass
+    return response
 
 @app.route('/analysis.html')
 def analysis():

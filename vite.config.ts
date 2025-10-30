@@ -5,7 +5,21 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    target: 'es2020',
+    cssCodeSplit: true,
+    sourcemap: false,
+    modulePreload: { polyfill: false },
     rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]'
+      },
       input: {
         main: 'static/index.html',
         analysis: 'static/analysis.html',
