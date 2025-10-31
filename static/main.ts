@@ -1898,7 +1898,7 @@ function sendIdlePrompt() {
                     role: 'assistant',
                     content: [
                         {
-                            type: 'input_text',
+                            type: 'output_text',
                             text: 'are you there'
                         }
                     ]
@@ -2016,7 +2016,6 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                     type: 'realtime',
                     model: 'gpt-4o-realtime-preview', 
                     instructions: instructions,
-                    voice: 'alloy',
                     tools: [],
                     tool_choice: 'none',
                 }
@@ -2028,7 +2027,9 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                 const responseCreate = {
                     type: 'response.create',
                     response: {
-                        instructions: "Start the conversation by saying: 'Hey, who's this?'"
+                        instructions: "Start the conversation by saying: 'Hey, who's this?'",
+                        modalities: ['audio'],
+                        voice: 'alloy'
                     }
                 };
                 ws.send(JSON.stringify(responseCreate));
@@ -2224,7 +2225,7 @@ async function realtimeSendUserText(userText: string, onDelta?: (delta: string) 
                 role: transcript.sender === 'You' ? 'user' : 'assistant',
                 content: [
                     {
-                        type: 'input_text',
+                        type: 'output_text',
                         text: transcript.text
                     }
                 ]
