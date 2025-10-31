@@ -267,10 +267,10 @@ Learn about your challenges and potential solutions while gathering information 
         """Get prompt for a specific agent (from memory - no DB call)"""
         base_prompt = self._prompts.get(agent_key, self._prompts.get('discovery-call', ''))
         sample_script = self._sample_scripts.get(agent_key, '')
-        
-        # If there's a sample script, append it to the prompt
+        if not base_prompt:
+            return ''
         if sample_script:
-            return f"{base_prompt}\n\n### SAMPLE SCRIPT FOR REFERENCE:\n\n{sample_script}"
+            return f"{base_prompt}"
         
         return base_prompt
     
