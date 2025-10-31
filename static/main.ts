@@ -2028,7 +2028,6 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
                     type: 'response.create',
                     response: {
                         instructions: "Start the conversation by saying: 'Hey, who's this?'",
-                        modalities: ['audio'],
                         voice: 'alloy'
                     }
                 };
