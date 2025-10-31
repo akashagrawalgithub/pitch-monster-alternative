@@ -2009,7 +2009,7 @@ async function ensureRealtimeConnection(onDelta?: (delta: string) => void): Prom
             realtimeConnecting = false;
             
             const instructions = agentSystemPrompt || 'You are a helpful sales training coach.';
-        
+            console.log('Instructions:', instructions);
             const sessionUpdate = {
                 type: 'session.update',
                 session: {
